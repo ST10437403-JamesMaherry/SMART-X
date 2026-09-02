@@ -1,0 +1,93 @@
+name: CI
+
+# Validate all changes entering the integration or release branches.
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+  pull_request:
+    branches:
+      - main
+      - dev
+
+  # Allow maintainers to run the workflow manually when required.
+  workflow_dispatch:
+
+# The workflow only needs permission to read repository content.
+permissions:
+  contents: read
+
+# Cancel an outdated run when newer commits are pushed to the same branch.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore and audit NuGet dependencies
+        run: >
+          dotnet restore SmartX.sln
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -warnaserror:"NU1901;NU1902;NU1903;NU1904"
+
+      - name: Build solution
+        run: >
+          dotnet build SmartX.sln
+          --configuration Release
+          --no-restore
+
+      - name: Run backend tests
+        run: >
+          dotnet test SmartX.sln
+          --configuration Release
+          --no-build
+          --logger "console;verbosity=normal"
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: src/SmartX.Client
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/SmartX.Client/package-lock.json
+
+      # npm ci performs a reproducible installation from package-lock.json.
+      - name: Restore frontend dependencies
+        run: npm ci
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Build React client
+        run: npm run build
