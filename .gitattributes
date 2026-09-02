@@ -1,0 +1,10 @@
+# Use consistent line endings across macOS, Linux and CI.
+* text=auto eol=lf
+
+# Explicitly identify binary assets.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
