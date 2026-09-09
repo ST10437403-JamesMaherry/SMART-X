@@ -1,101 +1,153 @@
-import { useState } from 'react';
-import heroImg from './assets/hero.png';
-import reactLogo from './assets/react.svg';
-import viteLogo from './assets/vite.svg';
+import { useCallback, useEffect, useState } from 'react';
+import { apiBaseUrl } from './api/apiClient';
+import { getApiHealth, type HealthResponse } from './api/healthApi';
 import './App.css';
 
+type HealthState =
+  { kind: 'checking' } | { kind: 'connected'; response: HealthResponse } | { kind: 'unavailable' };
+
+function formatCheckedTime(timestamp: string): string {
+  const parsedTimestamp = new Date(timestamp);
+
+  if (Number.isNaN(parsedTimestamp.getTime())) {
+    return 'Recently';
+  }
+
+  return new Intl.DateTimeFormat('en-ZA', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(parsedTimestamp);
+}
+
 function App() {
-  const [count, setCount] = useState(0);
+  const [healthState, setHealthState] = useState<HealthState>({
+    kind: 'checking',
+  });
+
+  const checkApiHealth = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await getApiHealth(signal);
+      setHealthState({ kind: 'connected', response });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+
+      setHealthState({ kind: 'unavailable' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const healthCheckTimer = window.setTimeout(() => {
+      void checkApiHealth(controller.signal);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(healthCheckTimer);
+      controller.abort();
+    };
+  }, [checkApiHealth]);
+
+  function handleRetry(): void {
+    setHealthState({ kind: 'checking' });
+    void checkApiHealth();
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+    <div className="app-shell">
+      <div className="ambient-glow" aria-hidden="true" />
+
+      <main className="baseline-card">
+        <header className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            <span />
+          </span>
+          <span>Smart-X</span>
+        </header>
+
+        <section className="intro" aria-labelledby="page-title">
+          <p className="eyebrow">PROG7312 · PART 1</p>
+          <h1 id="page-title">IoT Mesh Ecosystem</h1>
+          <p className="intro-copy">
+            A secure full-stack foundation for connected sensor telemetry.
           </p>
-        </div>
-        <button type="button" className="counter" onClick={() => setCount((count) => count + 1)}>
-          Count is {count}
-        </button>
-      </section>
+        </section>
 
-      <div className="ticks"></div>
+        <section
+          className={`status-card status-card--${healthState.kind}`}
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <div className="status-heading">
+            <span
+              className={`status-indicator status-indicator--${healthState.kind}`}
+              aria-hidden="true"
+            />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+            <div>
+              {healthState.kind === 'checking' && (
+                <>
+                  <p className="status-label">Checking connection</p>
+                  <h2>Contacting the Smart-X API</h2>
+                  <p className="status-description">Requesting {apiBaseUrl}/api/health</p>
+                </>
+              )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+              {healthState.kind === 'connected' && (
+                <>
+                  <p className="status-label">System available</p>
+                  <h2>Client and API connected</h2>
+                  <p className="status-description">
+                    The full-stack development baseline is operational.
+                  </p>
+                </>
+              )}
+
+              {healthState.kind === 'unavailable' && (
+                <>
+                  <p className="status-label">Connection unavailable</p>
+                  <h2>The API could not be reached</h2>
+                  <p className="status-description">
+                    Start the HTTPS API profile and try the connection again.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {healthState.kind === 'connected' && (
+            <dl className="health-details">
+              <div>
+                <dt>Service</dt>
+                <dd>{healthState.response.service}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{healthState.response.status}</dd>
+              </div>
+              <div>
+                <dt>Checked</dt>
+                <dd>{formatCheckedTime(healthState.response.checkedAtUtc)}</dd>
+              </div>
+            </dl>
+          )}
+
+          {healthState.kind === 'unavailable' && (
+            <button className="retry-button" type="button" onClick={handleRetry}>
+              Check again
+            </button>
+          )}
+        </section>
+
+        <footer className="technology-list" aria-label="Application technologies">
+          <span>React + TypeScript</span>
+          <span>.NET 10 Web API</span>
+          <span>Automated CI</span>
+        </footer>
+      </main>
+    </div>
   );
 }
 

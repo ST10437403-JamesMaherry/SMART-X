@@ -46,6 +46,9 @@ jobs:
           -p:NuGetAuditMode=all
           -warnaserror:"NU1901;NU1902;NU1903;NU1904"
 
+      - name: Check .NET formatting
+        run: dotnet format SmartX.sln --verify-no-changes --no-restore
+
       - name: Build solution
         run: >
           dotnet build SmartX.sln
@@ -88,6 +91,9 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+
+      - name: Check frontend formatting
+        run: npm run format:check  
 
       - name: Build React client
         run: npm run build
