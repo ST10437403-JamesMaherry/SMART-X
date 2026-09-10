@@ -2,81 +2,71 @@
 
 **PROG7312 Portfolio of Evidence - 2026**
 
-Smart-X is a simulated Internet of Things telemetry management ecosystem developed for the PROG7312 Portfolio of Evidence.
+Smart-X is a simulated Internet of Things (IoT) telemetry management system developed for the PROG7312 Portfolio of Evidence.
 
-The completed system will provide sensor registration, telemetry ingestion, real-time command processing, device history, anomaly management, and IoT mesh-network routing.
+The system is designed to register IoT sensors, receive strongly typed telemetry readings, monitor device behaviour, detect important changes, and eventually manage a simulated IoT mesh network.
+
+---
 
 ## Student Information
 
-- Student: James Maherry
-- Student number: ST10437403
-- Module: Programming 3B
-- Module code: PROG7312
+- **Student:** James Maherry
+- **Student Number:** ST10437403
+- **Module:** Programming 3B
+- **Module Code:** PROG7312
 
-## Part 1
+---
 
-Part 1 focuses on the Smart-X Data Ingestion and Validation Gateway.
+## What Smart-X Does
 
-The implementation will include:
+Smart-X acts as a central gateway for IoT devices.
 
-- A responsive React and TypeScript dashboard
-- An ASP.NET Core Web API
-- Sensor registration and telemetry ingestion
-- Generic telemetry packets
-- Operator-overloaded sensor value models
-- Jagged or multidimensional telemetry arrays
-- Optimised generic collections
-- Recursive deployment hierarchy validation
-- Encrypted device media and log attachments
-- A dynamic anomaly engagement feature
+For example, sensors could report:
 
-## Technology Stack
+- Temperature readings
+- Power consumption
+- Moisture levels
+- Valve or actuator states
 
-### Backend
+Smart-X identifies which sensor produced the reading, validates the information, processes the telemetry, and prepares it for monitoring and analysis.
 
-- C# and .NET 10
-- ASP.NET Core Web API Controllers
-- OpenAPI
-- xUnit
+The completed system will include sensor management, telemetry processing, anomaly detection, device history, command processing, and mesh-network routing.
 
-### Frontend
+---
 
-- React
-- TypeScript
-- Vite
-- ESLint
-- Prettier
+## Current Progress
 
-### Development and Delivery
+The project currently includes:
 
-- Visual Studio Code
-- Git and GitHub
-- GitHub Actions
-- Docker and Docker Compose
+- Clean multi-project .NET solution architecture
+- ASP.NET Core Web API
+- React and TypeScript frontend
+- Automated GitHub Actions CI
+- Sensor domain model
+- Sensor profiles with validation
+- MAC address and custom device identifiers
+- Structured deployment locations
+- Sensor categories and operational statuses
+- Telemetry data type definitions
+- Domain-specific exceptions
+- UTC creation and update timestamps
+- Generic `TelemetryPacket<T>` implementation
+- Strongly typed `double`, `int`, and `bool` telemetry
+- Numeric telemetry support using .NET generic mathematics
+- `TelemetryDelta<T>` for comparing sensor readings
+- Meaningful overloaded `-` operator for telemetry delta calculation
+- Validation for invalid telemetry operations
+- Comprehensive automated tests
 
-## Solution Structure
+At the end of Issue #6, the full solution contains:
 
-- `src/SmartX.Domain` - Domain models, value objects, generics and data structures
-- `src/SmartX.Contracts` - API request and response contracts
-- `src/SmartX.Application` - Application services and validation
-- `src/SmartX.Infrastructure` - Storage and infrastructure implementations
-- `src/SmartX.Api` - ASP.NET Core Web API
-- `src/SmartX.Client` - React and TypeScript dashboard
-- `tests/SmartX.Domain.Tests` - Domain unit tests
-- `tests/SmartX.Application.Tests` - Application unit tests
-- `tests/SmartX.Api.IntegrationTests` - API integration tests
-- `docs` - Research, diagrams and assessment evidence
+**63 passing automated tests with 0 failures.**
 
-## Prerequisites
+---
 
-- .NET 10 SDK
-- Node.js 24 LTS
-- npm
-- Git
-- Visual Studio Code
+## Generic Telemetry
 
-## Restore and Build the Backend
+Smart-X keeps sensor readings strongly typed using:
 
-```bash
-dotnet restore SmartX.sln
-dotnet build SmartX.sln
+```csharp
+TelemetryPacket<T>
