@@ -1,5 +1,8 @@
+using SmartX.Api.ExceptionHandling;
 using SmartX.Application.Attachments;
+using SmartX.Application.Sensors;
 using SmartX.Infrastructure.Attachments;
+using SmartX.Infrastructure.Sensors;
 
 const string clientCorsPolicyName = "SmartXClient";
 
@@ -25,14 +28,44 @@ var attachmentStoragePath =
                 configuredAttachmentStoragePath));
 
 builder.Services.AddControllers();
+
 builder.Services.AddOpenApi();
+
+// Central ProblemDetails support provides one consistent API error format.
+builder.Services.AddProblemDetails();
+
+builder.Services.AddExceptionHandler<
+    ApiExceptionHandler>();
 
 builder.Services.AddSingleton<TimeProvider>(
     TimeProvider.System);
 
+// -------------------------------------------------------------------------
+// Sensor persistence and application services
+// -------------------------------------------------------------------------
+
+// Part 1 uses process-local sensor storage. The Application layer depends
+// only on ISensorRepository, allowing this implementation to be replaced
+// by database persistence in a later Smart-X stage.
+builder.Services.AddSingleton<
+    ISensorRepository,
+    InMemorySensorRepository>();
+
+// Application services are scoped to the HTTP request. This keeps their
+// lifecycle compatible with future scoped persistence implementations.
+builder.Services.AddScoped<
+    SensorRegistrationService>();
+
+builder.Services.AddScoped<
+    SensorManagementService>();
+
+// -------------------------------------------------------------------------
+// Secure attachment infrastructure
+// -------------------------------------------------------------------------
+
 // Cryptographic infrastructure is resolved only when attachment
-// functionality is used. This keeps unrelated endpoints such as /health
-// independent while still requiring a valid key for attachment operations.
+// functionality is used. Unrelated endpoints therefore remain independent,
+// while attachment operations still require a configured encryption key.
 builder.Services.AddSingleton<IAttachmentCipher>(
     _ => new ChunkedAesGcmAttachmentCipher(
         builder.Configuration[
@@ -45,8 +78,12 @@ builder.Services.AddSingleton<ISensorAttachmentStore>(
             serviceProvider
                 .GetRequiredService<IAttachmentCipher>()));
 
-builder.Services.AddSingleton<
+builder.Services.AddScoped<
     SensorAttachmentService>();
+
+// -------------------------------------------------------------------------
+// Browser client access
+// -------------------------------------------------------------------------
 
 builder.Services.AddCors(options =>
 {
@@ -54,8 +91,8 @@ builder.Services.AddCors(options =>
         clientCorsPolicyName,
         policy =>
         {
-            // An empty production origin list rejects cross-origin
-            // browser requests.
+            // An empty production origin list rejects cross-origin browser
+            // requests by default.
             if (allowedClientOrigins.Length > 0)
             {
                 policy
@@ -67,6 +104,10 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Exception handling must execute before application endpoints so errors
+// raised by Application or Domain services can become ProblemDetails.
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
