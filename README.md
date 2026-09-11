@@ -4,7 +4,7 @@
 
 Smart-X is a simulated Internet of Things (IoT) telemetry management system developed for the PROG7312 Portfolio of Evidence.
 
-The system is designed to register IoT sensors, receive strongly typed telemetry readings, monitor device behaviour, detect important changes, and eventually manage a simulated IoT mesh network.
+The system is designed to register IoT sensors, process strongly typed telemetry readings, manage historical telemetry batches, validate deployment hierarchies, securely store sensor attachments, detect important changes, and eventually manage a simulated IoT mesh network.
 
 ---
 
@@ -19,42 +19,56 @@ The system is designed to register IoT sensors, receive strongly typed telemetry
 
 ## What Smart-X Does
 
-Smart-X acts as a central gateway for IoT devices.
+Smart-X acts as a central gateway for simulated IoT devices.
 
-For example, sensors may report:
+Sensors may report information such as:
 
 - Temperature readings
 - Power consumption
 - Moisture levels
 - Valve or actuator states
 
-Smart-X identifies which sensor produced a reading, validates the information, processes the telemetry, and prepares it for monitoring and analysis.
+Smart-X identifies which device produced a reading, validates the data, processes telemetry using strongly typed models, manages historical readings, validates sensor deployment structures, and securely manages sensor-related files.
 
-The completed system will include sensor management, telemetry processing, anomaly detection, device history, command processing, encrypted attachments, and IoT mesh-network routing.
+The completed Smart-X ecosystem will eventually include sensor management, telemetry processing, anomaly detection, device history, command processing, encrypted attachments, and IoT mesh-network routing.
 
 ---
 
-## Part 1
+# Part 1
 
 Part 1 focuses on building the **Smart-X Data Ingestion and Validation Gateway**.
 
-The completed Part 1 system will include:
+The Part 1 implementation currently demonstrates advanced C# concepts including:
 
-- Responsive React and TypeScript dashboard
-- ASP.NET Core Web API
-- Sensor registration and management
-- Strongly typed telemetry ingestion
-- Generic telemetry packets
-- Meaningful operator overloading
-- Optimised generic collections
-- Jagged or multidimensional telemetry arrays
-- Recursive deployment hierarchy validation
-- Encrypted device media and log attachments
-- Dynamic anomaly engagement functionality
+- Object-oriented domain modelling
+- Generic programming
+- Generic mathematics
+- Operator overloading
+- Jagged arrays
+- Generic collections
+- Recursion
+- Stream-based processing
+- Authenticated encryption
+- Automated testing
+
+The application uses a layered architecture consisting of:
+
+```text
+React Client
+     |
+     v
+ASP.NET Core API
+     |
+     v
+Application Layer
+     |
+     v
+Domain / Infrastructure
+```
 
 ---
 
-## Current Progress
+# Current Progress
 
 The project currently includes:
 
@@ -63,28 +77,29 @@ The project currently includes:
 - React and TypeScript frontend
 - Automated GitHub Actions CI
 - Sensor domain model
-- Sensor profiles with validation
+- Sensor profile validation
 - MAC address and custom device identifiers
 - Structured deployment locations
 - Sensor categories and operational statuses
 - Telemetry data type definitions
 - Domain-specific validation exceptions
 - UTC creation and update timestamps
-- Generic `TelemetryPacket<T>` implementation
-- Strongly typed `double`, `int`, and `bool` telemetry
-- Numeric telemetry support using .NET generic mathematics
-- `TelemetryDelta<T>` for comparing sensor readings
-- Meaningful overloaded subtraction operator for telemetry delta calculation
-- Validation for invalid telemetry operations
-- Comprehensive automated domain tests
-
-At the end of Issue #6, the full solution contains:
-
-**63 passing automated tests with 0 failures.**
+- Generic telemetry packets
+- Numeric generic telemetry
+- Meaningful operator overloading
+- Historical telemetry batch processing
+- Jagged array processing
+- Array-to-collection conversion
+- Recursive deployment hierarchy validation
+- Secure sensor media and log attachments
+- Streaming multipart uploads
+- AES-256-GCM authenticated encryption
+- Encrypted filesystem storage
+- Comprehensive automated testing
 
 ---
 
-## Sensor Domain Model
+# Sensor Domain Model
 
 Each registered Smart-X sensor has a domain profile containing information such as:
 
@@ -97,11 +112,13 @@ Each registered Smart-X sensor has a domain profile containing information such 
 - Creation timestamp
 - Update timestamp
 
-The domain model validates this information before it can be used elsewhere in the application.
+The domain model validates this information before it can be used by higher application layers.
 
 Device identifiers support both standard MAC addresses and custom Smart-X identifiers.
 
-Deployment locations are represented using a hierarchy containing:
+MAC addresses are normalised into a consistent format so that equivalent device identifiers can be compared reliably.
+
+Deployment locations use a structured hierarchy such as:
 
 ```text
 Facility
@@ -109,11 +126,9 @@ Facility
     └── Node
 ```
 
-This structure will also support later recursive deployment validation.
-
 ---
 
-## Generic Telemetry
+# Generic Telemetry
 
 Smart-X uses generics to keep incoming sensor readings strongly typed.
 
@@ -131,7 +146,7 @@ TelemetryPacket<int>
 TelemetryPacket<bool>
 ```
 
-This allows different sensors to use the same telemetry model while keeping their real data types.
+This allows different sensor types to share a common telemetry structure without storing telemetry values as `object`.
 
 For example:
 
@@ -141,17 +156,17 @@ Power counter       -> int
 Valve state         -> bool
 ```
 
-Telemetry values are not stored as `object`, avoiding unnecessary boxing, casting, and runtime type conversion.
-
-Each telemetry packet also contains:
+Each telemetry packet contains information including:
 
 - Source device identifier
 - Strongly typed payload
 - UTC capture timestamp
 
+Using generic models avoids unnecessary boxing, casting, and runtime type conversion.
+
 ---
 
-## Numeric Telemetry and Operator Overloading
+# Numeric Telemetry and Operator Overloading
 
 Numeric sensor readings use:
 
@@ -166,7 +181,7 @@ NumericTelemetryPacket<double>
 NumericTelemetryPacket<int>
 ```
 
-Smart-X overloads the subtraction operator so that two readings from the same sensor can be compared directly.
+Smart-X overloads the subtraction operator so that two compatible numeric sensor readings can be compared directly.
 
 For example:
 
@@ -183,7 +198,7 @@ The result is represented by:
 TelemetryDelta<T>
 ```
 
-A telemetry delta contains:
+A telemetry delta contains information such as:
 
 - Previous value
 - Current value
@@ -194,7 +209,7 @@ A telemetry delta contains:
 - Decrease state
 - Unchanged state
 
-This operator has a real purpose within Smart-X because it prepares the system for later features such as:
+The overloaded operator has a meaningful purpose within the Smart-X domain because telemetry differences can later support:
 
 - Spike detection
 - Sudden drop detection
@@ -202,21 +217,400 @@ This operator has a real purpose within Smart-X because it prepares the system f
 - Rate-of-change analysis
 - Threshold monitoring
 
-Boolean telemetry is still supported through `TelemetryPacket<bool>`, but boolean values are intentionally excluded from numeric subtraction because subtracting boolean states has no meaningful purpose.
+Boolean telemetry continues to use:
+
+```csharp
+TelemetryPacket<bool>
+```
+
+Boolean telemetry is intentionally excluded from numeric subtraction because subtracting boolean states has no meaningful domain purpose.
 
 ---
 
-## Technology Stack
+# Historical Telemetry Batch Processing
 
-### Backend
+Smart-X supports historical telemetry batch processing using both arrays and optimised generic collections.
+
+Raw sequential telemetry batches are represented using jagged arrays.
+
+This demonstrates the use of advanced array structures while supporting batches that may contain different numbers of telemetry readings.
+
+The historical processing pipeline converts raw array-based input into:
+
+```csharp
+List<T>
+```
+
+collections for easier downstream processing.
+
+The implementation preserves:
+
+- Batch ordering
+- Reading ordering
+- Generic telemetry types
+- Sequential processing behaviour
+
+Validation also handles:
+
+- Empty batches
+- Uneven batch sizes
+- Invalid batch structures
+
+This allows raw telemetry data to be received in an array-oriented format and then converted into a more flexible collection structure for later analysis.
+
+---
+
+# Recursive Deployment Validation
+
+Smart-X models sensor deployment structures as hierarchical trees.
+
+A deployment may contain nested child locations, allowing Smart-X to represent structures such as:
+
+```text
+Facility
+├── Zone A
+│   ├── Sensor Node 1
+│   └── Sensor Node 2
+│
+└── Zone B
+    └── Sensor Node 3
+```
+
+Recursive processing is used to traverse and validate the deployment hierarchy.
+
+This demonstrates recursion using a meaningful Smart-X use case rather than using recursion only for a mathematical example.
+
+The recursive deployment implementation allows nested deployment structures to be processed regardless of their depth while keeping the tree model separated from the API and infrastructure layers.
+
+---
+
+# Secure Sensor Attachments
+
+Smart-X supports files associated with individual sensor profiles.
+
+Supported attachment categories are:
+
+- Device configuration files
+- Deployment photos
+- Hardware log files
+
+The attachment implementation is separated across the existing Smart-X architecture:
+
+```text
+Multipart HTTP Request
+        |
+        v
+SmartX.Api
+        |
+        v
+SensorAttachmentService
+        |
+        v
+ISensorAttachmentStore
+        |
+        v
+Encrypted Filesystem Storage
+```
+
+---
+
+## Supported Attachment Types
+
+### Configuration Files
+
+Examples include:
+
+```text
+.json
+.yaml
+.yml
+.cfg
+.txt
+```
+
+### Deployment Photos
+
+Examples include:
+
+```text
+.jpg
+.jpeg
+.png
+.webp
+```
+
+### Hardware Logs
+
+Examples include:
+
+```text
+.log
+.txt
+.json
+.csv
+```
+
+Both file extensions and media types are validated before storage.
+
+---
+
+## Streaming Uploads
+
+Sensor attachments are uploaded using:
+
+```text
+multipart/form-data
+```
+
+The API processes multipart requests directly from the HTTP request stream.
+
+Smart-X does not require the complete uploaded file to be loaded into memory before processing.
+
+The upload pipeline is:
+
+```text
+HTTP Request Body
+        |
+        v
+MultipartReader
+        |
+        v
+Size-Limited Stream
+        |
+        v
+AES Encryption
+        |
+        v
+Encrypted Storage
+```
+
+This makes the upload mechanism more appropriate for larger files than a design that copies complete uploads into memory first.
+
+The maximum supported attachment size is:
+
+```text
+10 MiB
+```
+
+The size limit is enforced while the stream is being consumed rather than relying only on a client-provided `Content-Length` value.
+
+---
+
+# Attachment Security
+
+Smart-X applies multiple controls before an uploaded attachment reaches persistent storage.
+
+These include:
+
+- Sensor profile ID validation
+- Attachment category validation
+- File-name validation
+- Maximum file-name length
+- Control-character rejection
+- File-extension allowlists
+- Media-type allowlists
+- Maximum attachment size
+- Path-separator rejection
+- Generated internal storage identifiers
+- Authenticated encryption
+
+User-provided file names are treated only as metadata.
+
+They are never used as physical filesystem paths.
+
+For example, an uploaded file named:
+
+```text
+gateway.log
+```
+
+may be stored internally using a generated identifier similar to:
+
+```text
+68b4a84e00a7421782048f672df94c63.payload
+```
+
+This prevents user-controlled filenames from defining storage locations.
+
+---
+
+# Attachment Encryption
+
+Attachment payloads are encrypted before being persisted to disk.
+
+Smart-X uses:
+
+```text
+AES-256-GCM
+```
+
+AES-GCM provides both:
+
+- Confidentiality
+- Authentication
+
+This means encrypted payloads cannot be read without the encryption key and modified ciphertext is detected during decryption.
+
+Smart-X uses chunk-based encryption rather than loading an entire attachment into one encryption buffer.
+
+Each encrypted chunk receives:
+
+- A unique nonce
+- AES-GCM ciphertext
+- An authentication tag
+- Authenticated associated data
+
+A final authenticated record is also written so that incomplete or truncated encrypted files can be detected.
+
+The resulting process is:
+
+```text
+Plaintext Stream
+      |
+      v
+64 KiB Chunk
+      |
+      v
+AES-256-GCM
+      |
+      ├── Ciphertext
+      └── Authentication Tag
+      |
+      v
+Encrypted Payload
+```
+
+Plaintext attachment payloads are not intentionally persisted by the backend.
+
+Attachment metadata is stored separately from the encrypted payload.
+
+---
+
+# Attachment Encryption Key
+
+The encryption key is intentionally excluded from source control.
+
+Smart-X expects a Base64-encoded 32-byte encryption key through:
+
+```text
+Attachments__EncryptionKeyBase64
+```
+
+## macOS / Linux
+
+Generate and configure a temporary development key:
+
+```bash
+export Attachments__EncryptionKeyBase64="$(openssl rand -base64 32)"
+```
+
+The variable applies to the current terminal session.
+
+## Windows PowerShell
+
+```powershell
+$bytes = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+$env:Attachments__EncryptionKeyBase64 = [Convert]::ToBase64String($bytes)
+```
+
+Never commit a production encryption key to:
+
+```text
+appsettings.json
+appsettings.Development.json
+.env
+GitHub
+```
+
+---
+
+# Attachment Storage
+
+The default encrypted attachment storage location is:
+
+```text
+src/SmartX.Api/App_Data/attachments
+```
+
+Runtime attachment storage is excluded from Git.
+
+Each sensor receives its own generated storage directory.
+
+The physical storage contains:
+
+```text
+<attachment-id>.payload
+<attachment-id>.metadata.json
+```
+
+The `.payload` file contains encrypted attachment content.
+
+The `.metadata.json` file contains non-payload information required to identify and retrieve the attachment.
+
+---
+
+# Attachment API
+
+## Upload Attachment
+
+```http
+POST /api/sensors/{sensorProfileId}/attachments?category={category}
+Content-Type: multipart/form-data
+```
+
+Valid categories are:
+
+```text
+Configuration
+DeploymentPhoto
+HardwareLog
+```
+
+Example using `curl`:
+
+```bash
+curl -k \
+  -F "file=@device.log;type=text/plain" \
+  "https://localhost:<PORT>/api/sensors/<SENSOR-ID>/attachments?category=HardwareLog"
+```
+
+---
+
+## List Sensor Attachments
+
+```http
+GET /api/sensors/{sensorProfileId}/attachments
+```
+
+This returns attachment metadata associated with the supplied sensor profile ID.
+
+---
+
+## Download Attachment
+
+```http
+GET /api/sensors/{sensorProfileId}/attachments/{attachmentId}
+```
+
+The encrypted payload is read from storage, authenticated, decrypted, and streamed back to the client.
+
+The plaintext file is not first recreated as a temporary file on disk.
+
+---
+
+# Technology Stack
+
+## Backend
 
 - C#
 - .NET 10
 - ASP.NET Core Web API
 - OpenAPI
 - xUnit
+- AES-256-GCM
 
-### Frontend
+## Frontend
 
 - React
 - TypeScript
@@ -224,7 +618,7 @@ Boolean telemetry is still supported through `TelemetryPacket<bool>`, but boolea
 - ESLint
 - Prettier
 
-### Development and Delivery
+## Development and Delivery
 
 - Visual Studio Code
 - Git
@@ -233,10 +627,11 @@ Boolean telemetry is still supported through `TelemetryPacket<bool>`, but boolea
 
 ---
 
-## Solution Structure
+# Solution Structure
 
 ```text
 Smart-X/
+
 ├── src/
 │   ├── SmartX.Domain/
 │   ├── SmartX.Contracts/
@@ -248,28 +643,80 @@ Smart-X/
 ├── tests/
 │   ├── SmartX.Domain.Tests/
 │   ├── SmartX.Application.Tests/
+│   ├── SmartX.Infrastructure.Tests/
 │   └── SmartX.Api.IntegrationTests/
 │
 ├── docs/
+│
 └── SmartX.sln
 ```
 
-### Projects
+## Projects
 
-- `SmartX.Domain` - Domain entities, value objects, telemetry models and business rules
-- `SmartX.Contracts` - API request and response contracts
-- `SmartX.Application` - Application services and use cases
-- `SmartX.Infrastructure` - Storage and infrastructure implementations
-- `SmartX.Api` - ASP.NET Core Web API
-- `SmartX.Client` - React and TypeScript frontend
-- `SmartX.Domain.Tests` - Domain unit tests
-- `SmartX.Application.Tests` - Application unit tests
-- `SmartX.Api.IntegrationTests` - API integration tests
-- `docs` - Research, diagrams and assessment evidence
+### `SmartX.Domain`
+
+Contains:
+
+- Domain entities
+- Value objects
+- Sensor models
+- Telemetry models
+- Historical telemetry processing
+- Deployment structures
+- Recursive validation
+- Domain rules
+
+### `SmartX.Contracts`
+
+Contains API request and response contracts shared across application boundaries.
+
+### `SmartX.Application`
+
+Contains:
+
+- Application services
+- Attachment models
+- Attachment validation
+- Storage abstractions
+- Application-level use cases
+
+### `SmartX.Infrastructure`
+
+Contains infrastructure-specific implementations including:
+
+- AES-256-GCM attachment encryption
+- Streaming encryption and decryption
+- Encrypted filesystem storage
+- Attachment metadata persistence
+
+### `SmartX.Api`
+
+Contains:
+
+- ASP.NET Core controllers
+- HTTP configuration
+- Dependency injection
+- Multipart streaming
+- API endpoints
+
+### `SmartX.Client`
+
+Contains the React and TypeScript frontend.
+
+### Test Projects
+
+```text
+SmartX.Domain.Tests
+SmartX.Application.Tests
+SmartX.Infrastructure.Tests
+SmartX.Api.IntegrationTests
+```
+
+The `docs` directory contains research, diagrams, and assessment evidence.
 
 ---
 
-## Prerequisites
+# Prerequisites
 
 Install the following before running Smart-X:
 
@@ -278,9 +725,11 @@ Install the following before running Smart-X:
 - npm
 - Git
 
+OpenSSL is useful for generating local development encryption keys on macOS and Linux.
+
 ---
 
-## Restore the .NET Solution
+# Restore the .NET Solution
 
 From the repository root:
 
@@ -290,7 +739,7 @@ dotnet restore SmartX.sln
 
 ---
 
-## Build the Backend
+# Build the Backend
 
 ```bash
 dotnet build SmartX.sln
@@ -306,7 +755,7 @@ dotnet build SmartX.sln \
 
 ---
 
-## Run Backend Tests
+# Run Backend Tests
 
 Run the complete automated test suite:
 
@@ -320,46 +769,70 @@ Run only the domain tests:
 dotnet test tests/SmartX.Domain.Tests/SmartX.Domain.Tests.csproj
 ```
 
-Run the Release test suite:
+Run only the application tests:
 
 ```bash
-dotnet test SmartX.sln \
-  --configuration Release \
-  --no-build
+dotnet test tests/SmartX.Application.Tests/SmartX.Application.Tests.csproj
+```
+
+Run only the infrastructure tests:
+
+```bash
+dotnet test tests/SmartX.Infrastructure.Tests/SmartX.Infrastructure.Tests.csproj
+```
+
+Run only the API integration tests:
+
+```bash
+dotnet test tests/SmartX.Api.IntegrationTests/SmartX.Api.IntegrationTests.csproj
 ```
 
 ---
 
-## Run the API
+# Run the API
 
-From the repository root:
+Attachment functionality requires an encryption key.
+
+On macOS or Linux:
+
+```bash
+export Attachments__EncryptionKeyBase64="$(openssl rand -base64 32)"
+```
+
+Then run:
 
 ```bash
 dotnet run --project src/SmartX.Api
 ```
 
-The API will start using the development configuration defined by the project.
+The API starts using the development configuration defined by the project.
 
 ---
 
-## Install Frontend Dependencies
+# Install Frontend Dependencies
 
 ```bash
 cd src/SmartX.Client
-npm install
+npm ci
 ```
 
-For a clean dependency installation using the existing lock file:
+For development environments where the lock file does not need to be strictly reproduced:
 
 ```bash
-npm ci
+npm install
 ```
 
 ---
 
-## Run the Frontend
+# Run the Frontend
 
-From `src/SmartX.Client`:
+From:
+
+```text
+src/SmartX.Client
+```
+
+run:
 
 ```bash
 npm run dev
@@ -369,31 +842,36 @@ Vite will start the React development server.
 
 ---
 
-## Frontend Quality Checks
+# Frontend Quality Checks
 
 From `src/SmartX.Client`:
 
 ```bash
-npm run format:check
+npm audit --audit-level=high
 npm run lint
+npm run format:check
 npm run build
 ```
 
 These commands verify:
 
-- Prettier formatting
+- Dependency security
 - ESLint rules
+- Prettier formatting
 - TypeScript compilation
 - Production Vite build
 
 ---
 
-## .NET Quality Checks
+# .NET Quality Checks
 
 From the repository root:
 
 ```bash
-dotnet restore SmartX.sln
+dotnet restore SmartX.sln \
+  -p:NuGetAudit=true \
+  -p:NuGetAuditMode=all \
+  -warnaserror:"NU1901;NU1902;NU1903;NU1904"
 
 dotnet format SmartX.sln \
   --verify-no-changes \
@@ -412,59 +890,106 @@ git diff --check
 
 ---
 
-## Automated Testing
+# Automated Testing
 
-Smart-X currently uses three automated test projects:
+Smart-X currently uses four dedicated automated test projects:
 
 ```text
 SmartX.Domain.Tests
 SmartX.Application.Tests
+SmartX.Infrastructure.Tests
 SmartX.Api.IntegrationTests
 ```
 
-The current solution contains:
+At the end of Issue #9, the complete solution contains:
 
 ```text
-63 tests passed
-0 tests failed
-0 tests skipped
+104 automated tests
 ```
 
-The test suite will continue to grow as new Smart-X functionality is implemented.
+The tests cover areas including:
+
+- Sensor profile validation
+- Device identifiers
+- Deployment locations
+- Generic telemetry
+- Numeric telemetry
+- Operator overloading
+- Historical telemetry batch processing
+- Array-to-collection conversion
+- Recursive deployment validation
+- Attachment validation
+- Attachment size limits
+- Path traversal prevention
+- AES encryption and decryption
+- Ciphertext tamper detection
+- Ciphertext truncation detection
+- Encrypted filesystem storage
+- Sensor-specific attachment metadata
+- Multipart attachment uploads
+- Attachment listing
+- Secure attachment downloads
+
+Run:
+
+```bash
+dotnet test SmartX.sln
+```
+
+to verify the current pass, failure, and skipped test totals.
 
 ---
 
-## Continuous Integration
+# Continuous Integration
 
-GitHub Actions is used to automatically validate changes pushed to the repository.
+GitHub Actions automatically validates changes pushed to the repository.
 
-The CI process helps ensure that changes do not break the existing Smart-X implementation before they are merged into the integration branch.
+The CI pipeline helps prevent regressions before feature branches are merged into the integration branch.
 
-Local formatting, build, and test checks are also performed before pull requests are merged.
+The project also performs local quality checks before pull requests are completed, including:
+
+- Dependency restore and audit
+- .NET formatting validation
+- Release build
+- Automated .NET tests
+- Frontend dependency audit
+- ESLint
+- Prettier
+- React production build
+- Git whitespace validation
 
 ---
 
-## Remaining Part 1 Work
+# Git Workflow
 
-Upcoming Smart-X features will extend the current foundation with:
+Development is completed using short-lived feature branches.
 
-- Sensor registration application services
-- Sensor registration API endpoints
-- Telemetry ingestion and processing
-- Generic telemetry collections
-- Optimised collection usage
-- Jagged or multidimensional telemetry arrays
-- Recursive deployment hierarchy validation
-- Device media and log attachments
-- AES encryption for uploaded files
+Example:
+
+```text
+feature/9-secure-sensor-attachments
+```
+
+Changes are committed in logical units and merged into the `dev` integration branch through pull requests.
+
+The `dev` branch is used to integrate completed features before final delivery.
+
+---
+
+# Remaining Part 1 Work
+
+The main remaining Part 1 work will extend the existing foundation with:
+
 - Dynamic anomaly engagement functionality
-- Additional API integration
+- Remaining application and API integration
 - React dashboard integration
-- Final testing and documentation
+- Final end-to-end testing
+- Final assessment documentation
+- Final Part 1 regression testing
 
 ---
 
-## Future Smart-X Functionality
+# Future Smart-X Functionality
 
 Later stages of the Portfolio of Evidence will build on the Part 1 foundation.
 
