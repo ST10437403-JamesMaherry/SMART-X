@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using SmartX.Application.Attachments;
 using SmartX.Application.Sensors;
+using SmartX.Application.Telemetry;
 using SmartX.Domain.Exceptions;
 
 namespace SmartX.Api.ExceptionHandling;
@@ -38,9 +39,10 @@ public sealed class ApiExceptionHandler : IExceptionHandler
     }
 
     /// <summary>
-    /// Maps known application failures to safe client-facing ProblemDetails.
-    /// Unexpected failures are logged and represented by a generic 500
-    /// response so implementation details are not exposed.
+    /// Maps known Smart-X failures to safe client-facing ProblemDetails.
+    ///
+    /// Unexpected failures are logged but their internal exception messages
+    /// are deliberately hidden from API clients.
     /// </summary>
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
@@ -50,8 +52,8 @@ public sealed class ApiExceptionHandler : IExceptionHandler
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(exception);
 
-        // A disconnected HTTP request should not be transformed into an
-        // application error response after the caller has already gone away.
+        // A disconnected request should not be transformed into another HTTP
+        // response after the caller has already abandoned the connection.
         if (exception is OperationCanceledException &&
             httpContext.RequestAborted.IsCancellationRequested)
         {
@@ -75,9 +77,11 @@ public sealed class ApiExceptionHandler : IExceptionHandler
             {
                 Status = mapping.StatusCode,
                 Title = mapping.Title,
-                Detail = mapping.ExposeExceptionMessage
-                    ? exception.Message
-                    : "An unexpected error occurred while processing the request.",
+                Detail =
+                    mapping.ExposeExceptionMessage
+                        ? exception.Message
+                        : "An unexpected error occurred while processing " +
+                          "the request.",
                 Instance = httpContext.Request.Path
             };
 
@@ -117,6 +121,12 @@ public sealed class ApiExceptionHandler : IExceptionHandler
                 new ExceptionMapping(
                     StatusCodes.Status400BadRequest,
                     "Invalid sensor request",
+                    true),
+
+            InvalidTelemetryRequestException =>
+                new ExceptionMapping(
+                    StatusCodes.Status400BadRequest,
+                    "Invalid telemetry request",
                     true),
 
             InvalidSensorAttachmentException =>

@@ -14,7 +14,6 @@ namespace SmartX.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/sensors")]
-[Produces("application/json")]
 public sealed class SensorsController : ControllerBase
 {
     private readonly SensorRegistrationService _registrationService;

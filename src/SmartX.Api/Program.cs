@@ -1,8 +1,12 @@
+using Microsoft.AspNetCore.Mvc;
+
 using SmartX.Api.ExceptionHandling;
 using SmartX.Application.Attachments;
 using SmartX.Application.Sensors;
+using SmartX.Application.Telemetry;
 using SmartX.Infrastructure.Attachments;
 using SmartX.Infrastructure.Sensors;
+using SmartX.Infrastructure.Telemetry;
 
 const string clientCorsPolicyName = "SmartXClient";
 
@@ -27,11 +31,66 @@ var attachmentStoragePath =
                 builder.Environment.ContentRootPath,
                 configuredAttachmentStoragePath));
 
-builder.Services.AddControllers();
+// -------------------------------------------------------------------------
+// MVC and automatic validation responses
+// -------------------------------------------------------------------------
+
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // [ApiController] automatically short-circuits requests when model
+        // binding fails. This includes malformed JSON, invalid JSON types,
+        // and other request-body conversion failures.
+        //
+        // Configure that automatic path explicitly so it follows the same
+        // RFC-style ProblemDetails contract as the rest of the Smart-X API.
+        options.InvalidModelStateResponseFactory =
+            context =>
+            {
+                var problemDetails =
+                    new ValidationProblemDetails(
+                        context.ModelState)
+                    {
+                        Status =
+                            StatusCodes.Status400BadRequest,
+
+                        Title =
+                            "Request validation failed",
+
+                        Detail =
+                            "The request body or one or more request " +
+                            "values are invalid.",
+
+                        Instance =
+                            context.HttpContext.Request.Path
+                    };
+
+                // A trace identifier allows validation responses to be
+                // correlated with server-side diagnostics without exposing
+                // internal implementation details.
+                problemDetails.Extensions["traceId"] =
+                    context.HttpContext.TraceIdentifier;
+
+                var result =
+                    new BadRequestObjectResult(
+                        problemDetails);
+
+                // Validation failures use the standard ProblemDetails media
+                // type rather than being returned as ordinary JSON.
+                result.ContentTypes.Add(
+                    "application/problem+json");
+
+                return result;
+            };
+    });
 
 builder.Services.AddOpenApi();
 
-// Central ProblemDetails support provides one consistent API error format.
+// -------------------------------------------------------------------------
+// API error handling
+// -------------------------------------------------------------------------
+
 builder.Services.AddProblemDetails();
 
 builder.Services.AddExceptionHandler<
@@ -41,18 +100,15 @@ builder.Services.AddSingleton<TimeProvider>(
     TimeProvider.System);
 
 // -------------------------------------------------------------------------
-// Sensor persistence and application services
+// Sensor persistence and Application services
 // -------------------------------------------------------------------------
 
-// Part 1 uses process-local sensor storage. The Application layer depends
-// only on ISensorRepository, allowing this implementation to be replaced
-// by database persistence in a later Smart-X stage.
+// Sensor state must survive between individual HTTP requests during the
+// lifetime of the Part 1 backend process.
 builder.Services.AddSingleton<
     ISensorRepository,
     InMemorySensorRepository>();
 
-// Application services are scoped to the HTTP request. This keeps their
-// lifecycle compatible with future scoped persistence implementations.
 builder.Services.AddScoped<
     SensorRegistrationService>();
 
@@ -60,12 +116,26 @@ builder.Services.AddScoped<
     SensorManagementService>();
 
 // -------------------------------------------------------------------------
+// Telemetry persistence and Application services
+// -------------------------------------------------------------------------
+
+// Telemetry remains process-local during Part 1. The repository abstraction
+// allows a database or distributed store to replace this implementation in a
+// later Smart-X phase without changing controllers or Application services.
+builder.Services.AddSingleton<
+    ITelemetryRepository,
+    InMemoryTelemetryRepository>();
+
+builder.Services.AddScoped<
+    SensorTelemetryService>();
+
+// -------------------------------------------------------------------------
 // Secure attachment infrastructure
 // -------------------------------------------------------------------------
 
 // Cryptographic infrastructure is resolved only when attachment
-// functionality is used. Unrelated endpoints therefore remain independent,
-// while attachment operations still require a configured encryption key.
+// functionality is used. Unrelated endpoints remain independent while
+// attachment operations still require a valid encryption key.
 builder.Services.AddSingleton<IAttachmentCipher>(
     _ => new ChunkedAesGcmAttachmentCipher(
         builder.Configuration[
@@ -91,8 +161,8 @@ builder.Services.AddCors(options =>
         clientCorsPolicyName,
         policy =>
         {
-            // An empty production origin list rejects cross-origin browser
-            // requests by default.
+            // Production remains closed to browser origins unless explicitly
+            // configured.
             if (allowedClientOrigins.Length > 0)
             {
                 policy
@@ -105,8 +175,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Exception handling must execute before application endpoints so errors
-// raised by Application or Domain services can become ProblemDetails.
+// Expected Application and Domain failures are translated centrally into
+// RFC-style ProblemDetails responses.
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

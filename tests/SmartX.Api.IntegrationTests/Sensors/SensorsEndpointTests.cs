@@ -459,16 +459,16 @@ public sealed class SensorsEndpointTests
     }
 
     [Fact]
-    public async Task Register_WhenJsonMalformed_ReturnsBadRequest()
+    public async Task Register_WhenJsonMalformed_ReturnsValidationProblemDetails()
     {
         using var content =
             new StringContent(
                 """
-                {
-                  "name": "Broken JSON",
-                  "deviceIdentifier":
-                }
-                """,
+            {
+              "name": "Broken JSON",
+              "deviceIdentifier":
+            }
+            """,
                 System.Text.Encoding.UTF8,
                 "application/json");
 
@@ -480,6 +480,27 @@ public sealed class SensorsEndpointTests
         Assert.Equal(
             HttpStatusCode.BadRequest,
             response.StatusCode);
+
+        Assert.Equal(
+            "application/problem+json",
+            response.Content.Headers.ContentType?.MediaType);
+
+        var problem =
+            await response.Content
+                .ReadFromJsonAsync<ValidationProblemDetails>();
+
+        Assert.NotNull(problem);
+
+        Assert.Equal(
+            StatusCodes.Status400BadRequest,
+            problem.Status);
+
+        Assert.Equal(
+            "Request validation failed",
+            problem.Title);
+
+        Assert.NotEmpty(
+            problem.Errors);
     }
 
     public void Dispose()
