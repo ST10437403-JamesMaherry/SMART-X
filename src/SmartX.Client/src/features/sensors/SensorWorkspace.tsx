@@ -2,17 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getApiErrorMessage } from '../../api/apiTypes';
 import { getSensors, type SensorResponse } from '../../api/sensorsApi';
+import TelemetryWorkspace from '../telemetry/TelemetryWorkspace';
 import SensorRegistrationForm from './SensorRegistrationForm';
 import SensorRegistry from './SensorRegistry';
 import './SensorWorkspace.css';
 
 /**
- * Owns the sensor collection and selected-sensor state for the complete Part 1
- * ingestion workspace.
+ * Owns the registered sensor collection and selected-sensor state for the
+ * complete Part 1 ingestion workspace.
  *
- * Telemetry and attachment functionality will be integrated at this level in
- * the next commits so that every feature works against the same sensor
- * selection.
+ * Sensor registration, telemetry and attachments deliberately share this
+ * selected sensor so the operator does not have to repeatedly choose the same
+ * device in separate disconnected feature areas.
  */
 function SensorWorkspace() {
   const [sensors, setSensors] = useState<readonly SensorResponse[]>([]);
@@ -37,8 +38,8 @@ function SensorWorkspace() {
 
       /*
        * Preserve the current sensor when possible. Otherwise select the
-       * first available sensor so the later telemetry/attachment workflows
-       * have a sensible initial context.
+       * first available sensor so dependent telemetry and attachment
+       * workflows receive an appropriate initial context.
        */
       setSelectedSensorId((currentSensorId) => {
         if (currentSensorId && response.some((sensor) => sensor.id === currentSensorId)) {
@@ -67,7 +68,7 @@ function SensorWorkspace() {
 
     /*
      * Defer the asynchronous load beyond the synchronous effect phase. This
-     * follows the same React hooks lint-safe pattern as the API health check.
+     * follows the React hooks lint-safe pattern used elsewhere in Smart-X.
      */
     const loadTimer = window.setTimeout(() => {
       void loadSensors(controller.signal);
@@ -94,29 +95,39 @@ function SensorWorkspace() {
     setRegistryState('ready');
   }
 
+  /**
+   * Resolves the currently selected sensor profile once so downstream
+   * features consume the same object and selection state.
+   */
+  const selectedSensor = sensors.find((sensor) => sensor.id === selectedSensorId) ?? null;
+
   return (
-    <section className="sensor-workspace" aria-labelledby="sensor-workspace-title">
-      <header className="sensor-workspace-heading">
-        <p className="sensor-workspace-label">SENSOR MANAGEMENT</p>
+    <>
+      <section className="sensor-workspace" aria-labelledby="sensor-workspace-title">
+        <header className="sensor-workspace-heading">
+          <p className="sensor-workspace-label">SENSOR MANAGEMENT</p>
 
-        <h2 id="sensor-workspace-title">Sensor registry</h2>
-      </header>
+          <h2 id="sensor-workspace-title">Sensor registry</h2>
+        </header>
 
-      <div className="sensor-workspace-grid">
-        <SensorRegistrationForm onRegistered={handleRegistered} />
+        <div className="sensor-workspace-grid">
+          <SensorRegistrationForm onRegistered={handleRegistered} />
 
-        <SensorRegistry
-          sensors={sensors}
-          selectedSensorId={selectedSensorId}
-          state={registryState}
-          errorMessage={registryError}
-          onSelect={setSelectedSensorId}
-          onRetry={() => {
-            void loadSensors();
-          }}
-        />
-      </div>
-    </section>
+          <SensorRegistry
+            sensors={sensors}
+            selectedSensorId={selectedSensorId}
+            state={registryState}
+            errorMessage={registryError}
+            onSelect={setSelectedSensorId}
+            onRetry={() => {
+              void loadSensors();
+            }}
+          />
+        </div>
+      </section>
+
+      <TelemetryWorkspace sensor={selectedSensor} />
+    </>
   );
 }
 

@@ -1,0 +1,396 @@
+/*
+ * ==========================================================================
+ * TELEMETRY WORKSPACE
+ * ==========================================================================
+ *
+ * Telemetry follows the same restrained Smart-X visual system as sensor
+ * registration: black surfaces, fine borders, text-only controls and no
+ * decorative dashboard cards.
+ */
+
+.telemetry-workspace {
+  max-width: 68rem;
+
+  margin-top: clamp(5rem, 10vw, 8rem);
+  padding-top: 2rem;
+
+  border-top: 1px solid var(--border);
+}
+
+.telemetry-workspace-heading {
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.telemetry-workspace-label {
+  margin: 0 0 0.8rem;
+
+  color: var(--accent);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.14em;
+}
+
+.telemetry-workspace-heading h2 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.telemetry-workspace-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(17rem, 0.8fr)
+    minmax(0, 1.2fr);
+
+  gap: clamp(2rem, 5vw, 4rem);
+}
+
+.telemetry-panel {
+  min-width: 0;
+}
+
+.telemetry-history {
+  padding-left: clamp(2rem, 5vw, 4rem);
+
+  border-left: 1px solid var(--border);
+}
+
+.telemetry-panel-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1.75rem;
+}
+
+.telemetry-panel-heading h3 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.telemetry-count {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+
+  letter-spacing: 0.08em;
+}
+
+/*
+ * ==========================================================================
+ * SELECTED SENSOR CONTEXT
+ * ==========================================================================
+ */
+
+.telemetry-sensor-context {
+  display: grid;
+  gap: 0.4rem;
+
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.telemetry-sensor-context strong {
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+
+  letter-spacing: -0.015em;
+}
+
+.telemetry-sensor-context span {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  overflow-wrap: anywhere;
+}
+
+/*
+ * ==========================================================================
+ * TELEMETRY FORM
+ * ==========================================================================
+ */
+
+.telemetry-form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.telemetry-field label {
+  display: block;
+
+  margin-bottom: 0.55rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.telemetry-field input,
+.telemetry-field select {
+  width: 100%;
+  min-height: 3rem;
+
+  padding: 0.7rem 0.8rem;
+
+  border: 1px solid var(--border);
+  border-radius: 2px;
+
+  color: var(--heading);
+  background: var(--background);
+
+  font-family: var(--font-interface);
+  font-size: 0.8rem;
+
+  transition: border-color 120ms ease;
+}
+
+.telemetry-field input:hover,
+.telemetry-field select:hover {
+  border-color: var(--border-strong);
+}
+
+.telemetry-field input:focus,
+.telemetry-field select:focus {
+  border-color: var(--accent);
+}
+
+.telemetry-field input[aria-invalid='true'],
+.telemetry-field select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.telemetry-field-error {
+  margin: 0.5rem 0 0;
+
+  color: var(--danger);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  line-height: 1.5;
+}
+
+.telemetry-form-footer {
+  margin-top: 0.5rem;
+}
+
+.telemetry-primary-action,
+.telemetry-secondary-action {
+  min-height: 2.75rem;
+
+  padding: 0.75rem 1rem;
+
+  border-radius: 2px;
+
+  font-family: var(--font-interface);
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.telemetry-primary-action {
+  border: 1px solid var(--heading);
+
+  color: var(--background);
+  background: var(--heading);
+}
+
+.telemetry-primary-action:hover:not(:disabled) {
+  background: var(--text);
+}
+
+.telemetry-primary-action:disabled {
+  border-color: var(--border);
+
+  color: var(--text-muted);
+  background: var(--surface);
+
+  cursor: wait;
+}
+
+.telemetry-secondary-action {
+  margin-top: 1rem;
+
+  border: 1px solid var(--border-strong);
+
+  color: var(--heading);
+  background: transparent;
+}
+
+.telemetry-secondary-action:hover {
+  border-color: var(--heading);
+}
+
+.telemetry-feedback {
+  margin: 1rem 0 0;
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+
+  line-height: 1.5;
+}
+
+.telemetry-feedback--success {
+  color: var(--success);
+}
+
+.telemetry-feedback--error {
+  color: var(--danger);
+}
+
+/*
+ * ==========================================================================
+ * RECENT TELEMETRY
+ * ==========================================================================
+ */
+
+.telemetry-empty-state,
+.telemetry-no-sensor {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+
+  line-height: 1.6;
+}
+
+.telemetry-empty-state p {
+  margin: 0;
+}
+
+.telemetry-table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+.telemetry-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+
+  text-align: left;
+}
+
+.telemetry-table th {
+  padding: 0 1rem 0.8rem 0;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-size: 0.62rem;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  white-space: nowrap;
+}
+
+.telemetry-table td {
+  padding: 1rem 1rem 1rem 0;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  white-space: nowrap;
+}
+
+.telemetry-table td:first-child {
+  color: var(--accent);
+}
+
+.telemetry-table .telemetry-value {
+  color: var(--heading);
+
+  font-weight: 700;
+}
+
+.telemetry-table time {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * ==========================================================================
+ * RESPONSIVE TELEMETRY WORKSPACE
+ * ==========================================================================
+ */
+
+@media (max-width: 900px) {
+  .telemetry-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-history {
+    padding-top: 2.5rem;
+    padding-left: 0;
+
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .telemetry-workspace {
+    margin-top: 4.5rem;
+  }
+
+  .telemetry-primary-action {
+    width: 100%;
+  }
+
+  /*
+   * The history table remains semantically a table while horizontal overflow
+   * is contained within its own region rather than affecting the whole page.
+   */
+  .telemetry-table {
+    min-width: 32rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .telemetry-field input,
+  .telemetry-field select {
+    transition: none;
+  }
+}
