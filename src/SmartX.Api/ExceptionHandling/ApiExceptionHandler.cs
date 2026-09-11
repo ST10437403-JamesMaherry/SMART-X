@@ -3,7 +3,9 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
+
 using SmartX.Application.Attachments;
+using SmartX.Application.Dashboard;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
 using SmartX.Domain.Exceptions;
@@ -133,6 +135,18 @@ public sealed class ApiExceptionHandler : IExceptionHandler
                 new ExceptionMapping(
                     StatusCodes.Status400BadRequest,
                     "Invalid sensor attachment",
+                    true),
+
+            DashboardIssueNotFoundException =>
+                new ExceptionMapping(
+                    StatusCodes.Status404NotFound,
+                    "Dashboard issue not found",
+                    true),
+
+            DashboardIssueOperationException =>
+                new ExceptionMapping(
+                    StatusCodes.Status409Conflict,
+                    "Dashboard issue state conflict",
                     true),
 
             DomainValidationException =>

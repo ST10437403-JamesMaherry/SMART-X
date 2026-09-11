@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
+using SmartX.Api.Dashboard;
 using SmartX.Application.Telemetry;
 using SmartX.Contracts.Telemetry;
 
@@ -11,20 +12,31 @@ namespace SmartX.Api.Controllers;
 ///
 /// HTTP concerns remain in this controller while sensor validation, generic
 /// packet construction and persistence orchestration remain in Application.
+///
+/// Successfully persisted telemetry is subsequently passed to the Adaptive
+/// Anomaly Spotlight coordinator so dashboard state can react dynamically.
 /// </summary>
 [ApiController]
 [Route("api/sensors/{sensorProfileId:guid}/telemetry")]
-public sealed class TelemetryController : ControllerBase
+public sealed class TelemetryController
+    : ControllerBase
 {
     private readonly SensorTelemetryService _telemetryService;
+    private readonly DashboardEventCoordinator _dashboardEvents;
 
     public TelemetryController(
-        SensorTelemetryService telemetryService)
+        SensorTelemetryService telemetryService,
+        DashboardEventCoordinator dashboardEvents)
     {
         _telemetryService =
             telemetryService ??
             throw new ArgumentNullException(
                 nameof(telemetryService));
+
+        _dashboardEvents =
+            dashboardEvents ??
+            throw new ArgumentNullException(
+                nameof(dashboardEvents));
     }
 
     /// <summary>
@@ -46,10 +58,19 @@ public sealed class TelemetryController : ControllerBase
         [FromBody] IngestTelemetryRequest request,
         CancellationToken cancellationToken)
     {
-        var result =
+        TelemetryReadingResponse result =
             await _telemetryService.IngestAsync(
                 sensorProfileId,
                 request,
+                cancellationToken);
+
+        /*
+         * Analysis runs only after the strongly typed packet has been
+         * validated and persisted successfully.
+         */
+        await _dashboardEvents
+            .AnalyzeTelemetryAsync(
+                sensorProfileId,
                 cancellationToken);
 
         return StatusCode(
@@ -77,11 +98,24 @@ public sealed class TelemetryController : ControllerBase
         [FromBody] IngestTelemetryBatchRequest request,
         CancellationToken cancellationToken)
     {
-        var result =
+        TelemetryBatchIngestionResponse result =
             await _telemetryService.IngestBatchAsync(
                 sensorProfileId,
                 request,
                 cancellationToken);
+
+        /*
+         * An entirely empty historical batch contains no connectivity or
+         * anomaly evidence. At least one accepted packet is required before
+         * operational-state and anomaly analysis is triggered.
+         */
+        if (result.AcceptedPacketCount > 0)
+        {
+            await _dashboardEvents
+                .AnalyzeTelemetryAsync(
+                    sensorProfileId,
+                    cancellationToken);
+        }
 
         return StatusCode(
             StatusCodes.Status201Created,
@@ -108,12 +142,13 @@ public sealed class TelemetryController : ControllerBase
             SensorTelemetryService.DefaultRecentTelemetryLimit,
         CancellationToken cancellationToken = default)
     {
-        var result =
+        IReadOnlyList<TelemetryReadingResponse> result =
             await _telemetryService.GetRecentAsync(
                 sensorProfileId,
                 limit,
                 cancellationToken);
 
-        return Ok(result);
+        return Ok(
+            result);
     }
 }

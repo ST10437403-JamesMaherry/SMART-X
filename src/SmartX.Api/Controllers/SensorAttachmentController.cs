@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 
+using SmartX.Api.Dashboard;
 using SmartX.Api.Filters;
 using SmartX.Application.Attachments;
 using SmartX.Contracts.Attachments;
@@ -25,14 +26,21 @@ public sealed class SensorAttachmentsController : ControllerBase
         (1024L * 1024L);
 
     private readonly RegisteredSensorAttachmentService _attachmentService;
+    private readonly DashboardEventCoordinator _dashboardEvents;
 
     public SensorAttachmentsController(
-        RegisteredSensorAttachmentService attachmentService)
+        RegisteredSensorAttachmentService attachmentService,
+        DashboardEventCoordinator dashboardEvents)
     {
         _attachmentService =
             attachmentService ??
             throw new ArgumentNullException(
                 nameof(attachmentService));
+
+        _dashboardEvents =
+            dashboardEvents ??
+            throw new ArgumentNullException(
+                nameof(dashboardEvents));
     }
 
     /// <summary>
@@ -48,6 +56,7 @@ public sealed class SensorAttachmentsController : ControllerBase
         [FromQuery] string? category,
         CancellationToken cancellationToken)
     {
+
         if (!TryParseCategory(
                 category,
                 out var attachmentCategory))
@@ -128,6 +137,23 @@ public sealed class SensorAttachmentsController : ControllerBase
                         section.Body,
                         cancellationToken:
                             cancellationToken);
+
+                /*
+ * Configuration evidence directly affects the Adaptive Anomaly
+ * Spotlight. Once a valid encrypted configuration file has been stored,
+ * re-evaluate the sensor's configuration issue before notifying clients.
+ *
+ * Deployment photos and hardware logs do not alter configuration health,
+ * so they do not trigger this analysis.
+ */
+                if (attachmentCategory ==
+                    SensorAttachmentCategory.Configuration)
+                {
+                    await _dashboardEvents
+                        .AnalyzeConfigurationAsync(
+                            sensorProfileId,
+                            cancellationToken);
+                }
 
                 return CreatedAtAction(
                     nameof(Download),
