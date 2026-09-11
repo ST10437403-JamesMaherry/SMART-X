@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
+using SmartX.Api.Dashboard;
 using SmartX.Application.Sensors;
 using SmartX.Contracts.Sensors;
 
@@ -14,14 +15,17 @@ namespace SmartX.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/sensors")]
-public sealed class SensorsController : ControllerBase
+public sealed class SensorsController
+    : ControllerBase
 {
     private readonly SensorRegistrationService _registrationService;
     private readonly SensorManagementService _managementService;
+    private readonly DashboardEventCoordinator _dashboardEvents;
 
     public SensorsController(
         SensorRegistrationService registrationService,
-        SensorManagementService managementService)
+        SensorManagementService managementService,
+        DashboardEventCoordinator dashboardEvents)
     {
         _registrationService =
             registrationService ??
@@ -32,6 +36,11 @@ public sealed class SensorsController : ControllerBase
             managementService ??
             throw new ArgumentNullException(
                 nameof(managementService));
+
+        _dashboardEvents =
+            dashboardEvents ??
+            throw new ArgumentNullException(
+                nameof(dashboardEvents));
     }
 
     /// <summary>
@@ -57,16 +66,22 @@ public sealed class SensorsController : ControllerBase
         [FromBody] RegisterSensorRequest request,
         CancellationToken cancellationToken)
     {
-        var sensor =
+        SensorResponse sensor =
             await _registrationService.RegisterAsync(
                 request,
+                cancellationToken);
+
+        await _dashboardEvents
+            .NotifySensorRegisteredAsync(
+                sensor.Id,
                 cancellationToken);
 
         return CreatedAtAction(
             nameof(GetById),
             new
             {
-                id = sensor.Id
+                id =
+                    sensor.Id
             },
             sensor);
     }
@@ -81,11 +96,12 @@ public sealed class SensorsController : ControllerBase
         IReadOnlyList<SensorResponse>>> GetAll(
         CancellationToken cancellationToken)
     {
-        var sensors =
+        IReadOnlyList<SensorResponse> sensors =
             await _managementService.GetAllAsync(
                 cancellationToken);
 
-        return Ok(sensors);
+        return Ok(
+            sensors);
     }
 
     /// <summary>
@@ -100,12 +116,13 @@ public sealed class SensorsController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
-        var sensor =
+        SensorResponse sensor =
             await _managementService.GetByIdAsync(
                 id,
                 cancellationToken);
 
-        return Ok(sensor);
+        return Ok(
+            sensor);
     }
 
     /// <summary>
@@ -126,12 +143,50 @@ public sealed class SensorsController : ControllerBase
         [FromBody] UpdateSensorRequest request,
         CancellationToken cancellationToken)
     {
-        var sensor =
+        SensorResponse sensor =
             await _managementService.UpdateAsync(
                 id,
                 request,
                 cancellationToken);
 
-        return Ok(sensor);
+        return Ok(
+            sensor);
+    }
+
+    /// <summary>
+    /// Simulates or reports a sensor operational-state transition.
+    ///
+    /// This endpoint is primarily used in Part 1 to demonstrate the Adaptive
+    /// Anomaly Spotlight without requiring physical IoT hardware.
+    /// </summary>
+    [HttpPatch("{id:guid}/status")]
+    [ProducesResponseType<SensorResponse>(
+        StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SensorResponse>> ChangeStatus(
+        Guid id,
+        [FromBody] ChangeSensorStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        SensorStatusChangeResult result =
+            await _managementService.ChangeStatusAsync(
+                id,
+                request,
+                cancellationToken);
+
+        if (result.Changed)
+        {
+            await _dashboardEvents
+                .AnalyzeSensorStatusAsync(
+                    id,
+                    result.PreviousStatus,
+                    cancellationToken);
+        }
+
+        return Ok(
+            result.Sensor);
     }
 }

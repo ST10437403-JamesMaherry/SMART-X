@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 
+using SmartX.Api.Dashboard;
 using SmartX.Api.ExceptionHandling;
 using SmartX.Application.Attachments;
+using SmartX.Application.Dashboard;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
+using SmartX.Domain.Dashboard;
 using SmartX.Infrastructure.Attachments;
 using SmartX.Infrastructure.Sensors;
 using SmartX.Infrastructure.Telemetry;
@@ -87,14 +90,17 @@ builder.Services
 
 builder.Services.AddOpenApi();
 
+// SignalR provides lightweight server-push notifications for the Adaptive
+// Anomaly Spotlight. HTTP remains the authoritative state-transfer channel.
+builder.Services.AddSignalR();
+
 // -------------------------------------------------------------------------
 // API error handling
 // -------------------------------------------------------------------------
 
 builder.Services.AddProblemDetails();
 
-builder.Services.AddExceptionHandler<
-    ApiExceptionHandler>();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 builder.Services.AddSingleton<TimeProvider>(
     TimeProvider.System);
@@ -105,15 +111,11 @@ builder.Services.AddSingleton<TimeProvider>(
 
 // Sensor state must survive between individual HTTP requests during the
 // lifetime of the Part 1 backend process.
-builder.Services.AddSingleton<
-    ISensorRepository,
-    InMemorySensorRepository>();
+builder.Services.AddSingleton<ISensorRepository, InMemorySensorRepository>();
 
-builder.Services.AddScoped<
-    SensorRegistrationService>();
+builder.Services.AddScoped<SensorRegistrationService>();
 
-builder.Services.AddScoped<
-    SensorManagementService>();
+builder.Services.AddScoped<SensorManagementService>();
 
 // -------------------------------------------------------------------------
 // Telemetry persistence and Application services
@@ -122,12 +124,9 @@ builder.Services.AddScoped<
 // Telemetry remains process-local during Part 1. The repository abstraction
 // allows a database or distributed store to replace this implementation in a
 // later Smart-X phase without changing controllers or Application services.
-builder.Services.AddSingleton<
-    ITelemetryRepository,
-    InMemoryTelemetryRepository>();
+builder.Services.AddSingleton<ITelemetryRepository, InMemoryTelemetryRepository>();
 
-builder.Services.AddScoped<
-    SensorTelemetryService>();
+builder.Services.AddScoped<SensorTelemetryService>();
 
 // -------------------------------------------------------------------------
 // Secure attachment infrastructure
@@ -138,23 +137,58 @@ builder.Services.AddScoped<
 // attachment operations still require a valid encryption key.
 builder.Services.AddSingleton<IAttachmentCipher>(
     _ => new ChunkedAesGcmAttachmentCipher(
-        builder.Configuration[
-            "Attachments:EncryptionKeyBase64"]));
+        builder.Configuration["Attachments:EncryptionKeyBase64"]));
 
+/*
+ * The anomaly analyzer also needs attachment metadata when evaluating sensor
+ * configuration health. Defer concrete store/cipher construction so ordinary
+ * health, sensor and telemetry requests do not unexpectedly require the
+ * attachment encryption key.
+ */
 builder.Services.AddSingleton<ISensorAttachmentStore>(
     serviceProvider =>
-        new FileSystemSensorAttachmentStore(
-            attachmentStoragePath,
-            serviceProvider
-                .GetRequiredService<IAttachmentCipher>()));
+        new DeferredSensorAttachmentStore(
+            () =>
+                new FileSystemSensorAttachmentStore(
+                    attachmentStoragePath,
+                    serviceProvider.GetRequiredService<IAttachmentCipher>())));
 
-builder.Services.AddScoped<
-    SensorAttachmentService>();
+builder.Services.AddScoped<SensorAttachmentService>();
 
 // Adds the cross-aggregate rule that attachment operations may target only
 // sensor profiles registered through ISensorRepository.
-builder.Services.AddScoped<
-    RegisteredSensorAttachmentService>();
+builder.Services.AddScoped<RegisteredSensorAttachmentService>();
+
+// -------------------------------------------------------------------------
+// Adaptive Anomaly Spotlight
+// -------------------------------------------------------------------------
+
+/*
+ * The dashboard collection represents process-wide operational state and must
+ * therefore be shared across HTTP requests and SignalR connections.
+ */
+builder.Services.AddSingleton<DashboardIssueCollection>();
+
+/*
+ * Policy values are immutable for the lifetime of the Part 1 application.
+ */
+builder.Services.AddSingleton<AdaptiveAnomalyPolicy>();
+
+/*
+ * Analysis owns thread-safe process-level recovery counters and coordinates
+ * singleton repository abstractions, so one shared analyzer instance is used.
+ */
+builder.Services.AddSingleton<AdaptiveAnomalyAnalysisService>();
+
+builder.Services.AddSingleton<DashboardIssueService>();
+
+builder.Services.AddSingleton<DashboardRealtimeNotifier>();
+
+/*
+ * The coordinator depends on scoped application services used by individual
+ * requests while delegating persistent issue state to singleton components.
+ */
+builder.Services.AddScoped<DashboardEventCoordinator>();
 
 // -------------------------------------------------------------------------
 // Browser client access
@@ -196,6 +230,12 @@ app.UseCors(clientCorsPolicyName);
 app.UseAuthorization();
 
 app.MapControllers();
+
+/*
+ * Connected React clients subscribe here for lightweight dashboard
+ * invalidation events and retrieve authoritative issue state over HTTP.
+ */
+app.MapHub<DashboardHub>("/hubs/dashboard");
 
 app.Run();
 

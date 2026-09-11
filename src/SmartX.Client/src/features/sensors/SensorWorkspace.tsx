@@ -4,17 +4,17 @@ import { getApiErrorMessage } from '../../api/apiTypes';
 import { getSensors, type SensorResponse } from '../../api/sensorsApi';
 import IngestionSectionNavigation from '../../components/IngestionSectionNavigation';
 import AttachmentWorkspace from '../attachments/AttachmentWorkspace';
+import AdaptiveAnomalySpotlight from '../dashboard/AdaptiveAnomalySpotlight';
 import TelemetryWorkspace from '../telemetry/TelemetryWorkspace';
 import SensorRegistrationForm from './SensorRegistrationForm';
 import SensorRegistry from './SensorRegistry';
 import './SensorWorkspace.css';
 
 /**
- * Owns the shared sensor state for the complete Part 1 ingestion module.
+ * Owns the shared sensor context for the complete Part 1 ingestion module.
  *
- * Sensor registration, telemetry and attachments intentionally depend on one
- * selected sensor. This avoids duplicating sensor selectors across separate
- * feature areas and keeps device context consistent throughout the interface.
+ * Sensor registration, telemetry, attachments and the Adaptive Anomaly
+ * Spotlight deliberately operate against one selected sensor.
  */
 function SensorWorkspace() {
   const [sensors, setSensors] = useState<readonly SensorResponse[]>([]);
@@ -26,52 +26,79 @@ function SensorWorkspace() {
   const [registryError, setRegistryError] = useState<string | null>(null);
 
   /**
-   * Retrieves the current Smart-X sensor registry.
+   * Applies a newly retrieved sensor collection while preserving the current
+   * sensor selection whenever that sensor still exists.
    */
-  const loadSensors = useCallback(async (signal?: AbortSignal): Promise<void> => {
-    setRegistryState('loading');
-    setRegistryError(null);
+  const applySensorCollection = useCallback((response: readonly SensorResponse[]): void => {
+    setSensors(response);
 
-    try {
-      const response = await getSensors(signal);
-
-      setSensors(response);
-
-      /*
-       * Preserve an existing selection when the sensor still exists.
-       *
-       * Otherwise select the first available sensor so telemetry and
-       * attachment features receive a useful initial context.
-       */
-      setSelectedSensorId((currentSensorId) => {
-        if (currentSensorId && response.some((sensor) => sensor.id === currentSensorId)) {
-          return currentSensorId;
-        }
-
-        return response[0]?.id ?? null;
-      });
-
-      setRegistryState('ready');
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        return;
+    setSelectedSensorId((currentSensorId) => {
+      if (currentSensorId && response.some((sensor) => sensor.id === currentSensorId)) {
+        return currentSensorId;
       }
 
-      setSensors([]);
-      setSelectedSensorId(null);
-      setRegistryState('error');
-
-      setRegistryError(
-        getApiErrorMessage(error, 'The Smart-X sensor registry could not be loaded.'),
-      );
-    }
+      return response[0]?.id ?? null;
+    });
   }, []);
+
+  /**
+   * Performs the primary sensor-registry load with visible loading and failure
+   * states.
+   */
+  const loadSensors = useCallback(
+    async (signal?: AbortSignal): Promise<void> => {
+      setRegistryState('loading');
+      setRegistryError(null);
+
+      try {
+        const response = await getSensors(signal);
+
+        applySensorCollection(response);
+
+        setRegistryState('ready');
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+
+        setSensors([]);
+        setSelectedSensorId(null);
+        setRegistryState('error');
+
+        setRegistryError(
+          getApiErrorMessage(error, 'The Smart-X sensor registry could not be loaded.'),
+        );
+      }
+    },
+    [applySensorCollection],
+  );
+
+  /**
+   * Performs a quiet background refresh after SignalR reports broader system
+   * changes.
+   *
+   * Existing sensor data remains on screen if this background request fails;
+   * the Adaptive Anomaly Spotlight separately communicates live connectivity.
+   */
+  const refreshSensors = useCallback(async (): Promise<void> => {
+    try {
+      const response = await getSensors();
+
+      applySensorCollection(response);
+    } catch {
+      /*
+       * Preserve the current usable registry during a temporary background
+       * refresh failure. Primary registry loading already has a dedicated
+       * visible error state.
+       */
+    }
+  }, [applySensorCollection]);
 
   useEffect(() => {
     const controller = new AbortController();
 
     /*
-     * Delay the initial asynchronous state-producing operation beyond React's
+     * Delay the asynchronous state-producing operation beyond React's
      * synchronous effect phase to satisfy the project's hooks lint policy.
      */
     const loadTimer = window.setTimeout(() => {
@@ -86,7 +113,7 @@ function SensorWorkspace() {
 
   /**
    * Inserts a newly registered sensor directly into the current registry and
-   * makes it the active device context.
+   * makes it the selected device.
    */
   function handleRegistered(sensor: SensorResponse): void {
     setSensors((currentSensors) => [
@@ -95,13 +122,46 @@ function SensorWorkspace() {
     ]);
 
     setSelectedSensorId(sensor.id);
+
     setRegistryError(null);
     setRegistryState('ready');
   }
 
   /**
-   * Resolve the complete selected sensor once so every downstream feature
-   * consumes the same profile.
+   * Applies a server-confirmed update to one existing sensor.
+   *
+   * This is used by the Part 1 state simulator before the asynchronous
+   * background registry refresh arrives.
+   */
+  function handleSensorUpdated(sensor: SensorResponse): void {
+    setSensors((currentSensors) => {
+      const exists = currentSensors.some((currentSensor) => currentSensor.id === sensor.id);
+
+      if (!exists) {
+        return [sensor, ...currentSensors];
+      }
+
+      return currentSensors.map((currentSensor) =>
+        currentSensor.id === sensor.id ? sensor : currentSensor,
+      );
+    });
+
+    setSelectedSensorId(sensor.id);
+  }
+
+  /**
+   * Refreshes sensor status in response to SignalR dashboard invalidations.
+   *
+   * This is particularly important when an Offline sensor automatically
+   * becomes Online after its first valid telemetry packet.
+   */
+  const handleRealtimeChange = useCallback((): void => {
+    void refreshSensors();
+  }, [refreshSensors]);
+
+  /**
+   * Resolve the complete selected sensor once so all downstream features
+   * consume the same server-backed profile.
    */
   const selectedSensor = sensors.find((sensor) => sensor.id === selectedSensorId) ?? null;
 
@@ -109,12 +169,16 @@ function SensorWorkspace() {
 
   return (
     <>
-      {/*
-       * Section navigation is only displayed once the registry is available.
-       * This avoids exposing links to workflows that cannot operate while the
-       * API or sensor registry is unavailable.
-       */}
       {isRegistryReady && <IngestionSectionNavigation />}
+
+      {isRegistryReady && (
+        <AdaptiveAnomalySpotlight
+          sensor={selectedSensor}
+          onSelectSensor={setSelectedSensorId}
+          onSensorUpdated={handleSensorUpdated}
+          onRealtimeChange={handleRealtimeChange}
+        />
+      )}
 
       <section
         id="sensor-management"
@@ -144,28 +208,19 @@ function SensorWorkspace() {
         </div>
       </section>
 
-      {/*
-       * Telemetry and attachment features depend on the registry. They are
-       * withheld while registry loading fails rather than displaying several
-       * misleading "no sensor" states at the same time.
-       */}
       {isRegistryReady && (
         <>
           <TelemetryWorkspace sensor={selectedSensor} />
 
           {/*
-           * Changing sensors remounts attachment state so a file selected for
-           * one physical device cannot accidentally carry into another.
+           * Remount attachment state whenever the physical device context
+           * changes so a pending file can never carry from one sensor into
+           * another.
            */}
           <AttachmentWorkspace key={selectedSensor?.id ?? 'no-sensor'} sensor={selectedSensor} />
         </>
       )}
 
-      {/*
-       * Announce device-context changes without adding visible interface
-       * clutter. This is especially useful when the sensor registry is
-       * operated entirely from the keyboard.
-       */}
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">
         {selectedSensor ? `Selected sensor: ${selectedSensor.name}.` : 'No sensor selected.'}
       </p>
