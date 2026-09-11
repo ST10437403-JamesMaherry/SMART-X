@@ -1,4 +1,4 @@
-import { getJson, postJson, putJson } from './apiClient';
+import { getJson, postJson, putJson, requestJson } from './apiClient';
 
 /**
  * Transport values supported by the Smart-X sensor identifier contract.
@@ -22,7 +22,7 @@ export const telemetryDataTypes = ['Float', 'Integer', 'Boolean'] as const;
 export type TelemetryDataType = (typeof telemetryDataTypes)[number];
 
 /**
- * Operational sensor states currently exposed by the domain model.
+ * Operational sensor states exposed by the Smart-X domain model.
  */
 export const sensorStatuses = [
   'Offline',
@@ -122,4 +122,28 @@ export function updateSensor(
     request,
     signal,
   );
+}
+
+/**
+ * Changes the simulated operational state of a registered sensor.
+ *
+ * Part 1 does not require physical ESP32 devices, so this endpoint provides a
+ * controlled way to demonstrate disconnects, warning states, faults,
+ * maintenance and recovery through the real backend domain model.
+ */
+export function changeSensorStatus(
+  sensorId: string,
+  status: SensorStatus,
+  signal?: AbortSignal,
+): Promise<SensorResponse> {
+  return requestJson<SensorResponse>(`/api/sensors/${encodeURIComponent(sensorId)}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      status,
+    }),
+    signal,
+  });
 }
