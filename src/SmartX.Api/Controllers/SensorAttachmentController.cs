@@ -10,7 +10,7 @@ namespace SmartX.Api.Controllers;
 
 /// <summary>
 /// Provides streaming upload, listing and download endpoints for files
-/// attached to Smart-X sensor profiles.
+/// attached to registered Smart-X sensor profiles.
 /// </summary>
 [ApiController]
 [Route("api/sensors/{sensorProfileId:guid}/attachments")]
@@ -18,25 +18,26 @@ public sealed class SensorAttachmentsController : ControllerBase
 {
     private const int MaxMultipartBoundaryLength = 128;
 
-    // Allow a small amount of multipart/header overhead above the actual
-    // application-level 10 MiB attachment limit.
+    // Allow multipart/header overhead above the application-level attachment
+    // limit while the streamed attachment itself remains limited to 10 MiB.
     private const long MaxMultipartBodySizeBytes =
         SensorAttachmentService.MaxAttachmentSizeBytes +
         (1024L * 1024L);
 
-    private readonly SensorAttachmentService _attachmentService;
+    private readonly RegisteredSensorAttachmentService _attachmentService;
 
     public SensorAttachmentsController(
-        SensorAttachmentService attachmentService)
+        RegisteredSensorAttachmentService attachmentService)
     {
-        _attachmentService = attachmentService;
+        _attachmentService =
+            attachmentService ??
+            throw new ArgumentNullException(
+                nameof(attachmentService));
     }
 
     /// <summary>
-    /// Uploads one encrypted attachment for a sensor profile.
-    ///
-    /// The multipart body is parsed directly from Request.Body instead of
-    /// using IFormFile, avoiding unnecessary whole-file buffering.
+    /// Streams one attachment from the multipart request directly into the
+    /// validated and encrypted Smart-X attachment pipeline.
     /// </summary>
     [HttpPost]
     [Consumes("multipart/form-data")]
@@ -52,8 +53,10 @@ public sealed class SensorAttachmentsController : ControllerBase
                 out var attachmentCategory))
         {
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Invalid attachment category",
+                statusCode:
+                    StatusCodes.Status400BadRequest,
+                title:
+                    "Invalid attachment category",
                 detail:
                     "The category must be Configuration, " +
                     "DeploymentPhoto or HardwareLog.");
@@ -84,7 +87,9 @@ public sealed class SensorAttachmentsController : ControllerBase
                 }
 
                 if (!string.Equals(
-                        contentDisposition.DispositionType.Value,
+                        contentDisposition
+                            .DispositionType
+                            .Value,
                         "form-data",
                         StringComparison.OrdinalIgnoreCase))
                 {
@@ -96,7 +101,8 @@ public sealed class SensorAttachmentsController : ControllerBase
                             contentDisposition.FileNameStar)
                         .Value;
 
-                if (string.IsNullOrWhiteSpace(fileName))
+                if (string.IsNullOrWhiteSpace(
+                        fileName))
                 {
                     fileName =
                         HeaderUtilities.RemoveQuotes(
@@ -104,9 +110,10 @@ public sealed class SensorAttachmentsController : ControllerBase
                             .Value;
                 }
 
-                // A form-data section without a filename is a normal
-                // field rather than a file section.
-                if (string.IsNullOrWhiteSpace(fileName))
+                // A multipart form-data section without a filename is an
+                // ordinary form field rather than an uploaded file.
+                if (string.IsNullOrWhiteSpace(
+                        fileName))
                 {
                     continue;
                 }
@@ -127,35 +134,44 @@ public sealed class SensorAttachmentsController : ControllerBase
                     new
                     {
                         sensorProfileId,
-                        attachmentId = metadata.Id
+                        attachmentId =
+                            metadata.Id
                     },
                     ToResponse(metadata));
             }
 
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Attachment file required",
+                statusCode:
+                    StatusCodes.Status400BadRequest,
+                title:
+                    "Attachment file required",
                 detail:
                     "The multipart request did not contain a file.");
         }
         catch (InvalidSensorAttachmentException exception)
         {
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Invalid sensor attachment",
-                detail: exception.Message);
+                statusCode:
+                    StatusCodes.Status400BadRequest,
+                title:
+                    "Invalid sensor attachment",
+                detail:
+                    exception.Message);
         }
         catch (InvalidDataException exception)
         {
             return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Malformed multipart attachment",
-                detail: exception.Message);
+                statusCode:
+                    StatusCodes.Status400BadRequest,
+                title:
+                    "Malformed multipart attachment",
+                detail:
+                    exception.Message);
         }
     }
 
     /// <summary>
-    /// Lists metadata for all attachments associated with a sensor.
+    /// Lists attachment metadata for a registered sensor.
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<
@@ -177,7 +193,8 @@ public sealed class SensorAttachmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Streams a decrypted attachment to the requesting client.
+    /// Streams decrypted attachment content to the requesting client without
+    /// writing a plaintext temporary file to persistent storage.
     /// </summary>
     [HttpGet("{attachmentId:guid}")]
     public async Task<IActionResult> Download(
@@ -207,12 +224,15 @@ public sealed class SensorAttachmentsController : ControllerBase
                 .ContentDispositionHeaderValue(
                     "attachment")
             {
-                FileNameStar = metadata.FileName
+                FileNameStar =
+                    metadata.FileName
             };
 
         Response.Headers.ContentDisposition =
             contentDisposition.ToString();
 
+        // Sensitive diagnostic/configuration files should not be cached by
+        // browsers or intermediary HTTP caches.
         Response.Headers["Cache-Control"] =
             "no-store";
 
@@ -248,7 +268,8 @@ public sealed class SensorAttachmentsController : ControllerBase
     private static string GetMultipartBoundary(
         string? contentType)
     {
-        if (string.IsNullOrWhiteSpace(contentType) ||
+        if (string.IsNullOrWhiteSpace(
+                contentType) ||
             !MediaTypeHeaderValue.TryParse(
                 contentType,
                 out var mediaType) ||
@@ -266,7 +287,8 @@ public sealed class SensorAttachmentsController : ControllerBase
                     mediaType.Boundary)
                 .Value;
 
-        if (string.IsNullOrWhiteSpace(boundary))
+        if (string.IsNullOrWhiteSpace(
+                boundary))
         {
             throw new InvalidSensorAttachmentException(
                 "The multipart request boundary is missing.");

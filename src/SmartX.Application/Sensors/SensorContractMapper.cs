@@ -7,19 +7,14 @@ namespace SmartX.Application.Sensors;
 /// Maps between transport-facing sensor contracts and validated Smart-X
 /// domain objects.
 ///
-/// Keeping mapping inside the application boundary prevents API contracts
-/// from leaking into the domain model and prevents domain entities from
+/// Keeping mapping inside the Application boundary prevents transport models
+/// from leaking into the Domain and prevents mutable Domain entities from
 /// being returned directly to external clients.
 /// </summary>
 public static class SensorContractMapper
 {
     /// <summary>
-    /// Converts an API registration request into a fully validated
-    /// <see cref="SensorProfile"/>.
-    ///
-    /// Domain constructors remain responsible for their own business rules.
-    /// This mapper validates transport-specific concepts such as textual
-    /// enum values and identifier-kind selection.
+    /// Converts an API registration request into a validated sensor profile.
     /// </summary>
     public static SensorProfile ToDomain(
         RegisterSensorRequest request,
@@ -27,22 +22,14 @@ public static class SensorContractMapper
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (request.DeploymentLocation is null)
-        {
-            throw new SensorRegistrationValidationException(
-                "A sensor deployment location is required.");
-        }
+        var deploymentLocation =
+            MapDeploymentLocation(
+                request.DeploymentLocation);
 
         var deviceIdentifier =
             MapDeviceIdentifier(
                 request.DeviceIdentifier,
                 request.IdentifierKind);
-
-        var deploymentLocation =
-            new DeploymentLocation(
-                request.DeploymentLocation.Facility,
-                request.DeploymentLocation.Zone,
-                request.DeploymentLocation.NodeId);
 
         var category =
             ParseDefinedEnum<SensorCategory>(
@@ -64,7 +51,45 @@ public static class SensorContractMapper
     }
 
     /// <summary>
-    /// Converts a validated domain sensor into the public API response model.
+    /// Applies an API update request to an existing sensor profile.
+    ///
+    /// All transport values are converted before the Domain entity is
+    /// mutated. SensorProfile.UpdateDetails then performs the final Domain
+    /// validation and guarantees that failed updates do not partially modify
+    /// the entity.
+    /// </summary>
+    public static void ApplyUpdate(
+        SensorProfile sensor,
+        UpdateSensorRequest request,
+        DateTimeOffset updatedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(sensor);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var deploymentLocation =
+            MapDeploymentLocation(
+                request.DeploymentLocation);
+
+        var category =
+            ParseDefinedEnum<SensorCategory>(
+                request.Category,
+                "sensor category");
+
+        var telemetryDataType =
+            ParseDefinedEnum<TelemetryDataType>(
+                request.TelemetryDataType,
+                "telemetry data type");
+
+        sensor.UpdateDetails(
+            request.Name,
+            deploymentLocation,
+            category,
+            telemetryDataType,
+            updatedAtUtc);
+    }
+
+    /// <summary>
+    /// Converts a validated Domain sensor into its public API response model.
     /// </summary>
     public static SensorResponse ToResponse(
         SensorProfile sensor)
@@ -87,6 +112,21 @@ public static class SensorContractMapper
             sensor.UpdatedAtUtc);
     }
 
+    private static DeploymentLocation MapDeploymentLocation(
+        SensorDeploymentLocationRequest? request)
+    {
+        if (request is null)
+        {
+            throw new SensorRegistrationValidationException(
+                "A sensor deployment location is required.");
+        }
+
+        return new DeploymentLocation(
+            request.Facility,
+            request.Zone,
+            request.NodeId);
+    }
+
     private static DeviceIdentifier MapDeviceIdentifier(
         string? value,
         string? identifierKind)
@@ -101,14 +141,14 @@ public static class SensorContractMapper
             identifierKind.Trim();
 
         if (normalisedKind.Equals(
-                "MacAddress",
+                nameof(DeviceIdentifierKind.MacAddress),
                 StringComparison.OrdinalIgnoreCase))
         {
             return DeviceIdentifier.FromMacAddress(value);
         }
 
         if (normalisedKind.Equals(
-                "UniqueIdentifier",
+                nameof(DeviceIdentifierKind.UniqueIdentifier),
                 StringComparison.OrdinalIgnoreCase))
         {
             return DeviceIdentifier.FromUniqueIdentifier(value);
@@ -138,7 +178,6 @@ public static class SensorContractMapper
                 ignoreCase: true,
                 out var parsed) ||
             !Enum.IsDefined(
-                typeof(TEnum),
                 parsed))
         {
             throw new SensorRegistrationValidationException(
