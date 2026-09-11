@@ -151,6 +151,11 @@ builder.Services.AddSingleton<ISensorAttachmentStore>(
 builder.Services.AddScoped<
     SensorAttachmentService>();
 
+// Adds the cross-aggregate rule that attachment operations may target only
+// sensor profiles registered through ISensorRepository.
+builder.Services.AddScoped<
+    RegisteredSensorAttachmentService>();
+
 // -------------------------------------------------------------------------
 // Browser client access
 // -------------------------------------------------------------------------

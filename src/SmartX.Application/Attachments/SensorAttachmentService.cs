@@ -5,7 +5,7 @@ namespace SmartX.Application.Attachments;
 /// sensor profiles.
 ///
 /// HTTP, filesystem and encryption concerns are intentionally kept outside
-/// this service so the application layer remains independently testable.
+/// this service so the Application layer remains independently testable.
 /// </summary>
 public sealed class SensorAttachmentService
 {
@@ -85,15 +85,23 @@ public sealed class SensorAttachmentService
         ISensorAttachmentStore store,
         TimeProvider timeProvider)
     {
-        _store = store
-            ?? throw new ArgumentNullException(nameof(store));
+        _store =
+            store ??
+            throw new ArgumentNullException(
+                nameof(store));
 
-        _timeProvider = timeProvider
-            ?? throw new ArgumentNullException(nameof(timeProvider));
+        _timeProvider =
+            timeProvider ??
+            throw new ArgumentNullException(
+                nameof(timeProvider));
     }
 
     /// <summary>
     /// Validates and persists a new sensor attachment.
+    ///
+    /// Only a small leading prefix is consumed for content inspection.
+    /// PrefixReplayingReadStream then restores those bytes to the downstream
+    /// pipeline so the complete attachment can remain fully streaming.
     /// </summary>
     public async Task<SensorAttachmentMetadata> UploadAsync(
         Guid sensorProfileId,
@@ -104,7 +112,8 @@ public sealed class SensorAttachmentService
         long? declaredLength = null,
         CancellationToken cancellationToken = default)
     {
-        ValidateSensorProfileId(sensorProfileId);
+        ValidateSensorProfileId(
+            sensorProfileId);
 
         if (!Enum.IsDefined(
                 typeof(SensorAttachmentCategory),
@@ -135,31 +144,61 @@ public sealed class SensorAttachmentService
                 $"{MaxAttachmentSizeBytes} bytes.");
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         var validatedFileName =
-            ValidateAndNormaliseFileName(fileName);
+            ValidateAndNormaliseFileName(
+                fileName);
 
         var validatedContentType =
-            ValidateAndNormaliseContentType(contentType);
+            ValidateAndNormaliseContentType(
+                contentType);
 
         ValidateCategoryRules(
             category,
             validatedFileName,
             validatedContentType);
 
-        var request = new SensorAttachmentWriteRequest(
-            sensorProfileId,
+        // Inspect only enough bytes to identify supported binary formats.
+        // The complete upload is never buffered in memory.
+        var prefix =
+            await ReadInspectionPrefixAsync(
+                content,
+                cancellationToken);
+
+        AttachmentSignatureValidator.Validate(
+            category,
             validatedFileName,
             validatedContentType,
-            category,
-            _timeProvider.GetUtcNow().ToUniversalTime());
+            prefix);
 
-        // The wrapper protects against clients that omit or falsify a
-        // Content-Length header. The store must consume this stream in
-        // order to persist the attachment.
-        using var limitedContent = new SizeLimitedReadStream(
-            content,
-            MaxAttachmentSizeBytes,
-            leaveOpen: true);
+        var request =
+            new SensorAttachmentWriteRequest(
+                sensorProfileId,
+                validatedFileName,
+                validatedContentType,
+                category,
+                _timeProvider
+                    .GetUtcNow()
+                    .ToUniversalTime());
+
+        // Signature inspection consumed the leading bytes from the original
+        // stream. Replay them so the encrypted persistent payload remains
+        // byte-for-byte equivalent to the original upload.
+        using var replayingContent =
+            new PrefixReplayingReadStream(
+                prefix,
+                content,
+                leaveOpen: true);
+
+        // This protects against omitted or falsified Content-Length values.
+        // Importantly, the limiter wraps the replay stream, meaning the bytes
+        // inspected above are still included in the actual size limit.
+        using var limitedContent =
+            new SizeLimitedReadStream(
+                replayingContent,
+                MaxAttachmentSizeBytes,
+                leaveOpen: true);
 
         return await _store.SaveAsync(
             request,
@@ -174,7 +213,8 @@ public sealed class SensorAttachmentService
         Guid sensorProfileId,
         CancellationToken cancellationToken = default)
     {
-        ValidateSensorProfileId(sensorProfileId);
+        ValidateSensorProfileId(
+            sensorProfileId);
 
         return _store.ListAsync(
             sensorProfileId,
@@ -189,8 +229,11 @@ public sealed class SensorAttachmentService
         Guid attachmentId,
         CancellationToken cancellationToken = default)
     {
-        ValidateSensorProfileId(sensorProfileId);
-        ValidateAttachmentId(attachmentId);
+        ValidateSensorProfileId(
+            sensorProfileId);
+
+        ValidateAttachmentId(
+            attachmentId);
 
         return _store.GetMetadataAsync(
             sensorProfileId,
@@ -208,8 +251,11 @@ public sealed class SensorAttachmentService
         Stream destination,
         CancellationToken cancellationToken = default)
     {
-        ValidateSensorProfileId(sensorProfileId);
-        ValidateAttachmentId(attachmentId);
+        ValidateSensorProfileId(
+            sensorProfileId);
+
+        ValidateAttachmentId(
+            attachmentId);
 
         ArgumentNullException.ThrowIfNull(destination);
 
@@ -225,6 +271,54 @@ public sealed class SensorAttachmentService
             attachmentId,
             destination,
             cancellationToken);
+    }
+
+    private static async Task<byte[]> ReadInspectionPrefixAsync(
+        Stream content,
+        CancellationToken cancellationToken)
+    {
+        var buffer =
+            new byte[
+                AttachmentSignatureValidator
+                    .InspectionPrefixLength];
+
+        var totalBytesRead =
+            0;
+
+        while (totalBytesRead <
+               buffer.Length)
+        {
+            var bytesRead =
+                await content.ReadAsync(
+                    buffer.AsMemory(
+                        totalBytesRead,
+                        buffer.Length -
+                        totalBytesRead),
+                    cancellationToken);
+
+            if (bytesRead == 0)
+            {
+                break;
+            }
+
+            totalBytesRead +=
+                bytesRead;
+        }
+
+        if (totalBytesRead == 0)
+        {
+            throw new InvalidSensorAttachmentException(
+                "Empty attachment files are not supported.");
+        }
+
+        if (totalBytesRead ==
+            buffer.Length)
+        {
+            return buffer;
+        }
+
+        return buffer[
+            ..totalBytesRead];
     }
 
     private static void ValidateSensorProfileId(
@@ -256,23 +350,26 @@ public sealed class SensorAttachmentService
                 "An attachment file name is required.");
         }
 
-        var normalised = fileName.Trim();
+        var normalised =
+            fileName.Trim();
 
-        if (normalised.Length > MaxFileNameLength)
+        if (normalised.Length >
+            MaxFileNameLength)
         {
             throw new InvalidSensorAttachmentException(
                 $"An attachment file name cannot exceed " +
                 $"{MaxFileNameLength} characters.");
         }
 
-        if (normalised.Any(char.IsControl))
+        if (normalised.Any(
+                char.IsControl))
         {
             throw new InvalidSensorAttachmentException(
                 "The attachment file name contains invalid control " +
                 "characters.");
         }
 
-        // Uploaded names are metadata only and must never be interpreted
+        // Uploaded names remain metadata only and must never be interpreted
         // as filesystem paths.
         if (normalised.Contains(
                 '/',
@@ -285,9 +382,12 @@ public sealed class SensorAttachmentService
                 "Attachment file names cannot contain path separators.");
         }
 
-        var extension = Path.GetExtension(normalised);
+        var extension =
+            Path.GetExtension(
+                normalised);
 
-        if (string.IsNullOrWhiteSpace(extension))
+        if (string.IsNullOrWhiteSpace(
+                extension))
         {
             throw new InvalidSensorAttachmentException(
                 "The attachment must include a supported file extension.");
@@ -299,20 +399,23 @@ public sealed class SensorAttachmentService
     private static string ValidateAndNormaliseContentType(
         string? contentType)
     {
-        if (string.IsNullOrWhiteSpace(contentType))
+        if (string.IsNullOrWhiteSpace(
+                contentType))
         {
             throw new InvalidSensorAttachmentException(
                 "An attachment content type is required.");
         }
 
-        // Parameters such as "; charset=utf-8" are not relevant to the
-        // media-type allowlist.
-        var mediaType = contentType
-            .Split(';', 2)[0]
-            .Trim()
-            .ToLowerInvariant();
+        var mediaType =
+            contentType
+                .Split(
+                    ';',
+                    2)[0]
+                .Trim()
+                .ToLowerInvariant();
 
-        if (string.IsNullOrWhiteSpace(mediaType))
+        if (string.IsNullOrWhiteSpace(
+                mediaType))
         {
             throw new InvalidSensorAttachmentException(
                 "The attachment content type is invalid.");
@@ -326,19 +429,23 @@ public sealed class SensorAttachmentService
         string fileName,
         string contentType)
     {
-        var rules = Rules[category];
+        var rules =
+            Rules[category];
 
         var extension =
-            Path.GetExtension(fileName);
+            Path.GetExtension(
+                fileName);
 
-        if (!rules.Extensions.Contains(extension))
+        if (!rules.Extensions.Contains(
+                extension))
         {
             throw new InvalidSensorAttachmentException(
                 $"Files with the '{extension}' extension are not " +
                 $"supported for {category} attachments.");
         }
 
-        if (!rules.ContentTypes.Contains(contentType))
+        if (!rules.ContentTypes.Contains(
+                contentType))
         {
             throw new InvalidSensorAttachmentException(
                 $"The content type '{contentType}' is not supported for " +
