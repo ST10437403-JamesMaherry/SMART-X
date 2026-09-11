@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getApiErrorMessage } from '../../api/apiTypes';
 import { getSensors, type SensorResponse } from '../../api/sensorsApi';
+import IngestionSectionNavigation from '../../components/IngestionSectionNavigation';
 import AttachmentWorkspace from '../attachments/AttachmentWorkspace';
 import TelemetryWorkspace from '../telemetry/TelemetryWorkspace';
 import SensorRegistrationForm from './SensorRegistrationForm';
@@ -9,12 +10,11 @@ import SensorRegistry from './SensorRegistry';
 import './SensorWorkspace.css';
 
 /**
- * Owns the registered sensor collection and selected-sensor state for the
- * complete Part 1 ingestion workspace.
+ * Owns the shared sensor state for the complete Part 1 ingestion module.
  *
- * Registration, telemetry and secure attachments deliberately share one
- * selected sensor so the operator does not have to repeatedly choose the same
- * device in disconnected feature areas.
+ * Sensor registration, telemetry and attachments intentionally depend on one
+ * selected sensor. This avoids duplicating sensor selectors across separate
+ * feature areas and keeps device context consistent throughout the interface.
  */
 function SensorWorkspace() {
   const [sensors, setSensors] = useState<readonly SensorResponse[]>([]);
@@ -26,7 +26,7 @@ function SensorWorkspace() {
   const [registryError, setRegistryError] = useState<string | null>(null);
 
   /**
-   * Retrieves the current sensor registry from the Smart-X API.
+   * Retrieves the current Smart-X sensor registry.
    */
   const loadSensors = useCallback(async (signal?: AbortSignal): Promise<void> => {
     setRegistryState('loading');
@@ -38,9 +38,10 @@ function SensorWorkspace() {
       setSensors(response);
 
       /*
-       * Preserve the current sensor when possible. Otherwise select the
-       * first available sensor so dependent telemetry and attachment
-       * workflows receive an appropriate initial context.
+       * Preserve an existing selection when the sensor still exists.
+       *
+       * Otherwise select the first available sensor so telemetry and
+       * attachment features receive a useful initial context.
        */
       setSelectedSensorId((currentSensorId) => {
         if (currentSensorId && response.some((sensor) => sensor.id === currentSensorId)) {
@@ -56,6 +57,8 @@ function SensorWorkspace() {
         return;
       }
 
+      setSensors([]);
+      setSelectedSensorId(null);
       setRegistryState('error');
 
       setRegistryError(
@@ -68,7 +71,8 @@ function SensorWorkspace() {
     const controller = new AbortController();
 
     /*
-     * Defer the asynchronous load beyond React's synchronous effect phase.
+     * Delay the initial asynchronous state-producing operation beyond React's
+     * synchronous effect phase to satisfy the project's hooks lint policy.
      */
     const loadTimer = window.setTimeout(() => {
       void loadSensors(controller.signal);
@@ -81,8 +85,8 @@ function SensorWorkspace() {
   }, [loadSensors]);
 
   /**
-   * Adds a newly registered sensor directly to the current registry and makes
-   * it the selected sensor.
+   * Inserts a newly registered sensor directly into the current registry and
+   * makes it the active device context.
    */
   function handleRegistered(sensor: SensorResponse): void {
     setSensors((currentSensors) => [
@@ -96,14 +100,28 @@ function SensorWorkspace() {
   }
 
   /**
-   * Resolves the currently selected sensor profile once so all dependent
-   * features consume the same object and selection state.
+   * Resolve the complete selected sensor once so every downstream feature
+   * consumes the same profile.
    */
   const selectedSensor = sensors.find((sensor) => sensor.id === selectedSensorId) ?? null;
 
+  const isRegistryReady = registryState === 'ready';
+
   return (
     <>
-      <section className="sensor-workspace" aria-labelledby="sensor-workspace-title">
+      {/*
+       * Section navigation is only displayed once the registry is available.
+       * This avoids exposing links to workflows that cannot operate while the
+       * API or sensor registry is unavailable.
+       */}
+      {isRegistryReady && <IngestionSectionNavigation />}
+
+      <section
+        id="sensor-management"
+        className="sensor-workspace"
+        aria-labelledby="sensor-workspace-title"
+        tabIndex={-1}
+      >
         <header className="sensor-workspace-heading">
           <p className="sensor-workspace-label">SENSOR MANAGEMENT</p>
 
@@ -126,14 +144,31 @@ function SensorWorkspace() {
         </div>
       </section>
 
-      <TelemetryWorkspace sensor={selectedSensor} />
+      {/*
+       * Telemetry and attachment features depend on the registry. They are
+       * withheld while registry loading fails rather than displaying several
+       * misleading "no sensor" states at the same time.
+       */}
+      {isRegistryReady && (
+        <>
+          <TelemetryWorkspace sensor={selectedSensor} />
+
+          {/*
+           * Changing sensors remounts attachment state so a file selected for
+           * one physical device cannot accidentally carry into another.
+           */}
+          <AttachmentWorkspace key={selectedSensor?.id ?? 'no-sensor'} sensor={selectedSensor} />
+        </>
+      )}
 
       {/*
-       * Remount the attachment workspace when sensor context changes. This
-       * guarantees that selected files and upload state can never accidentally
-       * carry across from one physical device to another.
+       * Announce device-context changes without adding visible interface
+       * clutter. This is especially useful when the sensor registry is
+       * operated entirely from the keyboard.
        */}
-      <AttachmentWorkspace key={selectedSensor?.id ?? 'no-sensor'} sensor={selectedSensor} />
+      <p className="visually-hidden" aria-live="polite" aria-atomic="true">
+        {selectedSensor ? `Selected sensor: ${selectedSensor.name}.` : 'No sensor selected.'}
+      </p>
     </>
   );
 }

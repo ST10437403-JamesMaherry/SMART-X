@@ -64,11 +64,6 @@ function AttachmentWorkspace({ sensor }: AttachmentWorkspaceProps) {
 
     const controller = new AbortController();
 
-    /*
-     * Defer the asynchronous state-producing request beyond the synchronous
-     * effect phase to remain compatible with the React hooks lint rules used
-     * throughout Smart-X.
-     */
     const loadTimer = window.setTimeout(() => {
       void loadAttachments(sensor.id, controller.signal);
     }, 0);
@@ -80,7 +75,7 @@ function AttachmentWorkspace({ sensor }: AttachmentWorkspaceProps) {
   }, [loadAttachments, sensor]);
 
   /**
-   * Inserts newly uploaded metadata directly into the current list.
+   * Inserts newly uploaded metadata directly into the current attachment list.
    */
   function handleUploaded(attachment: SensorAttachmentResponse): void {
     setAttachments((currentAttachments) => [
@@ -93,11 +88,7 @@ function AttachmentWorkspace({ sensor }: AttachmentWorkspaceProps) {
   }
 
   /**
-   * Downloads and decrypts one attachment through the Smart-X API.
-   *
-   * The backend streams decrypted content and the browser receives only the
-   * resulting response. The encrypted storage path and encryption key never
-   * enter the React application.
+   * Downloads one attachment through the backend decryption endpoint.
    */
   async function handleDownload(attachment: SensorAttachmentResponse): Promise<void> {
     if (!sensor) {
@@ -123,11 +114,6 @@ function AttachmentWorkspace({ sensor }: AttachmentWorkspaceProps) {
       anchor.click();
       anchor.remove();
 
-      /*
-       * Revoke after the browser has received the synthetic click. Delaying
-       * until the next task avoids revoking the URL before some browsers begin
-       * reading it.
-       */
       window.setTimeout(() => {
         URL.revokeObjectURL(downloadUrl);
       }, 0);
@@ -140,7 +126,7 @@ function AttachmentWorkspace({ sensor }: AttachmentWorkspaceProps) {
 
   if (!sensor) {
     return (
-      <section className="attachment-workspace">
+      <section id="attachment-management" className="attachment-workspace" tabIndex={-1}>
         <header className="attachment-workspace-heading">
           <p className="attachment-workspace-label">ATTACHMENTS</p>
 
@@ -153,7 +139,12 @@ function AttachmentWorkspace({ sensor }: AttachmentWorkspaceProps) {
   }
 
   return (
-    <section className="attachment-workspace" aria-labelledby="attachment-workspace-title">
+    <section
+      id="attachment-management"
+      className="attachment-workspace"
+      aria-labelledby="attachment-workspace-title"
+      tabIndex={-1}
+    >
       <header className="attachment-workspace-heading">
         <p className="attachment-workspace-label">ATTACHMENTS</p>
 

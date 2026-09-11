@@ -446,11 +446,136 @@
   }
 }
 
+/*
+ * ==========================================================================
+ * INGESTION SECTION NAVIGATION
+ * ==========================================================================
+ *
+ * This secondary navigation moves between the major workflows inside the
+ * active Part 1 module. It intentionally uses simple text and structural
+ * borders rather than tabs, icons or navigation cards.
+ */
+
+.ingestion-section-navigation {
+  max-width: 68rem;
+
+  margin-top: clamp(4rem, 8vw, 6rem);
+
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.ingestion-section-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.ingestion-section-list li {
+  min-width: 0;
+}
+
+.ingestion-section-list li:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.ingestion-section-list a {
+  display: flex;
+  align-items: center;
+
+  min-height: 3.5rem;
+
+  padding: 0.8rem 1rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.67rem;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  transition:
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.ingestion-section-list a:hover {
+  color: var(--heading);
+  background: var(--surface);
+}
+
+.ingestion-section-list a:focus-visible {
+  position: relative;
+  z-index: 1;
+
+  outline-offset: -2px;
+}
+
+/*
+ * When section navigation is present, reduce the normal gap before the sensor
+ * workspace so the navigation and first workflow read as one structure.
+ */
+.ingestion-section-navigation + .sensor-workspace {
+  margin-top: clamp(3rem, 6vw, 5rem);
+}
+
+/*
+ * Native hash links target these workflow sections.
+ *
+ * Scroll margin keeps the section heading away from the top browser edge and
+ * tabIndex=-1 allows accessibility focus to be moved to the section target.
+ */
+#sensor-management,
+#telemetry-management,
+#attachment-management {
+  scroll-margin-top: 2rem;
+}
+
+#sensor-management:focus-visible,
+#telemetry-management:focus-visible,
+#attachment-management:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 0.75rem;
+}
+
+/*
+ * ==========================================================================
+ * RESPONSIVE SECTION NAVIGATION
+ * ==========================================================================
+ */
+
+@media (max-width: 560px) {
+  .ingestion-section-navigation {
+    margin-top: 3.5rem;
+  }
+
+  .ingestion-section-list a {
+    justify-content: center;
+
+    min-height: 3.25rem;
+
+    padding-inline: 0.5rem;
+
+    font-size: 0.61rem;
+  }
+
+  .ingestion-section-navigation + .sensor-workspace {
+    margin-top: 3rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sensor-field input,
   .sensor-field select,
   .sensor-primary-action,
-  .sensor-row {
+  .sensor-row,
+  .ingestion-section-list a {
     transition: none;
   }
 }

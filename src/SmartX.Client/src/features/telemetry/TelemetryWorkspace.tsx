@@ -13,17 +13,15 @@ interface TelemetryWorkspaceProps {
 }
 
 /**
- * Maximum number of recent readings shown by the Part 1 client.
- *
- * The backend accepts recent-history limits from 1 to 100 and defaults to 50.
+ * Maximum number of recent telemetry readings shown in the Part 1 client.
  */
 const recentTelemetryLimit = 50;
 
 /**
  * Owns recent telemetry state for the currently selected Smart-X sensor.
  *
- * Individual readings and historical batches share this workspace so accepted
- * data immediately appears in one ordered history view.
+ * Individual readings and historical jagged batches share this workspace so
+ * accepted packets immediately feed one authoritative recent-history view.
  */
 function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
   const [readings, setReadings] = useState<readonly TelemetryReadingResponse[]>([]);
@@ -33,7 +31,7 @@ function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
   const [historyError, setHistoryError] = useState<string | null>(null);
 
   /**
-   * Loads recent telemetry for one registered sensor.
+   * Retrieves recent telemetry for one sensor.
    */
   const loadTelemetry = useCallback(
     async (sensorId: string, signal?: AbortSignal): Promise<void> => {
@@ -66,10 +64,6 @@ function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
 
     const controller = new AbortController();
 
-    /*
-     * Defer the asynchronous state-producing operation until after React's
-     * synchronous effect phase to remain compatible with hooks lint rules.
-     */
     const loadTimer = window.setTimeout(() => {
       void loadTelemetry(sensor.id, controller.signal);
     }, 0);
@@ -81,8 +75,7 @@ function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
   }, [loadTelemetry, sensor]);
 
   /**
-   * Adds one API-confirmed reading directly to the current history without
-   * requiring another network request.
+   * Adds one API-confirmed telemetry packet directly to visible history.
    */
   function handleTelemetryAccepted(reading: TelemetryReadingResponse): void {
     setReadings((currentReadings) => {
@@ -96,9 +89,8 @@ function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
   }
 
   /**
-   * Batch ingestion returns a processing summary instead of each individual
-   * reading, so the authoritative recent-history endpoint is refreshed after
-   * a successful batch.
+   * Historical batch submission returns aggregate information rather than the
+   * individual packets, so refresh from the authoritative API afterwards.
    */
   function handleBatchAccepted(): void {
     if (!sensor) {
@@ -110,7 +102,7 @@ function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
 
   if (!sensor) {
     return (
-      <section className="telemetry-workspace">
+      <section id="telemetry-management" className="telemetry-workspace" tabIndex={-1}>
         <header className="telemetry-workspace-heading">
           <p className="telemetry-workspace-label">TELEMETRY</p>
 
@@ -123,7 +115,12 @@ function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
   }
 
   return (
-    <section className="telemetry-workspace" aria-labelledby="telemetry-workspace-title">
+    <section
+      id="telemetry-management"
+      className="telemetry-workspace"
+      aria-labelledby="telemetry-workspace-title"
+      tabIndex={-1}
+    >
       <header className="telemetry-workspace-heading">
         <p className="telemetry-workspace-label">TELEMETRY</p>
 
@@ -144,11 +141,6 @@ function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
         />
       </div>
 
-      {/*
-       * Using the selected sensor ID as a React key resets the editable batch
-       * state when the operator changes sensors without requiring another
-       * state-resetting effect.
-       */}
       <TelemetryBatchSimulator
         key={sensor.id}
         sensor={sensor}
