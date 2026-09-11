@@ -5,10 +5,9 @@ import { routes } from '../routing/routes';
 /**
  * Displays the three permanent architectural pillars of Smart-X.
  *
- * Only the Part 1 ingestion module is currently routable. The Part 2 and
- * final PoE modules remain visible so that the application architecture is
- * clear, but their controls are intentionally disabled until those features
- * are implemented.
+ * Part 1 exposes only the Sensor Data Ingestion and Telemetry route.
+ * Future modules remain visible and keyboard discoverable while being marked
+ * semantically unavailable until their corresponding PoE phases.
  */
 function PillarNavigation() {
   return (
@@ -37,26 +36,42 @@ function PillarNavigation() {
           <button
             className="pillar-control pillar-control--disabled"
             type="button"
-            disabled
-            aria-label="Real-Time Command Stream and History. Unavailable until Part 2."
+            aria-disabled="true"
+            aria-describedby="command-module-description"
           >
             <span className="pillar-title">Real-Time Command Stream and History</span>
 
             <span className="pillar-state">Part 2</span>
           </button>
+
+          {/*
+           * The visible "Part 2" label keeps the interface minimal while this
+           * fuller explanation is available to assistive technologies.
+           */}
+          <span id="command-module-description" className="visually-hidden">
+            This module is unavailable in Part 1 and will be implemented in Part 2.
+          </span>
         </li>
 
         <li className="pillar-item">
           <button
             className="pillar-control pillar-control--disabled"
             type="button"
-            disabled
-            aria-label="Network Topology and Mesh Routing. Unavailable until the final PoE."
+            aria-disabled="true"
+            aria-describedby="topology-module-description"
           >
             <span className="pillar-title">Network Topology and Mesh Routing</span>
 
             <span className="pillar-state">Final PoE</span>
           </button>
+
+          {/*
+           * The future availability explanation remains accessible without
+           * adding unnecessary visible copy to the interface.
+           */}
+          <span id="topology-module-description" className="visually-hidden">
+            This module is unavailable in Part 1 and will be implemented in the final PoE.
+          </span>
         </li>
       </ul>
     </nav>

@@ -8,15 +8,24 @@ interface ApplicationShellProps {
 }
 
 /**
- * Provides the shared structural shell used by Smart-X pages.
+ * Provides the permanent structural shell used across Smart-X.
  *
- * Keeping the application header and page container in one component prevents
- * individual feature pages from duplicating layout markup as the Part 1,
- * Part 2 and final PoE interfaces grow.
+ * Centralising the header and main content region prevents duplicated layout
+ * markup and ensures that accessibility behaviour remains consistent as new
+ * PoE modules are introduced.
  */
 function ApplicationShell({ children }: ApplicationShellProps) {
   return (
     <div className="app-shell">
+      {/*
+       * The skip link is visually hidden until focused. This allows keyboard
+       * and assistive-technology users to bypass repeated navigation without
+       * adding visual clutter to the normal interface.
+       */}
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+
       <div className="page-container">
         <header className="site-header">
           <Link className="wordmark" to={routes.home} aria-label="Smart-X home">
@@ -24,7 +33,9 @@ function ApplicationShell({ children }: ApplicationShellProps) {
           </Link>
         </header>
 
-        <main className="page-content">{children}</main>
+        <main id="main-content" className="page-content">
+          {children}
+        </main>
       </div>
     </div>
   );
