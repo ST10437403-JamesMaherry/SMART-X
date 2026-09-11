@@ -1,41 +1,32 @@
-import { Link } from 'react-router-dom';
-
-import { routes } from '../routing/routes';
+import ApplicationShell from '../components/ApplicationShell';
+import PillarNavigation from '../components/PillarNavigation';
 
 /**
- * Provides the Part 1 entry point for Smart-X sensor ingestion functionality.
+ * Provides the permanent Part 1 route for sensor ingestion functionality.
  *
- * Sensor registration, telemetry simulation and secure attachments will be
- * introduced in their dedicated issues. This route currently establishes the
- * permanent module page within the application's navigation structure.
+ * Sensor registration, telemetry simulation and secure attachment management
+ * are added by their dedicated frontend issues. This page currently
+ * establishes the active module route and navigation state.
  */
 function IngestionPage() {
   return (
-    <div className="app-shell">
-      <div className="page-container">
-        <header className="site-header">
-          <Link className="wordmark" to={routes.home} aria-label="Smart-X home">
-            SMART-X
-          </Link>
-        </header>
+    <ApplicationShell>
+      <section className="page-intro module-heading" aria-labelledby="page-title">
+        <p className="eyebrow">PART 1 / ACTIVE</p>
 
-        <main className="page-content">
-          <section className="page-intro module-heading" aria-labelledby="page-title">
-            <p className="eyebrow">PART 1 / ACTIVE</p>
+        <h1 className="page-title" id="page-title">
+          Sensor Data
+          <br />
+          Ingestion
+        </h1>
 
-            <h1 className="page-title" id="page-title">
-              Sensor Data
-              <br />
-              Ingestion
-            </h1>
+        <p className="page-description">
+          Register sensors, submit telemetry and manage device attachments.
+        </p>
+      </section>
 
-            <p className="page-description">
-              Register sensors, submit telemetry and manage device attachments.
-            </p>
-          </section>
-        </main>
-      </div>
-    </div>
+      <PillarNavigation />
+    </ApplicationShell>
   );
 }
 

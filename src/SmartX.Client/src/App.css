@@ -3,9 +3,9 @@
  * SMART-X PAGE SHELL
  * ==========================================================================
  *
- * The interface intentionally avoids decorative cards and excessive UI
- * chrome. Hierarchy is created using typography, spacing and thin structural
- * lines instead.
+ * Smart-X intentionally uses a restrained technical interface. Hierarchy is
+ * created through typography, whitespace and structural borders rather than
+ * decorative cards, gradients, shadows or visual effects.
  */
 
 .app-shell {
@@ -30,7 +30,6 @@
 .site-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
 
   height: 5rem;
 
@@ -45,6 +44,8 @@
   font-weight: 700;
 
   letter-spacing: 0.12em;
+
+  transition: color 120ms ease;
 }
 
 .wordmark:hover {
@@ -113,17 +114,137 @@
 
 /*
  * ==========================================================================
- * API STATUS
+ * THREE-PILLAR NAVIGATION
  * ==========================================================================
  *
- * Status information is presented as part of the page rather than inside a
- * floating or rounded dashboard card.
+ * The architectural modules are displayed as simple structural rows instead
+ * of dashboard cards. This keeps the interface minimal while still clearly
+ * communicating active, available and future functionality.
+ */
+
+.pillar-navigation {
+  max-width: 58rem;
+
+  margin-top: clamp(4.5rem, 9vw, 7rem);
+}
+
+.pillar-list {
+  margin: 0;
+  padding: 0;
+
+  border-top: 1px solid var(--border);
+
+  list-style: none;
+}
+
+.pillar-item {
+  border-bottom: 1px solid var(--border);
+}
+
+/*
+ * Links and disabled controls share the same dimensions so the three
+ * architectural pillars remain visually consistent.
+ */
+.pillar-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2rem;
+
+  width: 100%;
+  min-height: 5.25rem;
+
+  padding: 1.4rem 0;
+
+  border: 0;
+  border-radius: 0;
+
+  color: var(--heading);
+  background: transparent;
+
+  text-align: left;
+}
+
+/*
+ * Only the implemented Part 1 route is interactive.
+ */
+a.pillar-control {
+  cursor: pointer;
+
+  transition:
+    color 120ms ease,
+    padding-left 120ms ease;
+}
+
+a.pillar-control:hover {
+  color: var(--accent);
+}
+
+.pillar-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.2vw, 1.45rem);
+  font-weight: 400;
+
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.pillar-state {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.1em;
+
+  text-transform: uppercase;
+}
+
+/*
+ * React Router applies this state only while the user is inside the
+ * implemented Part 1 ingestion route.
+ *
+ * The left rule and spacing provide an obvious active-page state without
+ * requiring icons, filled backgrounds or large colour blocks.
+ */
+.pillar-control--active {
+  padding-left: 1rem;
+
+  border-left: 2px solid var(--accent);
+
+  color: var(--heading);
+}
+
+.pillar-control--active .pillar-state {
+  color: var(--accent);
+}
+
+/*
+ * Native disabled buttons provide clear browser and accessibility semantics.
+ * Their appearance communicates future availability without pretending that
+ * the modules are currently interactive.
+ */
+.pillar-control--disabled {
+  color: #666666;
+
+  cursor: not-allowed;
+}
+
+.pillar-control--disabled .pillar-state {
+  color: #555555;
+}
+
+/*
+ * ==========================================================================
+ * API STATUS
+ * ==========================================================================
  */
 
 .system-status {
   max-width: 48rem;
 
-  margin-top: clamp(5rem, 10vw, 8rem);
+  margin-top: clamp(4rem, 8vw, 6rem);
   padding: 1.75rem 0;
 
   border-top: 1px solid var(--border);
@@ -140,6 +261,7 @@
   font-weight: 700;
 
   letter-spacing: 0.14em;
+
   text-transform: uppercase;
 }
 
@@ -163,15 +285,15 @@
 
   color: var(--text-muted);
 
+  font-family: var(--font-interface);
   font-size: 0.8rem;
+
   line-height: 1.7;
 }
 
 /*
- * The status state is communicated through restrained text colour rather than
- * decorative glowing dots or large coloured panels.
+ * Colour supplements the written status labels rather than replacing them.
  */
-
 .system-status--checking .status-label {
   color: var(--warning);
 }
@@ -225,7 +347,7 @@
 
 /*
  * ==========================================================================
- * INGESTION PAGE
+ * INGESTION MODULE
  * ==========================================================================
  */
 
@@ -235,6 +357,32 @@
 
 .module-heading .page-title {
   font-size: clamp(3rem, 7vw, 6rem);
+}
+
+/*
+ * ==========================================================================
+ * ACCESSIBILITY
+ * ==========================================================================
+ */
+
+/*
+ * Visually hidden content remains available to assistive technologies.
+ */
+.visually-hidden {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  padding: 0;
+  margin: -1px;
+
+  overflow: hidden;
+
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+
+  border: 0;
 }
 
 /*
@@ -260,8 +408,25 @@
     font-size: clamp(3rem, 16vw, 4.75rem);
   }
 
-  .system-status {
+  .pillar-navigation {
     margin-top: 4.5rem;
+  }
+
+  .pillar-control {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+
+    min-height: 0;
+
+    padding: 1.35rem 0;
+  }
+
+  .pillar-control--active {
+    padding-left: 1rem;
+  }
+
+  .system-status {
+    margin-top: 4rem;
   }
 }
 
@@ -282,13 +447,18 @@
     margin-top: 1.5rem;
   }
 
+  .pillar-navigation {
+    margin-top: 3.75rem;
+  }
+
   .system-status {
     margin-top: 3.75rem;
   }
 }
 
 /*
- * Respect reduced-motion preferences.
+ * Remove non-essential transition behaviour when reduced motion has been
+ * requested at operating-system level.
  */
 @media (prefers-reduced-motion: reduce) {
   *,
