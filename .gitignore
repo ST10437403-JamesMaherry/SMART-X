@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Smart-X encrypted runtime attachment storage
+src/SmartX.Api/App_Data/
