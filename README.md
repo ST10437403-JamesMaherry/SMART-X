@@ -96,6 +96,15 @@ The project currently includes:
 - AES-256-GCM authenticated encryption
 - Encrypted filesystem storage
 - Comprehensive automated testing
+- Sensor registration application service
+- Sensor repository abstraction
+- Atomic duplicate device-identifier detection contract
+- API-to-domain sensor registration mapping
+- Domain-to-API sensor response mapping
+- Asynchronous sensor registration
+- Cancellation-token propagation
+- Backend sensor registration validation
+- Application-layer sensor registration unit tests
 
 ---
 
@@ -127,6 +136,40 @@ Facility
 ```
 
 ---
+
+# Sensor Registration Application Service
+
+Smart-X includes an application-layer workflow for registering sensor profiles.
+
+Incoming registration contracts contain:
+
+- Sensor name
+- Device identifier
+- Device identifier kind
+- Deployment location
+- Sensor category
+- Telemetry data type
+
+The application layer maps this transport data into the existing validated domain objects before persistence.
+
+The registration workflow is:
+
+```text
+RegisterSensorRequest
+        |
+        v
+SensorContractMapper
+        |
+        v
+SensorProfile
+        |
+        v
+SensorRegistrationService
+        |
+        v
+ISensorRepository
+
+ ---
 
 # Generic Telemetry
 
