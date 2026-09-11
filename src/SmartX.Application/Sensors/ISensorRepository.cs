@@ -3,26 +3,47 @@ using SmartX.Domain.Sensors;
 namespace SmartX.Application.Sensors;
 
 /// <summary>
-/// Defines persistence operations required by sensor registration.
+/// Defines persistence operations required by Smart-X sensor application
+/// services.
 ///
-/// Concrete storage technology is deliberately hidden from the application
-/// layer. A later implementation may use an in-memory dictionary, relational
-/// database or another persistence mechanism without changing registration
-/// business logic.
+/// The Application layer depends only on this abstraction. Infrastructure
+/// is therefore free to use in-memory storage, a relational database or
+/// another persistence technology without changing the business workflow.
 /// </summary>
 public interface ISensorRepository
 {
     /// <summary>
     /// Attempts to add a sensor profile atomically.
     ///
-    /// Returns false when another sensor with the same normalised device
-    /// identifier already exists.
-    ///
-    /// The atomic contract avoids a check-then-insert race where concurrent
-    /// registrations could both observe that an identifier was available
-    /// before attempting to persist it.
+    /// Returns false when another sensor already uses the same normalised
+    /// device identifier.
     /// </summary>
     Task<bool> TryAddAsync(
+        SensorProfile sensor,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns all currently registered sensor profiles.
+    /// </summary>
+    Task<IReadOnlyList<SensorProfile>> GetAllAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a sensor profile by its internal Smart-X identifier.
+    ///
+    /// Returns null when the sensor does not exist.
+    /// </summary>
+    Task<SensorProfile?> GetByIdAsync(
+        Guid sensorProfileId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Persists changes to an existing sensor profile.
+    ///
+    /// Returns false when the sensor no longer exists.
+    /// Device identifiers remain immutable.
+    /// </summary>
+    Task<bool> UpdateAsync(
         SensorProfile sensor,
         CancellationToken cancellationToken = default);
 }

@@ -4,6 +4,13 @@ using SmartX.Domain.Sensors;
 
 namespace SmartX.Application.Tests.Sensors;
 
+/// <summary>
+/// Verifies translation between transport-facing sensor contracts and the
+/// validated Smart-X domain model.
+///
+/// These tests protect the architectural boundary between SmartX.Contracts
+/// and SmartX.Domain while ensuring transport values are mapped safely.
+/// </summary>
 public sealed class SensorContractMapperTests
 {
     private static readonly DateTimeOffset CreatedAt =
@@ -282,6 +289,127 @@ public sealed class SensorContractMapperTests
         Assert.Equal(
             sensor.UpdatedAtUtc,
             response.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public void ApplyUpdate_WhenValid_UpdatesMutableDomainProperties()
+    {
+        var sensor =
+            SensorProfile.Create(
+                "Original Sensor",
+                DeviceIdentifier.FromMacAddress(
+                    "AA:BB:CC:DD:EE:10"),
+                new DeploymentLocation(
+                    "Facility A",
+                    "Zone 1",
+                    "Node 1"),
+                SensorCategory.Environmental,
+                TelemetryDataType.Float,
+                CreatedAt);
+
+        var request =
+            new UpdateSensorRequest(
+                "Updated Sensor",
+                new SensorDeploymentLocationRequest(
+                    "Facility B",
+                    "Zone 2",
+                    "Node 9"),
+                SensorCategory.PowerConsumption.ToString(),
+                TelemetryDataType.Integer.ToString());
+
+        var updateTime =
+            CreatedAt.AddHours(1);
+
+        SensorContractMapper.ApplyUpdate(
+            sensor,
+            request,
+            updateTime);
+
+        Assert.Equal(
+            "Updated Sensor",
+            sensor.Name);
+
+        Assert.Equal(
+            "Facility B",
+            sensor.DeploymentLocation.Facility);
+
+        Assert.Equal(
+            "Zone 2",
+            sensor.DeploymentLocation.Zone);
+
+        Assert.Equal(
+            "Node 9",
+            sensor.DeploymentLocation.NodeId);
+
+        Assert.Equal(
+            SensorCategory.PowerConsumption,
+            sensor.Category);
+
+        Assert.Equal(
+            TelemetryDataType.Integer,
+            sensor.DataType);
+
+        Assert.Equal(
+            updateTime.ToUniversalTime(),
+            sensor.UpdatedAtUtc);
+
+        // Physical device identity must remain immutable during profile
+        // updates.
+        Assert.Equal(
+            "AA:BB:CC:DD:EE:10",
+            sensor.DeviceIdentifier.Value);
+    }
+
+    [Fact]
+    public void ApplyUpdate_WhenInvalidCategory_DoesNotMutateSensor()
+    {
+        var sensor =
+            SensorProfile.Create(
+                "Original Sensor",
+                DeviceIdentifier.FromMacAddress(
+                    "AA:BB:CC:DD:EE:11"),
+                new DeploymentLocation(
+                    "Facility A",
+                    "Zone 1",
+                    "Node 1"),
+                SensorCategory.Environmental,
+                TelemetryDataType.Float,
+                CreatedAt);
+
+        var request =
+            new UpdateSensorRequest(
+                "Should Not Be Applied",
+                new SensorDeploymentLocationRequest(
+                    "Facility B",
+                    "Zone 2",
+                    "Node 2"),
+                "InvalidCategory",
+                TelemetryDataType.Integer.ToString());
+
+        Assert.Throws<
+            SensorRegistrationValidationException>(
+            () => SensorContractMapper.ApplyUpdate(
+                sensor,
+                request,
+                CreatedAt.AddHours(1)));
+
+        // Mapping and validation must complete before SensorProfile is
+        // mutated, preventing partially applied updates.
+        Assert.Equal(
+            "Original Sensor",
+            sensor.Name);
+
+        Assert.Equal(
+            "Facility A",
+            sensor.DeploymentLocation.Facility);
+
+        Assert.Equal(
+            SensorCategory.Environmental,
+            sensor.Category);
+
+        Assert.Equal(
+            TelemetryDataType.Float,
+            sensor.DataType);
     }
 
     private static RegisterSensorRequest CreateValidRequest(

@@ -346,5 +346,34 @@ public sealed class SensorRegistrationServiceTests
             return Task.FromResult(
                 TryAddResult);
         }
+
+        public Task<IReadOnlyList<SensorProfile>> GetAllAsync(
+        CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return Task.FromResult<IReadOnlyList<SensorProfile>>(
+                Array.Empty<SensorProfile>());
+        }
+
+        public Task<SensorProfile?> GetByIdAsync(
+            Guid sensorProfileId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return Task.FromResult<SensorProfile?>(null);
+        }
+
+        public Task<bool> UpdateAsync(
+            SensorProfile sensor,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(sensor);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return Task.FromResult(false);
+        }
     }
 }
