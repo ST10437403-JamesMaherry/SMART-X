@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getApiErrorMessage } from '../../api/apiTypes';
 import { getSensors, type SensorResponse } from '../../api/sensorsApi';
+import AttachmentWorkspace from '../attachments/AttachmentWorkspace';
 import TelemetryWorkspace from '../telemetry/TelemetryWorkspace';
 import SensorRegistrationForm from './SensorRegistrationForm';
 import SensorRegistry from './SensorRegistry';
@@ -11,9 +12,9 @@ import './SensorWorkspace.css';
  * Owns the registered sensor collection and selected-sensor state for the
  * complete Part 1 ingestion workspace.
  *
- * Sensor registration, telemetry and attachments deliberately share this
+ * Registration, telemetry and secure attachments deliberately share one
  * selected sensor so the operator does not have to repeatedly choose the same
- * device in separate disconnected feature areas.
+ * device in disconnected feature areas.
  */
 function SensorWorkspace() {
   const [sensors, setSensors] = useState<readonly SensorResponse[]>([]);
@@ -67,8 +68,7 @@ function SensorWorkspace() {
     const controller = new AbortController();
 
     /*
-     * Defer the asynchronous load beyond the synchronous effect phase. This
-     * follows the React hooks lint-safe pattern used elsewhere in Smart-X.
+     * Defer the asynchronous load beyond React's synchronous effect phase.
      */
     const loadTimer = window.setTimeout(() => {
       void loadSensors(controller.signal);
@@ -96,7 +96,7 @@ function SensorWorkspace() {
   }
 
   /**
-   * Resolves the currently selected sensor profile once so downstream
+   * Resolves the currently selected sensor profile once so all dependent
    * features consume the same object and selection state.
    */
   const selectedSensor = sensors.find((sensor) => sensor.id === selectedSensorId) ?? null;
@@ -127,6 +127,13 @@ function SensorWorkspace() {
       </section>
 
       <TelemetryWorkspace sensor={selectedSensor} />
+
+      {/*
+       * Remount the attachment workspace when sensor context changes. This
+       * guarantees that selected files and upload state can never accidentally
+       * carry across from one physical device to another.
+       */}
+      <AttachmentWorkspace key={selectedSensor?.id ?? 'no-sensor'} sensor={selectedSensor} />
     </>
   );
 }
