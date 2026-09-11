@@ -1,33 +1,171 @@
+import { ApiError, type ApiProblemDetails } from './apiTypes';
+
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 
 /**
- * The API base URL can be overridden through Vite environment configuration.
+ * Base address of the Smart-X API.
+ *
+ * Local development defaults to the HTTPS launch profile while deployments
+ * can provide a different endpoint through VITE_API_BASE_URL.
  */
 export const apiBaseUrl = (configuredApiBaseUrl || 'https://localhost:7095').replace(/\/+$/, '');
 
 /**
- * Performs a typed JSON GET request against the Smart-X API.
+ * Normalises relative Smart-X API paths and rejects accidental empty
+ * requests before they reach the browser networking layer.
  */
-export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+function normalizePath(path: string): string {
+  const normalizedPath = path.trim();
 
-  const response = await fetch(`${apiBaseUrl}${normalizedPath}`, {
+  if (!normalizedPath) {
+    throw new Error('A Smart-X API path is required.');
+  }
+
+  return normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+}
+
+/**
+ * Creates an absolute API URL from a Smart-X relative route.
+ *
+ * Exporting this helper allows APIs that require lower-level browser
+ * networking primitives, such as XMLHttpRequest upload progress, to use the
+ * exact same base URL configuration as ordinary fetch requests.
+ */
+export function buildApiUrl(path: string): string {
+  return `${apiBaseUrl}${normalizePath(path)}`;
+}
+
+/**
+ * Attempts to read an ASP.NET Core ProblemDetails response.
+ *
+ * Not every failed HTTP response is guaranteed to contain JSON, so parsing
+ * failures are deliberately converted to undefined rather than masking the
+ * original HTTP status.
+ */
+async function readProblemDetails(response: Response): Promise<ApiProblemDetails | undefined> {
+  const contentType = response.headers.get('content-type');
+
+  if (!contentType?.includes('json')) {
+    return undefined;
+  }
+
+  try {
+    return (await response.json()) as ApiProblemDetails;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Converts an unsuccessful HTTP response into the standard Smart-X client
+ * error representation.
+ */
+export async function createApiError(response: Response): Promise<ApiError> {
+  const problemDetails = await readProblemDetails(response);
+
+  return new ApiError(response.status, problemDetails);
+}
+
+/**
+ * Performs the common Smart-X fetch operation.
+ *
+ * This method handles base URL resolution and ProblemDetails conversion while
+ * leaving response-body handling to the more specialised helper methods.
+ */
+export async function request(path: string, options: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(options.headers);
+
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json');
+  }
+
+  const response = await fetch(buildApiUrl(path), {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  return response;
+}
+
+/**
+ * Performs a Smart-X API request that expects a JSON response body.
+ */
+export async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const response = await request(path, options);
+  const contentType = response.headers.get('content-type');
+
+  if (!contentType?.includes('application/json')) {
+    throw new Error('The Smart-X API returned an unexpected response format.');
+  }
+
+  return (await response.json()) as T;
+}
+
+/**
+ * Performs a typed JSON GET request.
+ */
+export function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+  return requestJson<T>(path, {
+    method: 'GET',
+    signal,
+  });
+}
+
+/**
+ * Performs a typed JSON POST request.
+ */
+export function postJson<TResponse, TRequest>(
+  path: string,
+  body: TRequest,
+  signal?: AbortSignal,
+): Promise<TResponse> {
+  return requestJson<TResponse>(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+}
+
+/**
+ * Performs a typed JSON PUT request.
+ */
+export function putJson<TResponse, TRequest>(
+  path: string,
+  body: TRequest,
+  signal?: AbortSignal,
+): Promise<TResponse> {
+  return requestJson<TResponse>(path, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+}
+
+/**
+ * Retrieves binary content from the Smart-X API.
+ *
+ * Attachment payloads are decrypted by the backend and streamed directly to
+ * this response. The browser therefore receives only the requested plaintext
+ * download and never needs access to encryption infrastructure.
+ */
+export async function getBlob(path: string, signal?: AbortSignal): Promise<Blob> {
+  const response = await request(path, {
     method: 'GET',
     headers: {
-      Accept: 'application/json',
+      Accept: '*/*',
     },
     signal,
   });
 
-  if (!response.ok) {
-    throw new Error(`API request failed with status ${response.status}.`);
-  }
-
-  const contentType = response.headers.get('content-type');
-
-  if (!contentType?.includes('application/json')) {
-    throw new Error('The API returned an unexpected response format.');
-  }
-
-  return (await response.json()) as T;
+  return response.blob();
 }

@@ -1,12 +1,13 @@
 import ApplicationShell from '../components/ApplicationShell';
 import PillarNavigation from '../components/PillarNavigation';
+import SensorWorkspace from '../features/sensors/SensorWorkspace';
 
 /**
- * Provides the permanent Part 1 route for sensor ingestion functionality.
+ * Hosts the active Part 1 Sensor Data Ingestion and Telemetry module.
  *
- * Sensor registration, telemetry simulation and secure attachment management
- * are added by their dedicated frontend issues. This page currently
- * establishes the active module route and navigation state.
+ * The page preserves the permanent Smart-X architectural navigation while the
+ * ingestion workspace progressively gains sensor registration, telemetry and
+ * attachment functionality.
  */
 function IngestionPage() {
   return (
@@ -26,6 +27,8 @@ function IngestionPage() {
       </section>
 
       <PillarNavigation />
+
+      <SensorWorkspace />
     </ApplicationShell>
   );
 }
