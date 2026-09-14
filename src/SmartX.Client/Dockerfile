@@ -49,5 +49,10 @@ COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=5 \
-    CMD wget --quiet --tries=1 --spider http://127.0.0.1:8080/healthz || exit 1
+# Use BusyBox-compatible wget arguments because the Alpine-based
+# nginx-unprivileged image does not provide GNU wget.
+#
+# Docker itself controls the retry count through --retries. wget therefore
+# only needs to perform one bounded request against the local Nginx endpoint.
+HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=5 \
+    CMD wget -q -T 2 --spider http://127.0.0.1:8080/healthz || exit 1
