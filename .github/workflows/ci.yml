@@ -369,21 +369,39 @@ jobs:
 
           echo "SignalR negotiation succeeded."
 
-      # The API is intentionally private. All browser communication should pass
-      # through the Nginx application boundary instead of exposing a second
-      # public API port.
+      # The API may expose port 8080 to other containers on the private
+      # Compose network, but it must never publish that port to the host.
+      #
+      # Do not use `docker compose port` for this assertion. Some Docker
+      # Compose versions represent an exposed-but-unpublished port as ":0",
+      # which produces a false positive.
+      #
+      # HostConfig.PortBindings is Docker's authoritative configuration for
+      # host port publication.
       - name: Verify API remains private
         shell: bash
         run: |
-          published_api_port="$(docker compose port api 8080 2>/dev/null || true)"
+          api_container="$(docker compose ps --quiet api)"
 
-          if [[ -n "${published_api_port}" ]]; then
-            echo "API container unexpectedly exposes a host port:"
-            echo "${published_api_port}"
+          if [[ -z "${api_container}" ]]; then
+            echo "Smart-X API container could not be resolved."
+            docker compose ps
             exit 1
           fi
 
-          echo "API has no direct host port mapping."
+          published_binding="$(
+            docker inspect \
+              --format '{{with (index .HostConfig.PortBindings "8080/tcp")}}{{json .}}{{end}}' \
+              "${api_container}"
+          )"
+
+          if [[ -n "${published_binding}" && "${published_binding}" != "null" ]]; then
+            echo "API container unexpectedly publishes port 8080 to the host:"
+            echo "${published_binding}"
+            exit 1
+          fi
+
+          echo "API port 8080 is available only inside the Docker network."
 
       # Display the final service state as useful CI evidence.
       - name: Display Docker service state
