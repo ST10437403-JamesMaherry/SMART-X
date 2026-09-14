@@ -1,170 +1,206 @@
 # Smart-X IoT Mesh Ecosystem
 
-**PROG7312 Portfolio of Evidence - 2026**
+**PROG7312 Portfolio of Evidence — Part 1: Data Ingestion and Validation Gateway**
 
-Smart-X is a simulated Internet of Things (IoT) telemetry management ecosystem developed for the PROG7312 Portfolio of Evidence.
+Smart-X is a simulated Internet of Things (IoT) management ecosystem for registering distributed sensors, ingesting strongly typed telemetry, processing historical telemetry batches, detecting operational anomalies, and securely attaching device configuration, deployment, and log files.
 
-Part 1 implements the **Smart-X Data Ingestion and Validation Gateway**. The backend can register sensors, validate and ingest strongly typed telemetry, process historical telemetry batches, validate recursive deployment structures, and securely store sensor-related configuration files, deployment photographs, and hardware logs.
+Part 1 is implemented as a **React + TypeScript client** communicating asynchronously with a **.NET 10 ASP.NET Core Web API**.
 
-The project uses a layered .NET 10 architecture with a React + TypeScript client so that later PoE stages can extend the same foundation with real-time command processing, anomaly management, device history, and IoT mesh-network routing.
-
----
-
-## Student Information
-
-- **Student:** James Maherry
-- **Student Number:** ST10437403
-- **Module:** Programming 3B
-- **Module Code:** PROG7312
+> **Part 1 status:** feature-complete. Final fresh-clone, release, manual demonstration, backup, and submission checks are performed.
 
 ---
 
-## Part 1 Status
+## Student and Module Information
 
-### Backend
-
-The Part 1 backend implementation is complete for the current sensor, telemetry, deployment, and attachment requirements.
-
-Implemented functionality includes:
-
-- Sensor registration
-- Sensor listing and lookup
-- Sensor profile updates
-- MAC address and custom identifier validation
-- Atomic duplicate device-identifier protection
-- Structured deployment locations
-- Sensor categories and operational statuses
-- Strongly typed telemetry ingestion
-- Float, integer, and boolean telemetry
-- Historical jagged telemetry batch processing
-- Recent telemetry retrieval
-- Generic telemetry collections
-- Numeric telemetry operator overloading
-- Recursive deployment-tree validation
-- Secure multipart attachment uploads
-- Registered-sensor attachment enforcement
-- File extension and media-type validation
-- Image file-signature validation
-- 10 MiB attachment size limit
-- AES-256-GCM authenticated encryption
-- Encrypted filesystem storage
-- Secure streaming attachment downloads
-- Centralised `ProblemDetails` API errors
-- Cancellation-token propagation
-- Thread-safe in-memory sensor and telemetry repositories
-- Unit, infrastructure, API integration, and cross-feature workflow tests
-
-### Frontend
-
-The React + TypeScript client is scaffolded and included in CI.
-
-The remaining Part 1 work is primarily frontend-focused:
-
-- Build the Part 1 landing/dashboard experience
-- Connect the React client to the sensor and telemetry APIs
-- Add sensor registration and management UI
-- Add telemetry simulation and history UI
-- Add secure attachment upload/download UI
-- Implement the researched **Adaptive Anomaly Spotlight** engagement strategy
-- Keep the Part 2 and final PoE pillars visible but disabled
-- Complete final UI regression testing and assessment evidence
+| Field | Value |
+|---|---|
+| Student | James Maherry |
+| Student number | ST10437403 |
+| Module | Programming 3B |
+| Module code | PROG7312 |
+| Assessment | Portfolio of Evidence |
+| Part | Part 1 — Smart-X Data Ingestion and Validation Gateway |
+| Backend | .NET 10 / ASP.NET Core |
+| Frontend | React / TypeScript / Vite |
+| Delivery | GitHub Actions / Docker Compose |
 
 ---
 
-## Architecture
+## Part 1 at a Glance
 
-```text
-React + TypeScript Client
-          |
-          | HTTP / JSON / multipart
-          v
-     SmartX.Api
-          |
-          v
-   SmartX.Application
-      /         \
-     v           v
-SmartX.Domain  Repository Abstractions
-                   |
-                   v
-           SmartX.Infrastructure
-             /            \
-            v              v
-      In-Memory Data   Encrypted Files
+Smart-X Part 1 provides:
+
+- a three-pillar startup interface with only **Sensor Data Ingestion and Telemetry** active;
+- sensor registration, retrieval, update, and simulated operational-state changes;
+- strongly typed `Float`, `Integer`, and `Boolean` telemetry;
+- `TelemetryPacket<T>` generic payload handling without weakening values to `object` or `dynamic`;
+- meaningful operator overloading for numeric telemetry deltas;
+- real jagged-array historical batch ingestion;
+- conversion of raw batches into the custom `HistoricalTelemetryBuffer<T>` collection backed by `List<T>`;
+- recursive validation of nested Facility → Zone → Sub-zone → Node deployment trees;
+- a dynamic **Adaptive Anomaly Spotlight** that reacts to sensor and telemetry changes;
+- SignalR-based dashboard invalidation with authoritative HTTP state retrieval;
+- secure multipart attachment upload, listing, download, signature validation, and AES-256-GCM encryption;
+- responsive and accessible React interfaces;
+- backend unit, application, infrastructure, integration, workflow, and browser end-to-end tests;
+- Dockerized API and production React/Nginx deployment;
+- GitHub Actions validation for backend, frontend, Playwright, and Docker delivery.
+
+---
+
+# Assessment Evidence
+
+The repository contains a deliberately small evidence set under [`docs/evidence/part1`](docs/evidence/part1/README.md). The purpose is to let a marker verify high-value functionality quickly without reverse-engineering the entire solution.
+
+## Demonstration Video
+
+[**Watch the Smart-X Part 1 demonstration on YouTube**](https://youtu.be/hgDRpwixais)
+
+---
+
+## Gateway and Part 1 navigation
+
+![Smart-X gateway navigation](docs/evidence/part1/01-gateway-navigation.png)
+
+The startup view exposes all three Smart-X architectural pillars:
+
+1. **Sensor Data Ingestion and Telemetry** — active in Part 1.
+2. **Real-Time Command Stream and History** — disabled until Part 2.
+3. **Network Topology and Mesh Routing** — disabled until the final PoE.
+
+## Historical batch processing
+
+![Historical batch processing](docs/evidence/part1/04-historical-batch-processing.png)
+
+The historical simulator feeds the real jagged-array ingestion path. Uneven and empty batches preserve both batch order and packet sequence when transferred to the custom collection.
+
+## Adaptive Anomaly Spotlight
+
+![Adaptive Anomaly Spotlight](docs/evidence/part1/05-adaptive-anomaly-spotlight.png)
+
+The selected research strategy is implemented as an operational feature rather than a static visual. The backend detects issues, calculates priority, tracks lifecycle state, and notifies the React client through SignalR.
+
+## Secure attachments
+
+![Secure sensor attachments](docs/evidence/part1/06-secure-attachments.png)
+
+Sensor-linked files are streamed through validation and authenticated encryption before persistence. Downloads are decrypted by the API and streamed to the browser.
+
+For the complete evidence index, including responsive layout, Docker, CI, and encrypted-storage evidence, see [`docs/evidence/part1/README.md`](docs/evidence/part1/README.md).
+
+---
+
+# Architecture
+
+```mermaid
+flowchart TB
+    User["Operator / Lecturer"]
+
+    subgraph Client["SmartX.Client — React + TypeScript"]
+        Gateway["Three-pillar gateway"]
+        SensorUI["Sensor registration & management"]
+        TelemetryUI["Typed telemetry simulator"]
+        BatchUI["Historical batch simulator"]
+        AttachmentUI["Secure attachments"]
+        Spotlight["Adaptive Anomaly Spotlight"]
+        SignalRClient["SignalR client"]
+    end
+
+    subgraph Api["SmartX.Api — ASP.NET Core"]
+        Controllers["REST controllers"]
+        Hub["Dashboard SignalR hub"]
+        Problems["Central ProblemDetails handling"]
+    end
+
+    subgraph Application["SmartX.Application"]
+        SensorServices["Sensor services"]
+        TelemetryServices["Telemetry orchestration"]
+        Analysis["Adaptive anomaly analysis"]
+        AttachmentPipeline["Attachment validation pipeline"]
+    end
+
+    subgraph Domain["SmartX.Domain"]
+        SensorProfile["SensorProfile + value objects"]
+        Packet["TelemetryPacket&lt;T&gt;"]
+        Numeric["NumericTelemetryPacket&lt;T&gt;"]
+        Delta["TelemetryDelta&lt;T&gt;"]
+        History["HistoricalTelemetryBuffer&lt;T&gt;"]
+        Deployment["Recursive deployment validator"]
+        Issues["DashboardIssueCollection"]
+    end
+
+    subgraph Infrastructure["SmartX.Infrastructure"]
+        SensorRepo["In-memory sensor repository"]
+        TelemetryRepo["In-memory typed telemetry repository"]
+        Cipher["Chunked AES-256-GCM cipher"]
+        AttachmentStore["Encrypted filesystem attachment store"]
+    end
+
+    User --> Gateway
+    Gateway --> SensorUI
+    Gateway --> TelemetryUI
+    Gateway --> BatchUI
+    Gateway --> AttachmentUI
+    Gateway --> Spotlight
+
+    SensorUI --> Controllers
+    TelemetryUI --> Controllers
+    BatchUI --> Controllers
+    AttachmentUI --> Controllers
+    Spotlight --> Controllers
+    Spotlight --> SignalRClient
+    SignalRClient <--> Hub
+
+    Controllers --> Problems
+    Controllers --> SensorServices
+    Controllers --> TelemetryServices
+    Controllers --> AttachmentPipeline
+    Hub --> Analysis
+
+    SensorServices --> SensorProfile
+    TelemetryServices --> Packet
+    TelemetryServices --> Numeric
+    Numeric --> Delta
+    TelemetryServices --> History
+    Analysis --> Issues
+    Analysis --> Numeric
+    AttachmentPipeline --> Cipher
+
+    SensorServices --> SensorRepo
+    TelemetryServices --> TelemetryRepo
+    Cipher --> AttachmentStore
 ```
 
-The architecture separates transport, application orchestration, domain rules, and infrastructure concerns.
+## Docker deployment boundary
 
-### `SmartX.Domain`
+```mermaid
+flowchart LR
+    Browser["Browser"]
+    Nginx["React production build\nNginx :8080"]
+    Api["ASP.NET Core API\nprivate Docker network :8080"]
+    Volume["Named volume\n/data/attachments"]
 
-Contains the core business model and advanced C# concepts:
+    Browser -->|"HTTP localhost:8080"| Nginx
+    Nginx -->|"/api/*"| Api
+    Nginx <-->|"/hubs/* WebSocket"| Api
+    Api -->|"AES-256-GCM ciphertext"| Volume
+```
 
-- `SensorProfile`
-- `DeviceIdentifier`
-- `DeploymentLocation`
-- Sensor enums and validation rules
-- `TelemetryPacket<T>`
-- `NumericTelemetryPacket<T>`
-- `TelemetryDelta<T>`
-- `HistoricalTelemetryBuffer<T>`
-- Recursive deployment-tree models and validation
-- Domain-specific exceptions
-
-### `SmartX.Contracts`
-
-Contains transport-safe API request and response models.
-
-Domain entities are not exposed directly through the HTTP API.
-
-### `SmartX.Application`
-
-Contains application workflows and repository abstractions:
-
-- Sensor registration
-- Sensor querying and updates
-- Sensor contract mapping
-- Strongly typed telemetry orchestration
-- Historical telemetry batch processing
-- Attachment validation
-- Registered-sensor attachment enforcement
-- Repository interfaces
-
-### `SmartX.Infrastructure`
-
-Contains concrete infrastructure implementations:
-
-- Thread-safe in-memory sensor repository
-- Strongly typed in-memory telemetry repository
-- Chunked AES-256-GCM attachment encryption
-- Encrypted filesystem attachment storage
-- Attachment metadata persistence
-
-### `SmartX.Api`
-
-Contains:
-
-- ASP.NET Core controllers
-- Dependency injection
-- CORS configuration
-- OpenAPI support
-- Centralised `ProblemDetails`
-- Streaming multipart parsing
-- Sensor endpoints
-- Telemetry endpoints
-- Attachment endpoints
-
-### `SmartX.Client`
-
-Contains the React + TypeScript frontend.
-
-The client is currently being developed against the completed Part 1 backend API.
+Only the React/Nginx service publishes a host port. The API remains available to Nginx on the private Compose network.
 
 ---
 
-## Solution Structure
+# Solution Structure
 
 ```text
 Smart-X/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── docs/
+│   ├── evidence/
+│   │   └── part1/
+│   └── research/
 ├── src/
 │   ├── SmartX.Domain/
 │   ├── SmartX.Contracts/
@@ -172,92 +208,65 @@ Smart-X/
 │   ├── SmartX.Infrastructure/
 │   ├── SmartX.Api/
 │   └── SmartX.Client/
-│
 ├── tests/
 │   ├── SmartX.Domain.Tests/
 │   ├── SmartX.Application.Tests/
 │   ├── SmartX.Infrastructure.Tests/
 │   └── SmartX.Api.IntegrationTests/
-│
-├── docs/
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-└── SmartX.sln
+├── .dockerignore
+├── .env.example
+├── compose.yaml
+├── Directory.Build.props
+├── global.json
+├── SmartX.sln
+└── README.md
 ```
+
+## Project responsibilities
+
+| Project | Responsibility |
+|---|---|
+| `SmartX.Domain` | Core sensor, telemetry, dashboard, deployment, collection, validation, and operator-overloading rules |
+| `SmartX.Contracts` | Transport-safe request and response records |
+| `SmartX.Application` | Use-case orchestration, mapping, attachment validation, telemetry processing, dashboard analysis |
+| `SmartX.Infrastructure` | In-memory repositories and encrypted filesystem attachment persistence |
+| `SmartX.Api` | HTTP controllers, SignalR, CORS, exception handling, health endpoint, dependency registration |
+| `SmartX.Client` | React UI, client validation, API integration, SignalR integration, responsive interaction |
+| `tests/*` | Domain, application, infrastructure, API integration, workflow, and regression coverage |
 
 ---
 
-# Core Part 1 Features
+# PoE Requirement Mapping
 
-## Sensor Management
+This section maps the Part 1 requirements directly to the implementation so the assessment criteria can be verified quickly.
 
-Each Smart-X sensor profile contains:
-
-- Internal sensor ID
-- Human-readable name
-- MAC address or custom unique identifier
-- Deployment facility
-- Deployment zone
-- Deployment node
-- Sensor category
-- Operational status
-- Expected telemetry data type
-- Creation timestamp
-- Update timestamp
-
-Supported sensor categories are:
-
-```text
-Environmental
-PowerConsumption
-Actuator
-```
-
-Supported telemetry types are:
-
-```text
-Float
-Integer
-Boolean
-```
-
-New sensors begin in the `Offline` state.
-
-### Device Identifiers
-
-Smart-X supports:
-
-```text
-MacAddress
-UniqueIdentifier
-```
-
-Equivalent MAC address formats are normalised to one canonical representation.
-
-For example:
-
-```text
-aa-bb-cc-dd-ee-ff
-AABBCCDDEEFF
-AA:BB:CC:DD:EE:FF
-```
-
-become:
-
-```text
-AA:BB:CC:DD:EE:FF
-```
-
-The repository maintains an identifier index so duplicate device registrations can be rejected efficiently and safely.
-
-Sensor identifiers are immutable after registration.
+| PoE requirement | Smart-X implementation | Primary source evidence | Automated evidence | Visual evidence |
+|---|---|---|---|---|
+| Three architectural pillars | React gateway with one active and two disabled routes | `src/SmartX.Client/src/` | Playwright E2E | `01-gateway-navigation.png` |
+| API integration | React typed API layer → ASP.NET Core controllers | `src/SmartX.Client/src/api/`, `src/SmartX.Api/Controllers/` | API integration + Playwright | Multiple UI captures |
+| Sensor profile | `SensorProfile`, `DeviceIdentifier`, `DeploymentLocation`, enums | `src/SmartX.Domain/Sensors/` | Domain + API integration | `02-sensor-registration.png` |
+| Generics | `TelemetryPacket<T>` and typed application pipeline | `src/SmartX.Domain/Telemetry/TelemetryPacket.cs` | `SensorTelemetryServiceTests` | `03-typed-telemetry.png` |
+| Operator overloading | `NumericTelemetryPacket<T>.operator -` returns `TelemetryDelta<T>` | `src/SmartX.Domain/Telemetry/NumericTelemetryPacket.cs` | numeric telemetry domain tests | `05-adaptive-anomaly-spotlight.png` |
+| Jagged arrays | raw `TelemetryPacket<T>[][]` batch mapping | `src/SmartX.Application/Telemetry/SensorTelemetryService.cs` | uneven/empty batch tests | `04-historical-batch-processing.png` |
+| `List<T>` optimisation | raw arrays transferred to pre-sized list storage | `src/SmartX.Domain/Telemetry/HistoricalTelemetryBuffer.cs` | historical buffer tests | `04-historical-batch-processing.png` |
+| Custom generic collection | `HistoricalTelemetryBuffer<T> : IReadOnlyList<TelemetryPacket<T>>` | `HistoricalTelemetryBuffer.cs` | domain/application tests | `04-historical-batch-processing.png` |
+| Recursion | recursive deployment-tree validator with safe termination | `src/SmartX.Domain/Deployment/DeploymentTreeValidator.cs` | deployment validator tests | source/test evidence |
+| Dynamic engagement | Adaptive Anomaly Spotlight | `src/SmartX.Application/Dashboard/`, `src/SmartX.Domain/Dashboard/` | dashboard + E2E tests | `05-adaptive-anomaly-spotlight.png` |
+| File upload | streamed multipart attachment controller | `src/SmartX.Api/Controllers/SensorAttachmentController.cs` | attachment integration tests | `06-secure-attachments.png` |
+| Full encryption | chunked AES-256-GCM before filesystem persistence | `src/SmartX.Infrastructure/Attachments/ChunkedAesGcmAttachmentCipher.cs` | infrastructure cipher tests | `07-encrypted-storage.png` |
+| Responsive UI | responsive CSS and accessible interaction states | `src/SmartX.Client/src/` | Playwright | `08-responsive-layout.png` |
+| Production delivery | multi-stage API + React/Nginx images and Compose | Dockerfiles + `compose.yaml` | Docker CI job | `09-docker-deployment.png` |
+| CI | backend, frontend, E2E, Docker validation | `.github/workflows/ci.yml` | GitHub Actions | `10-ci-validation.png` |
 
 ---
 
-## Strongly Typed Telemetry
+# Advanced Part 1 Data Structures
 
-Smart-X uses generics so telemetry values remain in their native value types.
+## 1. `TelemetryPacket<T>` — generics without boxing
+
+**PoE requirement:** process different telemetry types efficiently without type-coercion overhead.
+
+Smart-X represents telemetry with:
 
 ```csharp
 TelemetryPacket<double>
@@ -265,7 +274,9 @@ TelemetryPacket<int>
 TelemetryPacket<bool>
 ```
 
-The application maps registered sensor data types as follows:
+`Payload` remains type `T` throughout the Domain and Application layers. It is not converted to `object` or `dynamic`.
+
+The application maps sensor configuration to concrete packet types:
 
 ```text
 Float    -> NumericTelemetryPacket<double>
@@ -273,53 +284,62 @@ Integer  -> NumericTelemetryPacket<int>
 Boolean  -> TelemetryPacket<bool>
 ```
 
-This avoids weakening telemetry payloads to `object` or `dynamic`.
+This means an Environmental Float sensor cannot accept an integer or Boolean payload by mistake. The configured sensor type remains authoritative.
 
-A sensor configured for one telemetry type cannot accept a different payload type.
+**Key implementation:**
 
-For example, a `Float` sensor cannot accept an `IntegerValue` payload.
+- `src/SmartX.Domain/Telemetry/TelemetryPacket.cs`
+- `src/SmartX.Application/Telemetry/SensorTelemetryService.cs`
+- `src/SmartX.Application/Telemetry/TelemetryContractMapper.cs`
+
+**Key tests:**
+
+- `tests/SmartX.Domain.Tests/Telemetry/`
+- `tests/SmartX.Application.Tests/Telemetry/SensorTelemetryServiceTests.cs`
 
 ---
 
-## Numeric Telemetry and Operator Overloading
+## 2. `NumericTelemetryPacket<T>` and `TelemetryDelta<T>` — operator overloading
 
-Numeric telemetry uses:
+**PoE requirement:** use operator overloading for meaningful telemetry calculations.
 
-```csharp
-NumericTelemetryPacket<T>
-```
+Numeric telemetry extends the generic packet design using `INumber<T>` and overloads subtraction.
 
-The subtraction operator compares two chronological readings from the same device.
+Conceptually:
 
 ```text
-Previous reading: 22.4
-Current reading:  27.1
-
-Delta: +4.7
+previous reading = 22.4
+current reading  = 27.1
+current - previous
+                 = +4.7
 ```
 
-The result is represented by:
+The result is a strongly typed `TelemetryDelta<T>` containing:
 
-```csharp
-TelemetryDelta<T>
-```
+- source device identifier;
+- previous value;
+- current value;
+- signed delta;
+- absolute delta magnitude;
+- elapsed time;
+- increase/decrease/unchanged interpretation.
 
-and includes:
+The operation rejects invalid comparisons such as mismatched devices or invalid chronological ordering.
 
-- Previous value
-- Current value
-- Signed delta
-- Absolute magnitude
-- Elapsed time
-- Increase/decrease/unchanged state
+This is used as a real domain operation for change analysis rather than implementing an arbitrary operator purely to satisfy the rubric.
 
-This provides a meaningful domain use for operator overloading and can later support anomaly and rate-of-change analysis.
+**Key implementation:**
+
+- `src/SmartX.Domain/Telemetry/NumericTelemetryPacket.cs`
+- `src/SmartX.Domain/Telemetry/TelemetryDelta.cs`
 
 ---
 
-## Historical Telemetry Batch Processing
+## 3. Jagged arrays — raw historical telemetry batches
 
-Raw historical readings are accepted as jagged batches because individual telemetry batches may contain different numbers of readings.
+**PoE requirement:** use jagged or multidimensional arrays for sequential historical batches before moving data into an optimised collection.
+
+The API accepts batches with different lengths:
 
 ```text
 Batch 0 -> [10, 11]
@@ -327,47 +347,199 @@ Batch 1 -> [20]
 Batch 2 -> [30, 31, 32]
 ```
 
-The application converts raw jagged arrays into:
+The Application layer constructs real jagged arrays:
+
+```csharp
+TelemetryPacket<T>[][]
+```
+
+This is appropriate because historical batches are ordered but not necessarily equal in size.
+
+Validation rejects:
+
+- a null outer collection;
+- null inner batches;
+- null packet entries;
+- telemetry values that do not match the registered sensor type.
+
+Empty inner batches are valid and their boundary is retained.
+
+**Key implementation:**
+
+- `src/SmartX.Application/Telemetry/SensorTelemetryService.cs`
+
+**Key tests:**
+
+- `tests/SmartX.Application.Tests/Telemetry/SensorTelemetryServiceTests.cs`
+- `tests/SmartX.Api.IntegrationTests/Telemetry/TelemetryEndpointTests.cs`
+
+---
+
+## 4. `HistoricalTelemetryBuffer<T>` — custom generic collection and `List<T>`
+
+**PoE requirement:** transfer raw arrays into optimised generic collections and purposefully use a custom collection.
+
+After raw jagged-array validation, Smart-X transfers packets into:
 
 ```csharp
 HistoricalTelemetryBuffer<T>
 ```
 
-The custom collection is backed by optimised `List<T>` storage while preserving:
+The collection:
 
-- Original batch order
-- Packet sequence order
-- Empty batches
-- Uneven batch sizes
-- Strong generic types
-- Original batch boundaries
+- implements `IReadOnlyList<TelemetryPacket<T>>`;
+- uses a pre-sized internal `List<TelemetryPacket<T>>`;
+- preserves original packet order;
+- preserves batch boundaries through `TelemetryBatchRange`;
+- supports efficient sequential iteration;
+- supports enumerating an original batch without rebuilding another collection;
+- avoids repeated list-capacity expansion by pre-counting valid packets.
 
-The historical buffer is used by the real telemetry ingestion workflow rather than existing only as an isolated data-structure demonstration.
+`TelemetryBatchRange` stores the original batch index, flattened start index, count, end-exclusive index, and whether the batch was empty.
+
+This is the custom generic collection used purposefully by the real ingestion workflow.
+
+**Key implementation:**
+
+- `src/SmartX.Domain/Telemetry/HistoricalTelemetryBuffer.cs`
+- `src/SmartX.Domain/Telemetry/TelemetryBatchRange.cs`
 
 ---
 
-## Recursive Deployment Validation
+## 5. Recursive deployment tree
 
-Smart-X supports hierarchical deployment trees such as:
+**PoE requirement:** recursively validate nested deployment configurations with a safe base case.
+
+Smart-X models a hierarchy such as:
 
 ```text
 Facility
-├── Zone A
-│   ├── Node 1
-│   └── Node 2
-└── Zone B
-    └── Node 3
+└── Zone
+    └── Sub-zone
+        └── Node
 ```
 
-Recursive validation traverses nested deployment structures while maintaining clear validation rules and base cases.
+`DeploymentTreeValidator` recursively traverses nested deployment nodes. Validation includes explicit termination and safety rules so recursion cannot continue indefinitely.
 
-This gives recursion a direct Smart-X purpose: validating arbitrarily nested IoT deployment configurations.
+Protections include:
+
+- a clear leaf/base case;
+- maximum-depth protection;
+- cycle detection;
+- invalid parent/child relationship detection;
+- invalid or duplicate reference protection;
+- failed-path reporting.
+
+This makes recursion directly relevant to Smart-X deployment validation.
+
+**Key implementation:**
+
+- `src/SmartX.Domain/Deployment/DeploymentTreeValidator.cs`
+- `src/SmartX.Domain/Deployment/DeploymentTreeValidationResult.cs`
+- `src/SmartX.Domain/Deployment/DeploymentValidationErrorCode.cs`
+
+**Key tests:**
+
+- `tests/SmartX.Domain.Tests/Deployment/`
+
+---
+
+## 6. `DashboardIssueCollection` — dynamic operational state
+
+The selected engagement strategy needs a live collection of actionable operational issues.
+
+The custom dashboard collection manages issue lifecycle state for conditions such as:
+
+- telemetry spikes;
+- sensor disconnects;
+- repeated failures;
+- missing configuration evidence;
+- sensor state changes.
+
+Repeated observations update an existing active condition rather than producing uncontrolled duplicates. Issues can move through:
+
+```text
+Active -> Acknowledged -> Resolved
+```
+
+Resolved conditions disappear from the default active snapshot but may still be requested for historical inspection.
+
+**Key implementation:**
+
+- `src/SmartX.Domain/Dashboard/DashboardIssueCollection.cs`
+- `src/SmartX.Application/Dashboard/DashboardIssueService.cs`
+- `src/SmartX.Application/Dashboard/AdaptiveAnomalyAnalysisService.cs`
+
+---
+
+## 7. In-memory repositories and lookup structures
+
+Part 1 deliberately keeps sensors and telemetry process-local while hiding persistence behind interfaces:
+
+```text
+ISensorRepository
+ITelemetryRepository
+```
+
+This allows the PoE to focus on the required data structures and application behaviour without coupling controllers to a database.
+
+The sensor repository maintains fast identifier-based duplicate detection, while the telemetry repository preserves typed packet storage and recent-history retrieval.
+
+These repositories can later be replaced by durable infrastructure without rewriting the Domain or API controllers.
+
+---
+
+# Adaptive Anomaly Spotlight
+
+The Part 1 research task selected the **Adaptive Anomaly Spotlight** as the dashboard engagement strategy.
+
+Instead of presenting an operator with an undifferentiated list of telemetry, Smart-X converts system behaviour into prioritised operational issues.
+
+## Conditions currently surfaced
+
+```text
+TelemetrySpike
+SensorDisconnected
+RepeatedFailure
+ConfigurationIssue
+SensorStateChange
+```
+
+Severity levels:
+
+```text
+Information
+Warning
+Critical
+```
+
+Lifecycle states:
+
+```text
+Active
+Acknowledged
+Resolved
+```
+
+The backend remains authoritative. SignalR sends lightweight invalidation notifications; the React client then reloads the current dashboard snapshot over HTTP.
+
+Priority considers operational factors including severity, recurrence, recency, lifecycle state, and the underlying condition. Acknowledging an issue records that an operator has seen it, but does not falsely resolve the underlying problem.
+
+This design directly supports the research goal: reduce troubleshooting time by moving the operator toward the most relevant sensor, telemetry, or attachment evidence.
+
+**Primary implementation:**
+
+- `src/SmartX.Domain/Dashboard/`
+- `src/SmartX.Application/Dashboard/`
+- `src/SmartX.Api/Controllers/DashboardIssuesController.cs`
+- `src/SmartX.Api/Dashboard/`
+- `src/SmartX.Client/src/features/dashboard/AdaptiveAnomalySpotlight.tsx`
 
 ---
 
 # Secure Sensor Attachments
 
-Smart-X supports three attachment categories:
+Smart-X supports sensor-linked:
 
 ```text
 Configuration
@@ -375,9 +547,7 @@ DeploymentPhoto
 HardwareLog
 ```
 
-Attachments can only be associated with a sensor that is currently registered in Smart-X.
-
-## Supported File Types
+## Supported file types
 
 ### Configuration
 
@@ -389,7 +559,7 @@ Attachments can only be associated with a sensor that is currently registered in
 .txt
 ```
 
-### Deployment Photos
+### Deployment photos
 
 ```text
 .jpg
@@ -398,7 +568,7 @@ Attachments can only be associated with a sensor that is currently registered in
 .webp
 ```
 
-### Hardware Logs
+### Hardware logs
 
 ```text
 .log
@@ -407,286 +577,82 @@ Attachments can only be associated with a sensor that is currently registered in
 .csv
 ```
 
-The application validates file extensions and allowed media types before storage.
-
-Deployment photographs receive additional binary file-signature validation.
-
-Supported binary signatures currently include:
-
-- JPEG
-- PNG
-- WebP
-
-This prevents a client from bypassing validation simply by renaming an arbitrary file and supplying a false image media type.
-
----
-
-## Streaming Upload Pipeline
-
-Smart-X does not load complete attachments into memory.
-
-```text
-HTTP Request Body
-        |
-        v
-MultipartReader
-        |
-        v
-Small Signature Prefix Inspection
-        |
-        v
-Prefix Replay Stream
-        |
-        v
-Size-Limited Stream
-        |
-        v
-Chunked AES-256-GCM
-        |
-        v
-Encrypted Filesystem Storage
-```
-
-Only a small leading prefix is read for binary signature inspection. Those bytes are replayed into the downstream stream so the stored attachment remains byte-for-byte equivalent to the original upload.
-
-The maximum attachment size is:
+The maximum application-level attachment size is:
 
 ```text
 10 MiB
 ```
 
-The limit is enforced while the stream is consumed rather than trusting only a client-provided `Content-Length` header.
+## Security pipeline
 
----
+```text
+Multipart HTTP request
+        |
+        v
+MultipartReader
+        |
+        v
+File/category/name/content-type validation
+        |
+        v
+Binary signature inspection where applicable
+        |
+        v
+Prefix replay stream
+        |
+        v
+Size-limited stream
+        |
+        v
+Chunked AES-256-GCM
+        |
+        v
+Generated encrypted payload file
+```
 
-## Attachment Security
+### Security controls
 
-Controls include:
+The upload pipeline implements:
 
-- Registered sensor validation
-- Attachment category validation
-- File-name validation
-- Control-character rejection
-- Path-separator rejection
-- Extension allowlists
-- Media-type allowlists
-- JPEG/PNG/WebP signature inspection
-- Empty-file rejection
-- Streaming size enforcement
-- Generated physical storage names
-- Storage outside the public web root
-- AES-256-GCM authenticated encryption
-- Ciphertext tamper detection
-- Ciphertext truncation detection
-- Cancellation propagation
-- Partial-file cleanup after persistence failures
-- `Cache-Control: no-store` on downloads
-- `X-Content-Type-Options: nosniff` on downloads
+- registered parent-sensor verification;
+- attachment category validation;
+- file-name length validation;
+- control-character rejection;
+- `/` and `\` path-separator rejection;
+- extension allowlists;
+- media-type allowlists;
+- JPEG, PNG, and WebP signature inspection;
+- streamed size enforcement rather than trusting only `Content-Length`;
+- generated physical storage names;
+- storage outside the public web root;
+- AES-256-GCM authenticated encryption;
+- tamper detection;
+- truncation detection;
+- cancellation propagation;
+- cleanup after failed persistence;
+- secure browser download headers.
 
-Client file names are metadata only.
-
-A user upload such as:
+Client file names are metadata only. A file named:
 
 ```text
 gateway.log
 ```
 
-is stored physically using generated identifiers instead of the client-controlled name.
-
-Example:
+is physically stored under generated identifiers similar to:
 
 ```text
 68b4a84e00a7421782048f672df94c63.payload
 68b4a84e00a7421782048f672df94c63.metadata.json
 ```
 
----
+The browser never receives or requires the encryption key. The backend decrypts the requested attachment and streams plaintext directly to the response.
 
-## Attachment Encryption
-
-Attachment payloads are encrypted before persistent storage using:
+Downloads set:
 
 ```text
-AES-256-GCM
+Cache-Control: no-store
+X-Content-Type-Options: nosniff
 ```
-
-Smart-X uses chunked authenticated encryption so large files do not need to be buffered as one block.
-
-Each chunk contains a unique nonce-derived encryption operation and authentication tag.
-
-```text
-Plaintext Stream
-       |
-       v
-64 KiB Chunk
-       |
-       v
-AES-256-GCM
-       |
-       +--> Ciphertext
-       |
-       +--> Authentication Tag
-       |
-       v
-Encrypted Payload
-```
-
-A final authenticated record is written so truncated encrypted files can be detected.
-
-Plaintext attachment files are not intentionally written to persistent storage.
-
----
-
-# API Reference
-
-## Health
-
-| Method | Route | Purpose |
-|---|---|---|
-| `GET` | `/api/health` | API health check |
-
-## Sensors
-
-| Method | Route | Purpose |
-|---|---|---|
-| `POST` | `/api/sensors` | Register a sensor |
-| `GET` | `/api/sensors` | List registered sensors |
-| `GET` | `/api/sensors/{id}` | Retrieve one sensor |
-| `PUT` | `/api/sensors/{id}` | Update mutable sensor details |
-
-### Register Sensor Example
-
-```json
-{
-  "name": "Greenhouse Temperature Sensor",
-  "deviceIdentifier": "AA:BB:CC:DD:EE:01",
-  "identifierKind": "MacAddress",
-  "deploymentLocation": {
-    "facility": "Cape Town Facility",
-    "zone": "Greenhouse A",
-    "nodeId": "Node-01"
-  },
-  "category": "Environmental",
-  "telemetryDataType": "Float"
-}
-```
-
-Successful registration returns `201 Created`.
-
-Duplicate device identifiers return `409 Conflict`.
-
-Invalid sensor data returns `400 Bad Request`.
-
-Unknown sensors return `404 Not Found`.
-
----
-
-## Telemetry
-
-| Method | Route | Purpose |
-|---|---|---|
-| `POST` | `/api/sensors/{id}/telemetry` | Ingest one reading |
-| `POST` | `/api/sensors/{id}/telemetry/batches` | Ingest historical jagged batches |
-| `GET` | `/api/sensors/{id}/telemetry?limit=50` | Return recent telemetry |
-
-The recent telemetry limit defaults to `50` and supports values from `1` to `100`.
-
-### Float Telemetry
-
-```json
-{
-  "capturedAtUtc": "2026-09-11T10:30:00Z",
-  "floatValue": 24.75,
-  "integerValue": null,
-  "booleanValue": null
-}
-```
-
-### Integer Telemetry
-
-```json
-{
-  "capturedAtUtc": "2026-09-11T10:30:00Z",
-  "floatValue": null,
-  "integerValue": 4200,
-  "booleanValue": null
-}
-```
-
-### Boolean Telemetry
-
-```json
-{
-  "capturedAtUtc": "2026-09-11T10:30:00Z",
-  "floatValue": null,
-  "integerValue": null,
-  "booleanValue": false
-}
-```
-
-Exactly one value must match the registered sensor's configured telemetry type.
-
----
-
-## Attachments
-
-| Method | Route | Purpose |
-|---|---|---|
-| `POST` | `/api/sensors/{id}/attachments?category={category}` | Upload an attachment |
-| `GET` | `/api/sensors/{id}/attachments` | List attachment metadata |
-| `GET` | `/api/sensors/{id}/attachments/{attachmentId}` | Download and decrypt an attachment |
-
-Valid categories:
-
-```text
-Configuration
-DeploymentPhoto
-HardwareLog
-```
-
-Example:
-
-```bash
-curl -k \
-  -F "file=@gateway.log;type=text/plain" \
-  "https://localhost:<PORT>/api/sensors/<SENSOR-ID>/attachments?category=HardwareLog"
-```
-
-The `<SENSOR-ID>` must refer to an already registered sensor.
-
----
-
-# API Error Responses
-
-Smart-X uses centralised RFC-style `ProblemDetails` responses.
-
-| Status | Meaning |
-|---|---|
-| `400 Bad Request` | Invalid request, domain validation, telemetry mismatch, or invalid attachment |
-| `404 Not Found` | Requested sensor or attachment resource does not exist |
-| `409 Conflict` | Duplicate sensor device identifier |
-| `500 Internal Server Error` | Unexpected server-side failure |
-
-Malformed JSON and model-binding errors also return validation `ProblemDetails`.
-
-Unexpected internal exception details are not exposed to API clients.
-
----
-
-# Adaptive Anomaly Spotlight
-
-The Part 1 research task selected the **Adaptive Anomaly Spotlight** as the dashboard engagement strategy.
-
-The planned frontend feature will prioritise sensors using factors such as:
-
-- Severity
-- Recency
-- Disconnect duration
-- Latest telemetry state
-
-The intention is to move an operator from a fleet-level warning to the most relevant sensor, telemetry, configuration, and hardware-log evidence without forcing them to search manually through unrelated data.
-
-The feature is part of the remaining Part 1 React implementation.
 
 ---
 
@@ -697,62 +663,183 @@ The feature is part of the remaining Part 1 React implementation.
 - C#
 - .NET 10
 - ASP.NET Core Web API
-- OpenAPI
+- ASP.NET Core SignalR
+- OpenAPI in Development
 - xUnit
+- `Microsoft.AspNetCore.Mvc.Testing`
+- `coverlet.collector`
 - AES-256-GCM
 
 ## Frontend
 
-- React
+- React 19
 - TypeScript
 - Vite
+- React Router
+- Microsoft SignalR client
 - ESLint
 - Prettier
+- Playwright
 
-## Development and Delivery
+## Delivery
 
-- Visual Studio Code
 - Git
 - GitHub
 - GitHub Actions
+- Docker
+- Docker Compose
+- Nginx unprivileged runtime image
 
 ---
 
 # Prerequisites
 
+Smart-X is cross-platform. The recommended development environment is VS Code, but the commands below do not require a specific IDE.
+
+## Common requirements
+
 Install:
 
-- .NET 10 SDK
-- Node.js 24 or later
-- npm
-- Git
+- **Git**
+- **.NET 10 SDK**
+- **Node.js 24**
+- **npm**
+- a modern browser
+- **Docker Desktop** if using the containerized deployment
 
-OpenSSL is recommended on macOS/Linux for generating a local attachment encryption key.
-
-Check installed versions:
+Verify:
 
 ```bash
+git --version
 dotnet --version
 node --version
 npm --version
-git --version
+docker --version
+docker compose version
 ```
+
+The repository `global.json` controls the expected .NET SDK family.
 
 ---
 
-# Setup
+## macOS prerequisites
 
-## 1. Restore the Backend
+Recommended:
 
-From the repository root:
+- macOS on Apple Silicon or Intel
+- .NET 10 SDK
+- Node.js 24
+- Git
+- OpenSSL
+- Docker Desktop for Mac
+
+Verify OpenSSL:
+
+```bash
+openssl version
+```
+
+No Windows virtual machine is required for this project.
+
+---
+
+## Windows prerequisites
+
+Recommended:
+
+- Windows 10/11
+- PowerShell 7 or Windows PowerShell
+- .NET 10 SDK
+- Node.js 24
+- Git for Windows
+- Docker Desktop with Linux containers enabled
+
+A separate OpenSSL installation is not required because PowerShell/.NET cryptography can generate the attachment key.
+
+---
+
+# Fresh Clone Setup
+
+Clone the repository:
+
+```bash
+git clone https://github.com/EMWCCN/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry.git
+cd prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry
+```
+
+Restore backend dependencies:
 
 ```bash
 dotnet restore SmartX.sln
 ```
 
-## 2. Configure Attachment Encryption
+Restore frontend dependencies:
 
-Attachment functionality requires a Base64-encoded 32-byte encryption key.
+```bash
+cd src/SmartX.Client
+npm ci
+cd ../..
+```
+
+At this point choose either:
+
+- [Local development](#local-development), or
+- [Docker Compose](#docker-compose).
+
+---
+
+# HTTPS Development Certificate
+
+The local React development client targets the ASP.NET Core HTTPS profile at:
+
+```text
+https://localhost:7095
+```
+
+Trust the .NET development certificate before starting the local stack.
+
+## macOS
+
+```bash
+dotnet dev-certs https --trust
+```
+
+macOS may request Keychain approval.
+
+## Windows
+
+```powershell
+dotnet dev-certs https --trust
+```
+
+Windows may display a trust confirmation dialog.
+
+## If the certificate is broken
+
+First try trusting again:
+
+```bash
+dotnet dev-certs https --trust
+```
+
+If local ASP.NET development certificates are corrupted, they can be recreated:
+
+```bash
+dotnet dev-certs https --clean
+dotnet dev-certs https --trust
+```
+
+> `--clean` removes local ASP.NET Core development certificates. Use it only when certificate repair is actually required.
+
+---
+
+# Local Development
+
+Local development runs Vite and ASP.NET Core as separate processes.
+
+## 1. Configure attachment encryption
+
+A full Smart-X run requires a Base64-encoded **32-byte** attachment key.
 
 ### macOS / Linux
 
@@ -760,66 +847,550 @@ Attachment functionality requires a Base64-encoded 32-byte encryption key.
 export Attachments__EncryptionKeyBase64="$(openssl rand -base64 32)"
 ```
 
-The variable applies to the current terminal session.
+Optional custom storage path:
+
+```bash
+export Attachments__StoragePath="$PWD/.local/attachments"
+```
 
 ### Windows PowerShell
 
 ```powershell
-$bytes = New-Object byte[] 32
-[Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-$env:Attachments__EncryptionKeyBase64 = [Convert]::ToBase64String($bytes)
+$keyBytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($keyBytes)
+$env:Attachments__EncryptionKeyBase64 = [Convert]::ToBase64String($keyBytes)
 ```
 
-Do not commit encryption keys to `appsettings.json`, `appsettings.Development.json`, `.env`, or GitHub.
+Optional custom storage path:
 
-## 3. Build the Backend
+```powershell
+$env:Attachments__StoragePath = "$PWD\.local\attachments"
+```
+
+Do not commit the generated key.
+
+---
+
+## 2. Start the API
+
+From the repository root:
 
 ```bash
-dotnet build SmartX.sln
+dotnet run \
+  --project src/SmartX.Api \
+  --launch-profile https
 ```
 
-Release build:
+Development addresses:
 
-```bash
-dotnet build SmartX.sln \
-  --configuration Release \
-  --no-restore
+```text
+HTTPS: https://localhost:7095
+HTTP:  http://localhost:5203
 ```
 
-## 4. Run the API
+Health check:
 
-```bash
-dotnet run --project src/SmartX.Api
+```text
+https://localhost:7095/api/health
 ```
 
-Use the HTTP/HTTPS address printed by ASP.NET Core in the terminal.
+---
 
-## 5. Install Frontend Dependencies
+## 3. Start React
 
 Open a second terminal:
 
 ```bash
 cd src/SmartX.Client
-npm ci
-```
-
-## 6. Run the React Client
-
-From `src/SmartX.Client`:
-
-```bash
 npm run dev
 ```
 
-Vite prints the local client address in the terminal.
+Default client address:
 
-The development CORS configuration allows the Vite development origin configured in `appsettings.Development.json`.
+```text
+http://localhost:5173
+```
+
+In Development, the client defaults to:
+
+```text
+https://localhost:7095
+```
+
+for API traffic.
+
+The Development CORS configuration already permits:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## 4. Open Smart-X
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+---
+
+# Docker Compose
+
+Docker is the simplest way to run the completed production-style Part 1 stack.
+
+The Docker deployment uses:
+
+- a multi-stage .NET 10 API image;
+- a multi-stage Node 24 React build;
+- an unprivileged Nginx runtime;
+- private API networking;
+- same-origin `/api/*` reverse proxying;
+- SignalR `/hubs/*` WebSocket proxying;
+- health checks;
+- non-root runtime users;
+- a named encrypted-attachment volume.
+
+## 1. Create `.env`
+
+The real `.env` is ignored by Git.
+
+### macOS
+
+```bash
+cat > .env <<EOF
+SMARTX_HTTP_PORT=8080
+SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64=$(openssl rand -base64 32)
+EOF
+```
+
+### Windows PowerShell
+
+```powershell
+$keyBytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($keyBytes)
+$key = [Convert]::ToBase64String($keyBytes)
+
+@"
+SMARTX_HTTP_PORT=8080
+SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64=$key
+"@ | Set-Content -Encoding ascii .env
+```
+
+Never commit `.env`.
+
+Verify Git ignores it:
+
+```bash
+git check-ignore -v .env
+```
+
+---
+
+## 2. Validate configuration
+
+```bash
+docker compose config --quiet
+```
+
+`--quiet` is deliberate. A normal rendered Compose configuration can include resolved environment values.
+
+---
+
+## 3. Build and start
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+Check status:
+
+```bash
+docker compose ps
+```
+
+Both services should become healthy.
+
+Open:
+
+```text
+http://localhost:8080
+```
+
+or the port configured through `SMARTX_HTTP_PORT`.
+
+---
+
+## 4. Verify the deployment
+
+Frontend health:
+
+```bash
+curl -fsS http://localhost:8080/healthz
+```
+
+API through Nginx:
+
+```bash
+curl -fsS http://localhost:8080/api/health
+```
+
+SignalR negotiation:
+
+```bash
+curl -fsS \
+  -X POST \
+  'http://localhost:8080/hubs/dashboard/negotiate?negotiateVersion=1'
+```
+
+View recent logs:
+
+```bash
+docker compose logs --no-color --tail=100
+```
+
+---
+
+## 5. Stop Docker
+
+Preserve the attachment volume:
+
+```bash
+docker compose down
+```
+
+Delete containers **and** persistent attachment storage:
+
+```bash
+docker compose down --volumes
+```
+
+> Do not use `--volumes` unless deleting persisted encrypted attachment files is intentional.
+
+---
+
+# Environment Variables
+
+ASP.NET Core uses double underscores (`__`) to represent nested configuration keys.
+
+| Variable | Required | Purpose | Default / notes |
+|---|---:|---|---|
+| `Attachments__EncryptionKeyBase64` | Yes for full local functionality | Base64 32-byte AES-256-GCM key | Never commit |
+| `Attachments__StoragePath` | No | Local encrypted attachment directory | `App_Data/attachments` |
+| `Cors__AllowedOrigins__0` | No | Additional browser origin | Development already allows Vite |
+| `HttpsRedirection__Enabled` | No | Controls ASP.NET HTTPS redirect | `true`; Docker sets `false` internally |
+| `ASPNETCORE_ENVIRONMENT` | No | ASP.NET environment | Development via launch profile |
+| `ASPNETCORE_URLS` | No | Kestrel bind address | Docker sets internal `:8080` |
+| `VITE_API_BASE_URL` | No | React API origin override | Dev defaults to `https://localhost:7095`; production uses same origin |
+| `SMARTX_HTTP_PORT` | Docker | Host port for Nginx | `8080` |
+| `SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64` | Docker | Compose-level attachment secret | Required by `compose.yaml` |
+
+## Secret handling rules
+
+- never commit `.env`;
+- never place a real encryption key in `appsettings*.json`;
+- never include keys in screenshots;
+- never copy a CI test key into a real deployment;
+- use a managed secret store before exposing Smart-X outside a local/demo environment.
+
+---
+
+# API Reference
+
+The examples below use the Docker address:
+
+```bash
+BASE_URL="http://localhost:8080"
+```
+
+For local development, substitute:
+
+```text
+https://localhost:7095
+```
+
+## Health
+
+```http
+GET /api/health
+```
+
+```bash
+curl -fsS "$BASE_URL/api/health"
+```
+
+---
+
+## Sensors
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/api/sensors` | Register a sensor |
+| `GET` | `/api/sensors` | List sensors |
+| `GET` | `/api/sensors/{id}` | Get one sensor |
+| `PUT` | `/api/sensors/{id}` | Update mutable metadata |
+| `PATCH` | `/api/sensors/{id}/status` | Simulate/report operational state |
+
+### Register sensor
+
+```bash
+curl -i \
+  -X POST \
+  "$BASE_URL/api/sensors" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Greenhouse Temperature A1",
+    "deviceIdentifier": "AA:BB:CC:DD:EE:01",
+    "identifierKind": "MacAddress",
+    "deploymentLocation": {
+      "facility": "Cape Town Hydroponics Facility",
+      "zone": "Greenhouse A",
+      "nodeId": "Node-01"
+    },
+    "category": "Environmental",
+    "telemetryDataType": "Float"
+  }'
+```
+
+Supported identifier kinds:
+
+```text
+MacAddress
+UniqueIdentifier
+```
+
+Supported categories:
+
+```text
+Environmental
+PowerConsumption
+Actuator
+```
+
+Supported telemetry data types:
+
+```text
+Float
+Integer
+Boolean
+```
+
+Equivalent MAC formats are canonicalised. For example:
+
+```text
+aa-bb-cc-dd-ee-ff
+AABBCCDDEEFF
+AA:BB:CC:DD:EE:FF
+```
+
+all resolve to:
+
+```text
+AA:BB:CC:DD:EE:FF
+```
+
+Duplicate physical identifiers return a conflict response.
+
+### Update sensor
+
+Device identity is immutable and is therefore excluded from the update contract.
+
+```bash
+curl -i \
+  -X PUT \
+  "$BASE_URL/api/sensors/$SENSOR_ID" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Updated Greenhouse Sensor",
+    "deploymentLocation": {
+      "facility": "Facility B",
+      "zone": "Zone 4",
+      "nodeId": "Node 9"
+    },
+    "category": "Environmental",
+    "telemetryDataType": "Float"
+  }'
+```
+
+### Change sensor state
+
+```bash
+curl -i \
+  -X PATCH \
+  "$BASE_URL/api/sensors/$SENSOR_ID/status" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "status": "Offline"
+  }'
+```
+
+---
+
+# Telemetry API
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/api/sensors/{id}/telemetry` | Submit one typed reading |
+| `POST` | `/api/sensors/{id}/telemetry/batches` | Submit historical jagged batches |
+| `GET` | `/api/sensors/{id}/telemetry?limit=50` | Retrieve recent telemetry |
+
+The recent limit defaults to `50` and may not exceed `100`.
+
+## Float reading
+
+Exactly one payload field must be populated.
+
+```bash
+curl -i \
+  -X POST \
+  "$BASE_URL/api/sensors/$SENSOR_ID/telemetry" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "capturedAtUtc": "2026-09-14T08:00:00Z",
+    "floatValue": 24.75,
+    "integerValue": null,
+    "booleanValue": null
+  }'
+```
+
+## Integer reading
+
+```json
+{
+  "capturedAtUtc": "2026-09-14T08:01:00Z",
+  "floatValue": null,
+  "integerValue": 4200,
+  "booleanValue": null
+}
+```
+
+## Boolean reading
+
+```json
+{
+  "capturedAtUtc": "2026-09-14T08:02:00Z",
+  "floatValue": null,
+  "integerValue": null,
+  "booleanValue": true
+}
+```
+
+## Historical batches
+
+The same request contract is nested into uneven arrays.
+
+```bash
+curl -i \
+  -X POST \
+  "$BASE_URL/api/sensors/$SENSOR_ID/telemetry/batches" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "batches": [
+      [
+        {
+          "capturedAtUtc": "2026-09-14T08:00:00Z",
+          "floatValue": 10.0,
+          "integerValue": null,
+          "booleanValue": null
+        },
+        {
+          "capturedAtUtc": "2026-09-14T08:01:00Z",
+          "floatValue": 11.0,
+          "integerValue": null,
+          "booleanValue": null
+        }
+      ],
+      [
+        {
+          "capturedAtUtc": "2026-09-14T08:02:00Z",
+          "floatValue": 20.0,
+          "integerValue": null,
+          "booleanValue": null
+        }
+      ],
+      [
+        {
+          "capturedAtUtc": "2026-09-14T08:03:00Z",
+          "floatValue": 30.0,
+          "integerValue": null,
+          "booleanValue": null
+        },
+        {
+          "capturedAtUtc": "2026-09-14T08:04:00Z",
+          "floatValue": 31.0,
+          "integerValue": null,
+          "booleanValue": null
+        }
+      ]
+    ]
+  }'
+```
+
+---
+
+# Attachment API
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/api/sensors/{id}/attachments?category=...` | Stream an upload |
+| `GET` | `/api/sensors/{id}/attachments` | List attachment metadata |
+| `GET` | `/api/sensors/{id}/attachments/{attachmentId}` | Decrypt and stream download |
+
+### Upload configuration file
+
+```bash
+curl -i \
+  -X POST \
+  "$BASE_URL/api/sensors/$SENSOR_ID/attachments?category=Configuration" \
+  -F "file=@./gateway-config.json;type=application/json"
+```
+
+### Upload hardware log
+
+```bash
+curl -i \
+  -X POST \
+  "$BASE_URL/api/sensors/$SENSOR_ID/attachments?category=HardwareLog" \
+  -F "file=@./gateway.log;type=text/plain"
+```
+
+---
+
+# Dashboard API
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/api/dashboard/issues` | Current active/acknowledged prioritized issues |
+| `GET` | `/api/dashboard/issues?includeResolved=true` | Include resolved history |
+| `POST` | `/api/dashboard/issues/{issueId}/acknowledge` | Acknowledge an issue |
+| SignalR | `/hubs/dashboard` | Lightweight dashboard-change invalidation |
+
+Acknowledgement deliberately does not resolve the condition. Resolution is driven by recovery of the underlying sensor, telemetry, or configuration state.
+
+---
+
+# Error Responses
+
+Expected application and domain failures are translated centrally to ASP.NET Core `ProblemDetails`.
+
+Examples include:
+
+- invalid registration data → `400`;
+- malformed JSON → `400`;
+- unknown sensor → `404`;
+- duplicate sensor identifier → `409`;
+- invalid dashboard transition → `409`.
+
+The API does not intentionally expose internal exception detail to clients.
 
 ---
 
 # Automated Testing
 
-Smart-X uses four automated test projects:
+Smart-X contains four .NET test projects:
 
 ```text
 SmartX.Domain.Tests
@@ -828,96 +1399,40 @@ SmartX.Infrastructure.Tests
 SmartX.Api.IntegrationTests
 ```
 
-The backend currently contains **more than 200 automated tests** covering Domain, Application, Infrastructure, HTTP integration, and complete cross-feature workflows.
+The Part 1 backend contains **more than 200 automated tests** across Domain, Application, Infrastructure, HTTP integration, and complete cross-feature workflows.
 
 Coverage includes:
 
-- Sensor profile validation
-- MAC and unique identifiers
-- Duplicate-registration protection
-- Sensor querying and updating
-- Generic telemetry
-- Numeric generic telemetry
-- Operator overloading
-- Invalid telemetry type rejection
-- Historical jagged batches
-- Batch ordering and boundaries
-- Generic collection conversion
-- Recursive deployment validation
-- Thread-safe sensor persistence
-- Thread-safe telemetry persistence
-- Attachment validation
-- File-signature validation
-- Size limits
-- Path traversal prevention
-- AES encryption and decryption
-- Tamper detection
-- Truncation detection
-- Encrypted filesystem persistence
-- Cancellation and cleanup
-- Sensor-specific attachment enforcement
-- API `ProblemDetails`
-- Malformed JSON handling
-- Complete sensor + telemetry + attachment workflows
-- Cross-sensor resource isolation
-
-Run all backend tests:
-
-```bash
-dotnet test SmartX.sln
-```
-
-Run individual projects:
-
-```bash
-dotnet test tests/SmartX.Domain.Tests/SmartX.Domain.Tests.csproj
-
-dotnet test tests/SmartX.Application.Tests/SmartX.Application.Tests.csproj
-
-dotnet test tests/SmartX.Infrastructure.Tests/SmartX.Infrastructure.Tests.csproj
-
-dotnet test tests/SmartX.Api.IntegrationTests/SmartX.Api.IntegrationTests.csproj
-```
-
-Run Release tests:
-
-```bash
-dotnet test SmartX.sln \
-  --configuration Release \
-  --no-build
-```
+- sensor validation;
+- MAC and custom identifiers;
+- duplicate registration;
+- state transitions;
+- generic telemetry;
+- `double`, `int`, and `bool` payload preservation;
+- operator overloading;
+- invalid type rejection;
+- jagged historical batches;
+- empty and uneven batch preservation;
+- custom collection behaviour;
+- recursive deployment validation;
+- concurrent/in-memory persistence behaviour;
+- dashboard priority and lifecycle logic;
+- SignalR-driven frontend behaviour;
+- file-name and media validation;
+- image signature validation;
+- size limits;
+- path traversal prevention;
+- AES encryption/decryption;
+- ciphertext tamper detection;
+- ciphertext truncation detection;
+- upload/download workflows;
+- cross-sensor resource isolation;
+- `ProblemDetails`;
+- malformed JSON.
 
 ---
 
-# Code Coverage
-
-The test projects use `coverlet.collector`.
-
-Generate coverage locally:
-
-```bash
-rm -rf TestResults
-
-dotnet test SmartX.sln \
-  --configuration Release \
-  --collect:"XPlat Code Coverage" \
-  --results-directory TestResults
-```
-
-Find the generated reports:
-
-```bash
-find TestResults \
-  -type f \
-  -name "coverage.cobertura.xml" \
-  -print
-```
-
-`TestResults` is generated test output and should not be committed.
-
----
-
-# Backend Quality Checks
+## Backend quality gate
 
 From the repository root:
 
@@ -942,13 +1457,19 @@ dotnet test SmartX.sln \
 git diff --check
 ```
 
----
-
-# Frontend Quality Checks
-
-From `src/SmartX.Client`:
+Run tests without the Release gate:
 
 ```bash
+dotnet test SmartX.sln
+```
+
+---
+
+## Frontend quality gate
+
+```bash
+cd src/SmartX.Client
+
 npm ci
 npm audit --audit-level=high
 npm run lint
@@ -956,194 +1477,460 @@ npm run format:check
 npm run build
 ```
 
-These checks validate:
+---
 
-- Reproducible dependency installation
-- Dependency security
-- ESLint rules
-- Prettier formatting
-- TypeScript compilation
-- Production Vite build
+## Playwright end-to-end regression
+
+Install Chromium once if necessary:
+
+```bash
+cd src/SmartX.Client
+npx playwright install chromium
+```
+
+Run:
+
+```bash
+npm run test:e2e
+```
+
+Playwright owns isolated test servers:
+
+```text
+API:    http://127.0.0.1:5095
+Client: http://localhost:5173
+```
+
+The E2E configuration supplies deterministic **test-only** encryption material. It must not be reused as a real deployment key.
+
+---
+
+## Code coverage
+
+```bash
+rm -rf TestResults
+
+dotnet test SmartX.sln \
+  --configuration Release \
+  --collect:"XPlat Code Coverage" \
+  --results-directory TestResults
+```
+
+On Windows PowerShell, remove the old result directory with:
+
+```powershell
+Remove-Item TestResults -Recurse -Force -ErrorAction SilentlyContinue
+```
 
 ---
 
 # Continuous Integration
 
-GitHub Actions validates changes targeting the integration and release branches.
+`.github/workflows/ci.yml` validates changes entering `dev` and `main`.
 
-The CI pipeline performs:
+The final Part 1 pipeline contains four gates:
 
-### Backend
+```text
+Backend
+Frontend
+Playwright E2E
+Docker Deployment
+```
 
-- Repository checkout
+## Backend job
+
 - .NET 10 setup
 - NuGet restore and vulnerability audit
-- .NET formatting verification
+- .NET formatting
 - Release build
-- Complete backend test suite
+- complete .NET test suite
 
-### Frontend
+## Frontend job
 
-- Node.js 24 setup
+- Node.js 24
 - `npm ci`
-- Dependency audit
+- high-severity dependency audit
 - ESLint
-- Prettier formatting check
-- Production React/Vite build
+- Prettier
+- production Vite build
 
-Outdated runs are cancelled when a newer commit is pushed to the same branch.
+## Playwright job
 
----
+- real ASP.NET Core server
+- real Vite frontend
+- Chromium browser regression
+- frontend-to-backend workflow coverage
 
-# Storage and Runtime Notes
+## Docker job
 
-## Sensor and Telemetry Persistence
-
-Part 1 currently uses process-local in-memory repositories for registered sensors and telemetry.
-
-An API restart clears registered sensor and telemetry state.
-
-The repository interfaces intentionally hide the storage technology so durable persistence can be introduced later without changing the API and Application workflows.
-
-## Attachment Persistence
-
-Encrypted attachments are written to:
-
-```text
-src/SmartX.Api/App_Data/attachments
-```
-
-unless `Attachments:StoragePath` is configured differently.
-
-`App_Data` is excluded from Git.
-
-Each sensor receives a generated storage directory containing:
-
-```text
-<attachment-id>.payload
-<attachment-id>.metadata.json
-```
-
-Because sensor persistence is currently in-memory, stored attachments should be treated as belonging to the current Part 1 runtime session until durable sensor persistence is introduced.
+- Compose validation;
+- production image build;
+- non-root runtime verification;
+- health-gated startup;
+- React/Nginx verification;
+- API reverse-proxy verification;
+- SignalR negotiation;
+- API host-port privacy verification;
+- diagnostics on failure;
+- guaranteed cleanup.
 
 ---
 
-# Git Workflow
+# Persistence Model
 
-Development uses short-lived feature branches and pull requests into `dev`.
+## Sensors and telemetry
 
-Example:
+Part 1 intentionally uses process-local in-memory persistence for registered sensors and telemetry.
 
-```text
-feature/11-13-complete-backend-api
-```
-
-Commit messages follow a conventional style such as:
+Therefore:
 
 ```text
-feat: add sensor repository and api endpoints
-feat: add strongly typed telemetry application pipeline
-feat: expose telemetry ingestion and retrieval api
-feat: harden secure sensor attachment validation
-test: complete backend integration coverage
-docs: document completed backend api
+API restart
+    -> registered sensors cleared
+    -> telemetry cleared
 ```
 
-The `dev` branch is used as the integration branch before final delivery.
+This is a deliberate Part 1 boundary, not database persistence.
+
+Repository interfaces allow future parts to replace the current infrastructure without changing controllers or Domain rules.
+
+## Attachments — local mode
+
+By default encrypted attachments are written under the API's configured storage path:
+
+```text
+App_Data/attachments
+```
+
+`App_Data` is ignored by Git.
+
+## Attachments — Docker mode
+
+Docker mounts:
+
+```text
+/data/attachments
+```
+
+to a named volume.
+
+Therefore:
+
+```text
+docker compose down
+    -> encrypted files remain
+
+docker compose down --volumes
+    -> encrypted files are deleted
+```
+
+Because sensor registration itself is currently in-memory, persisted encrypted files should still be treated as Part 1 runtime evidence rather than a complete durable relational model.
 
 ---
 
-# Remaining Part 1 Work
+# Client and Backend Validation
 
-The core backend is ready for frontend integration.
+Validation is intentionally performed in both layers.
 
-Remaining work is focused on:
+## React
 
-- React Part 1 dashboard
-- Startup navigation with the three Smart-X architectural pillars
-- Sensor registration and management UI
-- Telemetry simulation and history UI
-- Attachment upload/list/download UI
-- Adaptive Anomaly Spotlight
-- Responsive UI and clear feedback states
-- Client-side validation
-- Final frontend/backend integration testing
-- Final assessment documentation and demonstration
+The client provides immediate feedback for:
 
-The Part 1 startup interface will present:
+- required registration fields;
+- valid identifier input;
+- telemetry type/value agreement;
+- finite numeric values;
+- Int32 integer range;
+- attachment category/file selection;
+- loading, success, and failure states.
+
+## API / Domain
+
+The backend remains authoritative and repeats all important rules, including:
+
+- physical identifier validation;
+- duplicate prevention;
+- enum/category validation;
+- telemetry type matching;
+- timestamp validation;
+- finite numeric telemetry;
+- attachment file, media, and signature rules;
+- size limits;
+- deployment hierarchy validation.
+
+This prevents a modified or non-browser client from bypassing critical rules.
+
+---
+
+# Research Deliverable
+
+The reviewed Part 1 research report is stored under:
 
 ```text
-Sensor Data Ingestion and Telemetry
-    -> Active
+docs/research/
+```
 
-Real-Time Command Stream and History
-    -> Disabled until Part 2
+The research evaluates developer-centric IoT dashboard engagement strategies and justifies the Adaptive Anomaly Spotlight used in the application.
 
-Network Topology and Mesh Routing
-    -> Disabled until the final PoE
+---
+
+# Troubleshooting
+
+## `NET::ERR_CERT_AUTHORITY_INVALID` or local HTTPS warning
+
+Trust the ASP.NET Core development certificate:
+
+```bash
+dotnet dev-certs https --trust
+```
+
+If necessary:
+
+```bash
+dotnet dev-certs https --clean
+dotnet dev-certs https --trust
+```
+
+Restart the browser and API.
+
+---
+
+## React says the API cannot be reached
+
+Confirm the API is running:
+
+```bash
+curl -k https://localhost:7095/api/health
+```
+
+Then confirm React is running at:
+
+```text
+http://localhost:5173
+```
+
+For local development, `appsettings.Development.json` permits that origin.
+
+---
+
+## CORS errors
+
+Do not solve CORS by enabling arbitrary origins.
+
+For local development use the provided Development configuration. For another trusted browser origin configure it explicitly:
+
+```text
+Cors__AllowedOrigins__0
 ```
 
 ---
 
-# Future Smart-X Functionality
+## Attachment encryption-key error
 
-Part 2 will extend Smart-X into real-time processing and device management, including:
+Generate a real 32-byte Base64 key.
 
-- FIFO telemetry queues
-- Priority queues for critical alerts
-- Command history and undo
-- Device-state lookups
-- Timestamp-organised history
-- Active error-state tracking
-- Real-time dashboard behaviour
+macOS:
 
-The final PoE will extend the same architecture with:
+```bash
+export Attachments__EncryptionKeyBase64="$(openssl rand -base64 32)"
+```
 
-- Historical data trees
-- Network graphs
-- Graph traversal
-- IoT mesh topology
-- Minimum spanning trees
-- Routing visualisation
-- Complete application integration
+Windows PowerShell:
+
+```powershell
+$keyBytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($keyBytes)
+$env:Attachments__EncryptionKeyBase64 = [Convert]::ToBase64String($keyBytes)
+```
+
+Restart the API after setting the variable.
+
+---
+
+## Docker says the encryption key is missing
+
+Create `.env` before starting Compose.
+
+Then validate:
+
+```bash
+docker compose config --quiet
+```
+
+Do not print a fully resolved Compose configuration in screenshots or logs when it may expose local environment values.
+
+---
+
+## Docker container remains unhealthy
+
+Inspect:
+
+```bash
+docker compose ps
+docker compose logs --no-color --tail=200
+```
+
+Check the public endpoints:
+
+```bash
+curl -fsS http://localhost:8080/healthz
+curl -fsS http://localhost:8080/api/health
+```
+
+---
+
+## Port 8080 is already in use
+
+Change:
+
+```text
+SMARTX_HTTP_PORT
+```
+
+inside the ignored `.env`, for example:
+
+```dotenv
+SMARTX_HTTP_PORT=9090
+```
+
+Then restart:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+Open:
+
+```text
+http://localhost:9090
+```
+
+---
+
+## Vite port 5173 is already in use
+
+Stop the conflicting process. The application and Playwright configuration expect the normal Smart-X development port.
+
+On macOS/Linux:
+
+```bash
+lsof -i :5173
+```
+
+On Windows PowerShell:
+
+```powershell
+Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue
+```
+
+---
+
+## Docker attachment files exist after API restart but sensors are missing
+
+This is expected in Part 1.
+
+The Docker volume persists encrypted files, while sensor and telemetry repositories remain process-local. Register sensors again after an API restart.
+
+---
+
+## `dotnet format --verify-no-changes` fails
+
+Run:
+
+```bash
+dotnet format SmartX.sln --no-restore
+```
+
+Then inspect:
+
+```bash
+git diff --check
+git diff
+```
+
+Do not commit unrelated formatting changes without reviewing them.
+
+---
+
+## `npm ci` fails
+
+Confirm Node and npm:
+
+```bash
+node --version
+npm --version
+```
+
+Use the committed `package-lock.json` and do not replace `npm ci` with an ad-hoc install in CI.
+
+---
+
+## Playwright browser missing
+
+```bash
+cd src/SmartX.Client
+npx playwright install chromium
+npm run test:e2e
+```
+
+On Linux CI, browser dependencies are installed with Playwright's `--with-deps` option.
 
 ---
 
 # Security Notes
 
-- Never commit the attachment encryption key.
-- Never use uploaded file names as physical storage paths.
+- Never commit attachment encryption keys.
+- Never expose `.env` contents in screenshots.
+- Never use client file names as physical storage paths.
 - Do not expose encrypted storage through `wwwroot`.
-- Treat request `Content-Type`, file extensions, and user-supplied metadata as untrusted input.
-- Use HTTPS outside local development.
-- Use a securely managed persistent secret when Smart-X is deployed beyond local development.
-- Replace the Part 1 in-memory repositories with durable persistence before treating Smart-X as a production system.
+- Treat content type, extension, file name, and client metadata as untrusted.
+- Keep production CORS closed unless a trusted origin is explicitly configured.
+- Use HTTPS when exposing Smart-X outside the local Docker demonstration boundary.
+- Use a managed secret store for any non-local deployment.
 
 ---
 
-# Current Development Milestone
+# Future Extension
 
-The Smart-X Part 1 backend now provides a complete foundation for:
+Part 1 deliberately establishes the foundation required by later PoE stages.
+
+## Part 2
+
+Planned concepts include:
+
+- `Queue<T>` for FIFO telemetry;
+- priority queues for critical alerts;
+- `Stack<T>` command history and undo;
+- `Dictionary<TKey,TValue>` device lookup;
+- sorted dictionaries for ordered history;
+- `HashSet<T>` unique active error tracking;
+- predictive action and suggestion logic.
+
+## Final PoE
+
+Planned concepts include:
+
+- binary/search/balanced trees for historical range queries;
+- graph-based mesh representation;
+- BFS/DFS traversal;
+- minimum spanning trees;
+- power-efficient route calculation;
+- complete three-pillar integration.
+
+---
+
+# Git Workflow
+
+Development uses short-lived branches and pull requests into `dev`.
+
+Commit messages use a concise conventional style, for example:
 
 ```text
-Sensor Registration
-        |
-        +--> Sensor Management
-        |
-        +--> Strongly Typed Telemetry
-        |       |
-        |       +--> Individual Readings
-        |       +--> Historical Batches
-        |       +--> Recent History
-        |
-        +--> Recursive Deployment Validation
-        |
-        +--> Secure Sensor Attachments
-                |
-                +--> Streaming Multipart Uploads
-                +--> Signature Validation
-                +--> AES-256-GCM Encryption
-                +--> Secure Download
+feat: add strongly typed telemetry pipeline
+test: cover secure attachment workflow
+fix(docker): stabilize container health validation
+docs: complete Part 1 project documentation
 ```
 
-The next major development stage is the React Part 1 dashboard and Adaptive Anomaly Spotlight integration.
+`dev` is the integration branch. Final Part 1 validation is followed by the release PR from `dev` to `main`.
