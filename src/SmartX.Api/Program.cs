@@ -15,6 +15,21 @@ const string clientCorsPolicyName = "SmartXClient";
 
 var builder = WebApplication.CreateBuilder(args);
 
+/*
+ * Local development normally terminates HTTPS directly in ASP.NET Core.
+ *
+ * Container deployments may instead terminate external traffic at a reverse
+ * proxy. In that case the internal proxy-to-API connection can remain HTTP
+ * without causing an unnecessary redirect loop.
+ *
+ * HTTPS redirection remains enabled by default and must be explicitly
+ * disabled by the deployment configuration.
+ */
+var httpsRedirectionEnabled =
+    builder.Configuration.GetValue(
+        "HttpsRedirection:Enabled",
+        defaultValue: true);
+
 var allowedClientOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>()
@@ -223,7 +238,15 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+/*
+ * Preserve HTTPS redirection for normal Smart-X execution while allowing a
+ * trusted deployment boundary, such as the Docker Nginx reverse proxy, to
+ * perform transport termination instead.
+ */
+if (httpsRedirectionEnabled)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors(clientCorsPolicyName);
 

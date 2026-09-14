@@ -3,12 +3,27 @@ import { ApiError, type ApiProblemDetails } from './apiTypes';
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 
 /**
+ * Default API location used when VITE_API_BASE_URL is not explicitly
+ * configured.
+ *
+ * During Vite development the ASP.NET Core HTTPS launch profile remains the
+ * default so the normal local workflow is unchanged.
+ *
+ * Production builds default to an empty base URL. This causes requests such
+ * as /api/health and /hubs/dashboard to use the browser's current origin,
+ * allowing a reverse proxy to route both React and API traffic through one
+ * external address.
+ */
+const defaultApiBaseUrl = import.meta.env.DEV ? 'https://localhost:7095' : '';
+
+/**
  * Base address of the Smart-X API.
  *
- * Local development defaults to the HTTPS launch profile while deployments
- * can provide a different endpoint through VITE_API_BASE_URL.
+ * VITE_API_BASE_URL remains available for deployments that deliberately host
+ * the client and API on different origins. The Docker deployment uses the
+ * same-origin production default.
  */
-export const apiBaseUrl = (configuredApiBaseUrl || 'https://localhost:7095').replace(/\/+$/, '');
+export const apiBaseUrl = (configuredApiBaseUrl || defaultApiBaseUrl).replace(/\/+$/, '');
 
 /**
  * Normalises relative Smart-X API paths and rejects accidental empty

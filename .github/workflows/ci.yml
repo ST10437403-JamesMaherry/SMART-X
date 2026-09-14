@@ -25,6 +25,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ===========================================================================
+  # BACKEND
+  # ===========================================================================
   backend:
     name: Backend
     runs-on: ubuntu-latest
@@ -62,6 +65,9 @@ jobs:
           --no-build
           --logger "console;verbosity=normal"
 
+  # ===========================================================================
+  # FRONTEND
+  # ===========================================================================
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
@@ -98,6 +104,9 @@ jobs:
       - name: Build React client
         run: npm run build
 
+  # ===========================================================================
+  # BROWSER REGRESSION
+  # ===========================================================================
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
@@ -140,3 +149,275 @@ jobs:
       - name: Run Playwright regression suite
         working-directory: src/SmartX.Client
         run: npm run test:e2e
+
+  # ===========================================================================
+  # PRODUCTION CONTAINER DEPLOYMENT
+  # ===========================================================================
+  docker:
+    name: Docker Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Container validation is a final delivery gate. There is no value spending
+    # runner time building deployment images until the source-level backend,
+    # frontend and browser regression suites have all passed.
+    needs:
+      - backend
+      - frontend
+      - e2e
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # -----------------------------------------------------------------------
+      # CI-only runtime configuration
+      # -----------------------------------------------------------------------
+      #
+      # Smart-X intentionally requires a 32-byte AES-256-GCM attachment key.
+      # CI does not need a permanent deployment secret, so a new disposable key
+      # is generated for every workflow run.
+      #
+      # The value is written directly to the GitHub Actions environment file
+      # and is never committed to the repository or printed by this workflow.
+      - name: Generate isolated Docker test configuration
+        shell: bash
+        run: |
+          {
+            echo "SMARTX_HTTP_PORT=18080"
+            echo "SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64=$(openssl rand -base64 32)"
+          } >> "$GITHUB_ENV"
+
+      # Validate variable substitution and Compose syntax before performing the
+      # substantially more expensive container image builds.
+      #
+      # --quiet is deliberate because normal `docker compose config` output
+      # would include the resolved attachment encryption key.
+      - name: Validate Docker Compose configuration
+        run: docker compose config --quiet
+
+      # Build both final production images through the same Compose definition
+      # that lecturers and developers use locally.
+      - name: Build Smart-X production images
+        run: docker compose build
+
+      # -----------------------------------------------------------------------
+      # Runtime privilege validation
+      # -----------------------------------------------------------------------
+      #
+      # Smart-X containers should not execute their application processes as
+      # root. This check fails if either image loses its non-root runtime user
+      # during a future Dockerfile change.
+      - name: Verify non-root runtime users
+        shell: bash
+        run: |
+          api_user="$(docker image inspect smartx-api:local --format '{{.Config.User}}')"
+          client_user="$(docker image inspect smartx-client:local --format '{{.Config.User}}')"
+
+          echo "API runtime user: ${api_user}"
+          echo "Client runtime user: ${client_user}"
+
+          if [[ -z "${api_user}" || "${api_user}" == "0" || "${api_user}" == "root" ]]; then
+            echo "Smart-X API image is not configured with a non-root runtime user."
+            exit 1
+          fi
+
+          if [[ -z "${client_user}" || "${client_user}" == "0" || "${client_user}" == "root" ]]; then
+            echo "Smart-X client image is not configured with a non-root runtime user."
+            exit 1
+          fi
+
+      # Start the same two-service production topology used by the documented
+      # local Docker deployment.
+      #
+      # The client service is already configured to wait for the API's real
+      # /api/health Docker health check before starting.
+      - name: Start Smart-X container deployment
+        run: docker compose up --detach
+
+      # Do not rely on an arbitrary sleep duration. Poll the externally visible
+      # application boundary until Nginx and the proxied ASP.NET Core API both
+      # answer successfully or the bounded readiness period expires.
+      - name: Wait for Smart-X readiness
+        shell: bash
+        run: |
+          for attempt in {1..30}; do
+            if \
+              curl --fail --silent --show-error \
+                "http://127.0.0.1:${SMARTX_HTTP_PORT}/healthz" \
+                > /dev/null \
+              && \
+              curl --fail --silent --show-error \
+                "http://127.0.0.1:${SMARTX_HTTP_PORT}/api/health" \
+                > /dev/null
+            then
+              echo "Smart-X Docker deployment is ready."
+              exit 0
+            fi
+
+            echo "Waiting for Smart-X containers (${attempt}/30)..."
+            sleep 2
+          done
+
+          echo "Smart-X did not become ready within the expected period."
+          docker compose ps
+          exit 1
+
+      # Docker health checks execute independently from the host-side readiness
+      # requests above. Nginx may already accept HTTP traffic while Docker
+      # still reports its health state as "starting".
+      #
+      # Polling removes that race condition and also gives the client enough
+      # time to complete its first scheduled container health check.
+      - name: Verify container health
+        shell: bash
+        run: |
+          api_container="$(docker compose ps --quiet api)"
+          client_container="$(docker compose ps --quiet client)"
+
+          if [[ -z "${api_container}" || -z "${client_container}" ]]; then
+            echo "One or more Smart-X containers could not be resolved."
+            docker compose ps
+            exit 1
+          fi
+
+          for attempt in {1..30}; do
+            api_health="$(
+              docker inspect \
+                --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' \
+                "${api_container}"
+            )"
+
+            client_health="$(
+              docker inspect \
+                --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' \
+                "${client_container}"
+            )"
+
+            echo "Health check ${attempt}/30:"
+            echo "  API:    ${api_health}"
+            echo "  Client: ${client_health}"
+
+            if [[ "${api_health}" == "healthy" && "${client_health}" == "healthy" ]]; then
+              echo "Both Smart-X containers are healthy."
+              exit 0
+            fi
+
+            # An explicitly unhealthy container is a real failure rather than
+            # a startup race, so surface it immediately.
+            if [[ "${api_health}" == "unhealthy" || "${client_health}" == "unhealthy" ]]; then
+              echo "A Smart-X container entered an unhealthy state."
+              docker compose ps
+              docker compose logs --no-color --tail=100
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          echo "Smart-X containers did not become healthy within 60 seconds."
+          docker compose ps
+          docker compose logs --no-color --tail=100
+          exit 1
+
+      # -----------------------------------------------------------------------
+      # Production routing smoke tests
+      # -----------------------------------------------------------------------
+
+      # Verify that the compiled React application is actually being served by
+      # the production Nginx container.
+      - name: Verify production React endpoint
+        run: >
+          curl
+          --fail
+          --silent
+          --show-error
+          "http://127.0.0.1:${SMARTX_HTTP_PORT}/"
+          > /dev/null
+
+      # This request passes through:
+      #
+      # host -> Nginx -> private Docker network -> ASP.NET Core
+      #
+      # and therefore proves the production API reverse-proxy path works.
+      - name: Verify API reverse proxy
+        run: >
+          curl
+          --fail
+          --silent
+          --show-error
+          "http://127.0.0.1:${SMARTX_HTTP_PORT}/api/health"
+
+      # Adaptive Anomaly Spotlight uses SignalR. Normal HTTP health checks alone
+      # would not prove that the /hubs reverse proxy is correctly configured.
+      - name: Verify SignalR reverse proxy
+        shell: bash
+        run: |
+          response="$(
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --request POST \
+              "http://127.0.0.1:${SMARTX_HTTP_PORT}/hubs/dashboard/negotiate?negotiateVersion=1"
+          )"
+
+          if ! grep --quiet '"availableTransports"' <<< "${response}"; then
+            echo "SignalR negotiation did not return available transports."
+            exit 1
+          fi
+
+          echo "SignalR negotiation succeeded."
+
+      # The API may expose port 8080 to other containers on the private
+      # Compose network, but it must never publish that port to the host.
+      #
+      # Do not use `docker compose port` for this assertion. Some Docker
+      # Compose versions represent an exposed-but-unpublished port as ":0",
+      # which produces a false positive.
+      #
+      # HostConfig.PortBindings is Docker's authoritative configuration for
+      # host port publication.
+      - name: Verify API remains private
+        shell: bash
+        run: |
+          api_container="$(docker compose ps --quiet api)"
+
+          if [[ -z "${api_container}" ]]; then
+            echo "Smart-X API container could not be resolved."
+            docker compose ps
+            exit 1
+          fi
+
+          published_binding="$(
+            docker inspect \
+              --format '{{with (index .HostConfig.PortBindings "8080/tcp")}}{{json .}}{{end}}' \
+              "${api_container}"
+          )"
+
+          if [[ -n "${published_binding}" && "${published_binding}" != "null" ]]; then
+            echo "API container unexpectedly publishes port 8080 to the host:"
+            echo "${published_binding}"
+            exit 1
+          fi
+
+          echo "API port 8080 is available only inside the Docker network."
+
+      # Display the final service state as useful CI evidence.
+      - name: Display Docker service state
+        run: docker compose ps
+
+      # If any earlier Docker step fails, surface recent logs before cleanup so
+      # startup, health-check, permission and reverse-proxy failures are easy to
+      # diagnose from the GitHub Actions run.
+      - name: Print Docker logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+
+      # Always remove CI containers, the private network and the disposable
+      # encrypted attachment volume.
+      #
+      # This runs even when a previous Docker validation step fails.
+      - name: Clean up Docker deployment
+        if: always()
+        run: docker compose down --volumes --remove-orphans
