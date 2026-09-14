@@ -1,0 +1,45 @@
+using SmartX.Domain.Telemetry;
+
+namespace SmartX.Application.Telemetry;
+
+/// <summary>
+/// Defines the strongly typed persistence operations required by Smart-X
+/// telemetry use cases.
+///
+/// Generic methods keep telemetry payloads in their native value type across
+/// the Application/Infrastructure boundary. Implementations must therefore
+/// never need to weaken telemetry packets to object or dynamic values.
+/// </summary>
+public interface ITelemetryRepository
+{
+    /// <summary>
+    /// Stores one strongly typed telemetry packet for a registered sensor.
+    /// </summary>
+    Task AddAsync<T>(
+        Guid sensorProfileId,
+        TelemetryPacket<T> packet,
+        CancellationToken cancellationToken = default)
+        where T : struct;
+
+    /// <summary>
+    /// Stores an already validated historical telemetry collection.
+    ///
+    /// HistoricalTelemetryBuffer preserves the sequence and original batch
+    /// boundaries established from the raw jagged input.
+    /// </summary>
+    Task AddBatchAsync<T>(
+        Guid sensorProfileId,
+        HistoricalTelemetryBuffer<T> history,
+        CancellationToken cancellationToken = default)
+        where T : struct;
+
+    /// <summary>
+    /// Returns up to the requested number of most recently stored telemetry
+    /// packets while preserving their original ingestion order.
+    /// </summary>
+    Task<IReadOnlyList<TelemetryPacket<T>>> GetRecentAsync<T>(
+        Guid sensorProfileId,
+        int limit,
+        CancellationToken cancellationToken = default)
+        where T : struct;
+}

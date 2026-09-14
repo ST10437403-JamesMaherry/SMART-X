@@ -1,0 +1,637 @@
+/*
+ * ==========================================================================
+ * TELEMETRY WORKSPACE
+ * ==========================================================================
+ *
+ * Telemetry follows the same restrained Smart-X visual system as sensor
+ * registration: black surfaces, fine borders, text-only controls and no
+ * decorative dashboard cards.
+ */
+
+.telemetry-workspace {
+  max-width: 68rem;
+
+  margin-top: clamp(5rem, 10vw, 8rem);
+  padding-top: 2rem;
+
+  border-top: 1px solid var(--border);
+}
+
+.telemetry-workspace-heading {
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.telemetry-workspace-label {
+  margin: 0 0 0.8rem;
+
+  color: var(--accent);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.14em;
+}
+
+.telemetry-workspace-heading h2 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.telemetry-workspace-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(17rem, 0.8fr)
+    minmax(0, 1.2fr);
+
+  gap: clamp(2rem, 5vw, 4rem);
+}
+
+.telemetry-panel {
+  min-width: 0;
+}
+
+.telemetry-history {
+  padding-left: clamp(2rem, 5vw, 4rem);
+
+  border-left: 1px solid var(--border);
+}
+
+.telemetry-panel-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1.75rem;
+}
+
+.telemetry-panel-heading h3 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.telemetry-count {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+
+  letter-spacing: 0.08em;
+}
+
+/*
+ * ==========================================================================
+ * SELECTED SENSOR CONTEXT
+ * ==========================================================================
+ */
+
+.telemetry-sensor-context {
+  display: grid;
+  gap: 0.4rem;
+
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.telemetry-sensor-context strong {
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+
+  letter-spacing: -0.015em;
+}
+
+.telemetry-sensor-context span {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  overflow-wrap: anywhere;
+}
+
+/*
+ * ==========================================================================
+ * TELEMETRY FORM
+ * ==========================================================================
+ */
+
+.telemetry-form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.telemetry-field label {
+  display: block;
+
+  margin-bottom: 0.55rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.telemetry-field input,
+.telemetry-field select {
+  width: 100%;
+  min-height: 3rem;
+
+  padding: 0.7rem 0.8rem;
+
+  border: 1px solid var(--border);
+  border-radius: 2px;
+
+  color: var(--heading);
+  background: var(--background);
+
+  font-family: var(--font-interface);
+  font-size: 0.8rem;
+
+  transition: border-color 120ms ease;
+}
+
+.telemetry-field input:hover,
+.telemetry-field select:hover {
+  border-color: var(--border-strong);
+}
+
+.telemetry-field input:focus,
+.telemetry-field select:focus {
+  border-color: var(--accent);
+}
+
+.telemetry-field input[aria-invalid='true'],
+.telemetry-field select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.telemetry-field-error {
+  margin: 0.5rem 0 0;
+
+  color: var(--danger);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  line-height: 1.5;
+}
+
+.telemetry-form-footer {
+  margin-top: 0.5rem;
+}
+
+.telemetry-primary-action,
+.telemetry-secondary-action {
+  min-height: 2.75rem;
+
+  padding: 0.75rem 1rem;
+
+  border-radius: 2px;
+
+  font-family: var(--font-interface);
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.telemetry-primary-action {
+  border: 1px solid var(--heading);
+
+  color: var(--background);
+  background: var(--heading);
+}
+
+.telemetry-primary-action:hover:not(:disabled) {
+  background: var(--text);
+}
+
+.telemetry-primary-action:disabled {
+  border-color: var(--border);
+
+  color: var(--text-muted);
+  background: var(--surface);
+
+  cursor: wait;
+}
+
+.telemetry-secondary-action {
+  margin-top: 1rem;
+
+  border: 1px solid var(--border-strong);
+
+  color: var(--heading);
+  background: transparent;
+}
+
+.telemetry-secondary-action:hover {
+  border-color: var(--heading);
+}
+
+.telemetry-feedback {
+  margin: 1rem 0 0;
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+
+  line-height: 1.5;
+}
+
+.telemetry-feedback--success {
+  color: var(--success);
+}
+
+.telemetry-feedback--error {
+  color: var(--danger);
+}
+
+/*
+ * ==========================================================================
+ * RECENT TELEMETRY
+ * ==========================================================================
+ */
+
+.telemetry-empty-state,
+.telemetry-no-sensor {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+
+  line-height: 1.6;
+}
+
+.telemetry-empty-state p {
+  margin: 0;
+}
+
+.telemetry-table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+.telemetry-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+
+  text-align: left;
+}
+
+.telemetry-table th {
+  padding: 0 1rem 0.8rem 0;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-size: 0.62rem;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  white-space: nowrap;
+}
+
+.telemetry-table td {
+  padding: 1rem 1rem 1rem 0;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  white-space: nowrap;
+}
+
+.telemetry-table td:first-child {
+  color: var(--accent);
+}
+
+.telemetry-table .telemetry-value {
+  color: var(--heading);
+
+  font-weight: 700;
+}
+
+.telemetry-table time {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * ==========================================================================
+ * RESPONSIVE TELEMETRY WORKSPACE
+ * ==========================================================================
+ */
+
+@media (max-width: 900px) {
+  .telemetry-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-history {
+    padding-top: 2.5rem;
+    padding-left: 0;
+
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .telemetry-workspace {
+    margin-top: 4.5rem;
+  }
+
+  .telemetry-primary-action {
+    width: 100%;
+  }
+
+  /*
+   * The history table remains semantically a table while horizontal overflow
+   * is contained within its own region rather than affecting the whole page.
+   */
+  .telemetry-table {
+    min-width: 32rem;
+  }
+}
+
+/*
+ * ==========================================================================
+ * HISTORICAL TELEMETRY BATCHES
+ * ==========================================================================
+ *
+ * Each row corresponds directly to one inner array in the jagged telemetry
+ * request. Structural lines and monospace values make that relationship clear
+ * without introducing cards, icons or decorative visual elements.
+ */
+
+.telemetry-batch-simulator {
+  margin-top: clamp(4rem, 8vw, 6rem);
+  padding-top: 2rem;
+
+  border-top: 1px solid var(--border);
+}
+
+.telemetry-batch-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+
+  margin-bottom: 2rem;
+}
+
+.telemetry-batch-heading h3 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 400;
+
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/*
+ * Compact representation of the current jagged-array lengths.
+ *
+ * Example:
+ * [2, 1, 0, 3]
+ */
+.telemetry-batch-shape {
+  color: var(--accent);
+
+  font-family: var(--font-interface);
+  font-size: 0.72rem;
+
+  letter-spacing: 0.04em;
+
+  white-space: nowrap;
+}
+
+.telemetry-batch-form {
+  width: 100%;
+}
+
+.telemetry-batch-fieldset {
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+}
+
+.telemetry-batch-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+
+  margin-bottom: 1.5rem;
+}
+
+.telemetry-batch-secondary-action,
+.telemetry-batch-remove {
+  min-height: 2.5rem;
+
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+
+  color: var(--text);
+  background: transparent;
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.telemetry-batch-secondary-action {
+  padding: 0.65rem 0.85rem;
+}
+
+.telemetry-batch-remove {
+  padding: 0.55rem 0.7rem;
+}
+
+.telemetry-batch-secondary-action:hover:not(:disabled),
+.telemetry-batch-remove:hover:not(:disabled) {
+  border-color: var(--heading);
+
+  color: var(--heading);
+  background: var(--surface);
+}
+
+.telemetry-batch-remove:disabled {
+  border-color: var(--border);
+
+  color: #4d4d4d;
+
+  cursor: not-allowed;
+}
+
+.telemetry-batch-list {
+  border-top: 1px solid var(--border);
+}
+
+.telemetry-batch-row {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+
+  padding: 1rem 0;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.telemetry-batch-row > label {
+  padding-top: 0.95rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.telemetry-batch-input-group {
+  min-width: 0;
+}
+
+.telemetry-batch-input-group input {
+  width: 100%;
+  min-height: 2.75rem;
+
+  padding: 0.65rem 0.8rem;
+
+  border: 1px solid var(--border);
+  border-radius: 2px;
+
+  color: var(--heading);
+  background: var(--background);
+
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+
+  transition: border-color 120ms ease;
+}
+
+.telemetry-batch-input-group input:hover {
+  border-color: var(--border-strong);
+}
+
+.telemetry-batch-input-group input:focus {
+  border-color: var(--accent);
+}
+
+.telemetry-batch-input-group input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.telemetry-batch-input-group input::placeholder {
+  color: #505050;
+}
+
+.telemetry-batch-remove {
+  margin-top: 0.15rem;
+}
+
+.telemetry-batch-footer {
+  margin-top: 1.75rem;
+}
+
+@media (max-width: 700px) {
+  .telemetry-batch-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .telemetry-batch-row {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+
+    padding: 1.25rem 0;
+  }
+
+  .telemetry-batch-row > label {
+    padding-top: 0;
+  }
+
+  .telemetry-batch-remove {
+    justify-self: start;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .telemetry-batch-toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .telemetry-batch-secondary-action {
+    width: 100%;
+  }
+
+  .telemetry-batch-footer .telemetry-primary-action {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .telemetry-field input,
+  .telemetry-field select {
+    transition: none;
+  }
+  .telemetry-batch-secondary-action,
+  .telemetry-batch-remove,
+  .telemetry-batch-input-group input {
+    transition: none;
+  }
+}

@@ -1,0 +1,571 @@
+/*
+ * ==========================================================================
+ * SENSOR WORKSPACE
+ * ==========================================================================
+ *
+ * The sensor-management interface extends the Smart-X visual language:
+ * near-black surfaces, sharp structural lines, restrained semantic colour and
+ * typography-driven hierarchy.
+ */
+
+.sensor-workspace {
+  max-width: 68rem;
+
+  margin-top: clamp(5rem, 10vw, 8rem);
+  padding-top: 2rem;
+
+  border-top: 1px solid var(--border);
+
+  scroll-margin-top: 2rem;
+}
+
+.sensor-workspace:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 0.75rem;
+}
+
+.sensor-workspace-heading {
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.sensor-workspace-label {
+  margin: 0 0 0.8rem;
+
+  color: var(--accent);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.14em;
+}
+
+.sensor-workspace-heading h2 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+/*
+ * Registration and registry share one workspace but remain separated by one
+ * structural rule rather than independent dashboard cards.
+ */
+.sensor-workspace-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.05fr)
+    minmax(18rem, 0.95fr);
+
+  gap: clamp(2rem, 5vw, 4rem);
+}
+
+.sensor-panel {
+  min-width: 0;
+}
+
+.sensor-registry {
+  padding-left: clamp(2rem, 5vw, 4rem);
+
+  border-left: 1px solid var(--border);
+}
+
+.sensor-panel-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1.75rem;
+}
+
+.sensor-panel-heading h3 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sensor-count {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+
+  letter-spacing: 0.08em;
+}
+
+/*
+ * ==========================================================================
+ * REGISTRATION FORM
+ * ==========================================================================
+ */
+
+.sensor-registration-form {
+  width: 100%;
+}
+
+.sensor-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 1.25rem;
+}
+
+.sensor-field {
+  min-width: 0;
+}
+
+.sensor-field--full {
+  grid-column: 1 / -1;
+}
+
+.sensor-field label {
+  display: block;
+
+  margin-bottom: 0.55rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sensor-field input,
+.sensor-field select {
+  width: 100%;
+  min-height: 3rem;
+
+  padding: 0.7rem 0.8rem;
+
+  border: 1px solid var(--border);
+  border-radius: 2px;
+
+  color: var(--heading);
+  background: var(--background);
+
+  font-family: var(--font-interface);
+  font-size: 0.8rem;
+
+  transition: border-color 120ms ease;
+}
+
+.sensor-field input:hover,
+.sensor-field select:hover {
+  border-color: var(--border-strong);
+}
+
+.sensor-field input:focus,
+.sensor-field select:focus {
+  border-color: var(--accent);
+}
+
+.sensor-field input::placeholder {
+  color: #555555;
+}
+
+.sensor-field input[aria-invalid='true'],
+.sensor-field select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.sensor-field-error {
+  margin: 0.5rem 0 0;
+
+  color: var(--danger);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  line-height: 1.5;
+}
+
+.sensor-form-footer {
+  margin-top: 1.75rem;
+}
+
+/*
+ * The primary action is deliberately high contrast rather than accent-filled.
+ */
+.sensor-primary-action,
+.sensor-secondary-action {
+  min-height: 2.75rem;
+
+  padding: 0.75rem 1rem;
+
+  border-radius: 2px;
+
+  font-family: var(--font-interface);
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.sensor-primary-action {
+  border: 1px solid var(--heading);
+
+  color: var(--background);
+  background: var(--heading);
+
+  transition:
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.sensor-primary-action:hover:not(:disabled) {
+  color: var(--background);
+  background: var(--text);
+}
+
+.sensor-primary-action:disabled {
+  border-color: var(--border);
+
+  color: var(--text-muted);
+  background: var(--surface);
+
+  cursor: wait;
+}
+
+.sensor-secondary-action {
+  margin-top: 1rem;
+
+  border: 1px solid var(--border-strong);
+
+  color: var(--heading);
+  background: transparent;
+}
+
+.sensor-secondary-action:hover {
+  border-color: var(--heading);
+}
+
+.sensor-feedback {
+  display: grid;
+  gap: 0.35rem;
+
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+
+  border-top: 1px solid var(--border);
+
+  font-family: var(--font-interface);
+  font-size: 0.72rem;
+
+  line-height: 1.55;
+}
+
+.sensor-feedback strong {
+  color: var(--heading);
+
+  font-size: 0.7rem;
+
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sensor-feedback--success {
+  color: var(--success);
+}
+
+.sensor-feedback--error {
+  color: var(--danger);
+}
+
+/*
+ * ==========================================================================
+ * SENSOR REGISTRY
+ * ==========================================================================
+ */
+
+.sensor-registry-state {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+
+  line-height: 1.6;
+}
+
+.sensor-registry-state p {
+  margin: 0;
+}
+
+.sensor-registry-list {
+  margin: 0;
+  padding: 0;
+
+  border-top: 1px solid var(--border);
+
+  list-style: none;
+}
+
+.sensor-registry-list li {
+  border-bottom: 1px solid var(--border);
+}
+
+.sensor-row {
+  display: grid;
+  gap: 1rem;
+
+  width: 100%;
+
+  padding: 1.2rem 0;
+
+  border: 0;
+  border-radius: 0;
+
+  color: var(--text);
+  background: transparent;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    color 120ms ease,
+    background-color 120ms ease,
+    padding-left 120ms ease;
+}
+
+.sensor-row:hover {
+  color: var(--heading);
+  background: var(--surface);
+}
+
+.sensor-row--selected {
+  padding-left: 1rem;
+
+  border-left: 2px solid var(--accent);
+}
+
+.sensor-row-primary {
+  display: grid;
+  gap: 0.4rem;
+
+  min-width: 0;
+}
+
+.sensor-row-primary strong {
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+
+  letter-spacing: -0.015em;
+
+  overflow-wrap: anywhere;
+}
+
+.sensor-row-primary > span {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  overflow-wrap: anywhere;
+}
+
+.sensor-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.62rem;
+
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sensor-row--selected .sensor-row-meta {
+  color: var(--accent);
+}
+
+/*
+ * ==========================================================================
+ * INGESTION SECTION NAVIGATION
+ * ==========================================================================
+ *
+ * Four text-only controls move between the Adaptive Anomaly Spotlight and the
+ * three operational ingestion workflows.
+ */
+
+.ingestion-section-navigation {
+  max-width: 68rem;
+
+  margin-top: clamp(4rem, 8vw, 6rem);
+
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.ingestion-section-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.ingestion-section-list li {
+  min-width: 0;
+}
+
+.ingestion-section-list li:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.ingestion-section-list a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 3.5rem;
+
+  padding: 0.8rem 0.75rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+
+  transition:
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.ingestion-section-list a:hover {
+  color: var(--heading);
+  background: var(--surface);
+}
+
+.ingestion-section-list a:focus-visible {
+  position: relative;
+  z-index: 1;
+
+  outline-offset: -2px;
+}
+
+/*
+ * Native hash links target these workflow sections.
+ */
+#sensor-management,
+#telemetry-management,
+#attachment-management {
+  scroll-margin-top: 2rem;
+}
+
+#sensor-management:focus-visible,
+#telemetry-management:focus-visible,
+#attachment-management:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 0.75rem;
+}
+
+/*
+ * ==========================================================================
+ * RESPONSIVE SENSOR WORKSPACE
+ * ==========================================================================
+ */
+
+@media (max-width: 900px) {
+  .sensor-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sensor-registry {
+    padding-top: 2.5rem;
+    padding-left: 0;
+
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .sensor-workspace {
+    margin-top: 4.5rem;
+  }
+
+  .sensor-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sensor-field--full {
+    grid-column: auto;
+  }
+
+  .sensor-primary-action {
+    width: 100%;
+  }
+
+  .sensor-row {
+    padding: 1.1rem 0;
+  }
+
+  .sensor-row--selected {
+    padding-left: 0.75rem;
+  }
+
+  .ingestion-section-navigation {
+    margin-top: 3.5rem;
+  }
+
+  .ingestion-section-list a {
+    min-height: 3.25rem;
+
+    padding-inline: 0.35rem;
+
+    font-size: 0.57rem;
+
+    letter-spacing: 0.045em;
+  }
+}
+
+@media (max-width: 380px) {
+  .ingestion-section-list a {
+    padding-inline: 0.2rem;
+
+    font-size: 0.54rem;
+
+    letter-spacing: 0.03em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sensor-field input,
+  .sensor-field select,
+  .sensor-primary-action,
+  .sensor-row,
+  .ingestion-section-list a {
+    transition: none;
+  }
+}

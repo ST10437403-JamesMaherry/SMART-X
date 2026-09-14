@@ -1,0 +1,607 @@
+/*
+ * ==========================================================================
+ * ADAPTIVE ANOMALY SPOTLIGHT
+ * ==========================================================================
+ *
+ * The dashboard engagement strategy follows the existing Smart-X visual
+ * language: near-black surfaces, structural borders, sharp controls and
+ * deliberate typography.
+ *
+ * Operational importance is communicated using hierarchy and restrained
+ * semantic colour rather than decorative cards, icons, glow or animation.
+ */
+
+.adaptive-spotlight {
+  max-width: 68rem;
+
+  margin-top: clamp(3rem, 6vw, 5rem);
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+
+  scroll-margin-top: 2rem;
+}
+
+.adaptive-spotlight:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 0.75rem;
+}
+
+/*
+ * ==========================================================================
+ * HEADING + LIVE STATE
+ * ==========================================================================
+ */
+
+.spotlight-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+
+  margin-bottom: 1.5rem;
+}
+
+.spotlight-label,
+.spotlight-state-label {
+  margin: 0 0 0.8rem;
+
+  color: var(--accent);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.14em;
+}
+
+.spotlight-heading h2 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.spotlight-live-state {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.spotlight-live-state-value {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.spotlight-live-state-value--connected {
+  color: var(--success);
+}
+
+.spotlight-live-state-value--connecting,
+.spotlight-live-state-value--reconnecting {
+  color: var(--warning);
+}
+
+.spotlight-live-state-value--disconnected {
+  color: var(--danger);
+}
+
+.spotlight-refresh-action {
+  min-height: 2.4rem;
+
+  padding: 0.55rem 0.75rem;
+
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+
+  color: var(--text);
+  background: transparent;
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.spotlight-refresh-action:hover {
+  border-color: var(--heading);
+
+  color: var(--heading);
+  background: var(--surface);
+}
+
+/*
+ * ==========================================================================
+ * DASHBOARD SUMMARY
+ * ==========================================================================
+ */
+
+.spotlight-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+
+  padding: 1rem 0;
+
+  border-top: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/*
+ * ==========================================================================
+ * SENSOR STATE SIMULATOR
+ * ==========================================================================
+ *
+ * Part 1 uses simulated sensor state because no physical IoT fleet is
+ * required. The actual state transition remains server-side and is processed
+ * through the same Domain rules used by the rest of Smart-X.
+ */
+
+.spotlight-state-simulator {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(18rem, 0.8fr);
+
+  gap: clamp(2rem, 5vw, 4rem);
+
+  padding: 1.5rem 0;
+
+  border-top: 1px solid var(--border);
+}
+
+.spotlight-state-context {
+  min-width: 0;
+}
+
+.spotlight-state-context h3 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 400;
+
+  letter-spacing: -0.02em;
+}
+
+.spotlight-state-context > span {
+  display: block;
+
+  margin-top: 0.5rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+}
+
+.spotlight-state-terminal {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.72rem;
+
+  line-height: 1.6;
+}
+
+.spotlight-state-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.spotlight-state-field label {
+  display: block;
+
+  margin-bottom: 0.5rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.64rem;
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.spotlight-state-field select {
+  width: 100%;
+  min-height: 2.75rem;
+
+  padding: 0.65rem 0.75rem;
+
+  border: 1px solid var(--border);
+  border-radius: 2px;
+
+  color: var(--heading);
+  background: var(--background);
+
+  font-family: var(--font-interface);
+  font-size: 0.75rem;
+
+  transition: border-color 120ms ease;
+}
+
+.spotlight-state-field select:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.spotlight-state-field select:focus {
+  border-color: var(--accent);
+}
+
+.spotlight-action-feedback {
+  grid-column: 1 / -1;
+
+  margin: 0.2rem 0 0;
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  line-height: 1.5;
+}
+
+.spotlight-action-feedback--success {
+  color: var(--success);
+}
+
+.spotlight-action-feedback--error {
+  color: var(--danger);
+}
+
+/*
+ * ==========================================================================
+ * ISSUE LIST
+ * ==========================================================================
+ *
+ * Issues are rows rather than independent rounded cards. The server-provided
+ * priority order is retained exactly.
+ */
+
+.spotlight-issue-list {
+  margin: 0;
+  padding: 0;
+
+  border-top: 1px solid var(--border);
+
+  list-style: none;
+}
+
+.spotlight-issue-list > li {
+  border-bottom: 1px solid var(--border);
+}
+
+.spotlight-issue {
+  padding: 1.4rem 0 1.4rem 1rem;
+
+  border-left: 2px solid var(--border-strong);
+}
+
+.spotlight-issue--critical {
+  border-left-color: var(--danger);
+}
+
+.spotlight-issue--warning {
+  border-left-color: var(--warning);
+}
+
+.spotlight-issue--information {
+  border-left-color: var(--accent);
+}
+
+.spotlight-issue--acknowledged {
+  opacity: 0.72;
+}
+
+.spotlight-issue-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.spotlight-issue-classification {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.62rem;
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.spotlight-severity--critical {
+  color: var(--danger);
+}
+
+.spotlight-severity--warning {
+  color: var(--warning);
+}
+
+.spotlight-severity--information {
+  color: var(--accent);
+}
+
+.spotlight-priority {
+  flex: 0 0 auto;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.62rem;
+
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.spotlight-issue h3 {
+  max-width: 44rem;
+
+  margin: 0.9rem 0 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 400;
+
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.spotlight-issue-sensor {
+  margin: 0.55rem 0 0;
+
+  color: var(--text);
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.spotlight-issue-detail {
+  max-width: 48rem;
+
+  margin: 0.85rem 0 0;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.72rem;
+
+  line-height: 1.7;
+}
+
+.spotlight-issue-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+
+  margin-top: 1rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.62rem;
+
+  line-height: 1.5;
+}
+
+.spotlight-issue-meta time {
+  font-variant-numeric: tabular-nums;
+}
+
+.spotlight-issue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+
+  margin-top: 1.25rem;
+}
+
+/*
+ * ==========================================================================
+ * ACTIONS
+ * ==========================================================================
+ */
+
+.spotlight-primary-action,
+.spotlight-secondary-action,
+.spotlight-show-all {
+  min-height: 2.6rem;
+
+  padding: 0.65rem 0.85rem;
+
+  border-radius: 2px;
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.spotlight-primary-action {
+  border: 1px solid var(--heading);
+
+  color: var(--background);
+  background: var(--heading);
+}
+
+.spotlight-primary-action:hover:not(:disabled) {
+  background: var(--text);
+}
+
+.spotlight-secondary-action,
+.spotlight-show-all {
+  border: 1px solid var(--border-strong);
+
+  color: var(--heading);
+  background: transparent;
+}
+
+.spotlight-secondary-action:hover:not(:disabled),
+.spotlight-show-all:hover:not(:disabled) {
+  border-color: var(--heading);
+
+  background: var(--surface);
+}
+
+.spotlight-primary-action:disabled,
+.spotlight-secondary-action:disabled {
+  color: var(--text-muted);
+
+  border-color: var(--border);
+  background: var(--surface);
+
+  cursor: wait;
+}
+
+.spotlight-show-all {
+  margin-top: 1.25rem;
+}
+
+/*
+ * ==========================================================================
+ * EMPTY + FAILURE STATES
+ * ==========================================================================
+ */
+
+.spotlight-empty-state,
+.spotlight-error-state,
+.spotlight-refresh-error {
+  margin: 0;
+  padding: 1.5rem 0;
+
+  border-top: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.75rem;
+
+  line-height: 1.6;
+}
+
+.spotlight-error-state p {
+  margin: 0;
+}
+
+.spotlight-error-state .spotlight-secondary-action {
+  margin-top: 1rem;
+}
+
+.spotlight-refresh-error {
+  padding-bottom: 0;
+
+  color: var(--danger);
+}
+
+/*
+ * ==========================================================================
+ * RESPONSIVE SPOTLIGHT
+ * ==========================================================================
+ */
+
+@media (max-width: 800px) {
+  .spotlight-state-simulator {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .adaptive-spotlight {
+    margin-top: 3rem;
+  }
+
+  .spotlight-heading {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .spotlight-live-state {
+    width: 100%;
+
+    justify-content: space-between;
+  }
+
+  .spotlight-state-form {
+    grid-template-columns: 1fr;
+  }
+
+  .spotlight-state-form .spotlight-secondary-action {
+    width: 100%;
+  }
+
+  .spotlight-issue {
+    padding-left: 0.75rem;
+  }
+
+  .spotlight-issue-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .spotlight-issue-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .spotlight-issue-actions .spotlight-primary-action,
+  .spotlight-issue-actions .spotlight-secondary-action {
+    width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .spotlight-issue-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-refresh-action,
+  .spotlight-state-field select {
+    transition: none;
+  }
+}

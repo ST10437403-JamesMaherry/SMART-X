@@ -1,0 +1,144 @@
+# =============================================================================
+# SMART-X DOCKER COMPOSE DEPLOYMENT
+# =============================================================================
+#
+# Architecture:
+#
+# Browser
+#    |
+#    | :8080 by default
+#    v
+# React + Nginx
+#    |
+#    +---- /api/*  ---------> ASP.NET Core API
+#    |
+#    +---- /hubs/* ---------> SignalR
+#
+# Only the Nginx frontend is published to the host. The API remains on the
+# private Compose network and is reached through the reverse proxy.
+#
+# Encrypted sensor attachments are stored in a Docker named volume so their
+# ciphertext survives normal container replacement and recreation.
+
+name: smartx
+
+services:
+  # ---------------------------------------------------------------------------
+  # ASP.NET Core API
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: src/SmartX.Api/Dockerfile
+
+    image: smartx-api:local
+
+    environment:
+      # Run the API using production configuration inside Docker.
+      ASPNETCORE_ENVIRONMENT: Production
+
+      # Kestrel listens only on the container's internal HTTP endpoint.
+      # Browser-facing traffic is handled by the Nginx reverse proxy.
+      ASPNETCORE_URLS: http://+:8080
+
+      # HTTPS redirection is deliberately disabled only inside the private
+      # Docker network. Commit 1 keeps it enabled by default for normal local
+      # ASP.NET Core execution.
+      HttpsRedirection__Enabled: "false"
+
+      # Store encrypted payload and metadata files on the persistent Docker
+      # volume rather than inside the replaceable container filesystem.
+      Attachments__StoragePath: /data/attachments
+
+      # Compose fails immediately if a real encryption key has not been
+      # supplied through the local .env file or host environment.
+      #
+      # The value itself is never embedded in this Compose file or image.
+      Attachments__EncryptionKeyBase64: ${SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64:?SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64 must be configured in the root .env file}
+
+    # The API is discoverable by the client container but is deliberately not
+    # published directly to the host machine.
+    expose:
+      - "8080"
+
+    volumes:
+      # Only encrypted attachment persistence is durable during Part 1.
+      #
+      # Sensor and telemetry repositories intentionally remain process-local.
+      - smartx-attachments:/data/attachments
+
+    # The Dockerfile already provides an API health check against:
+    #
+    #   GET /api/health
+    #
+    # Compose uses that image-level health state when deciding whether the
+    # frontend may start.
+    init: true
+
+    restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+
+    networks:
+      - smartx-network
+
+  # ---------------------------------------------------------------------------
+  # React + Nginx frontend
+  # ---------------------------------------------------------------------------
+  client:
+    build:
+      context: .
+      dockerfile: src/SmartX.Client/Dockerfile
+
+    image: smartx-client:local
+
+    # Do not start the browser-facing application until the API's actual
+    # /api/health endpoint has reported a healthy state.
+    depends_on:
+      api:
+        condition: service_healthy
+
+    ports:
+      # The host port is configurable without rebuilding either image.
+      #
+      # Example:
+      #
+      #   SMARTX_HTTP_PORT=9090
+      #
+      # would expose Smart-X at http://localhost:9090.
+      - "${SMARTX_HTTP_PORT:-8080}:8080"
+
+    # The client Dockerfile supplies its own /healthz container health check.
+    init: true
+
+    restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+
+    networks:
+      - smartx-network
+
+
+# =============================================================================
+# PERSISTENT STORAGE
+# =============================================================================
+
+volumes:
+  # Contains AES-256-GCM encrypted attachment payloads and their associated
+  # metadata.
+  #
+  # `docker compose down` preserves this volume.
+  #
+  # `docker compose down --volumes` deliberately deletes it.
+  smartx-attachments:
+
+
+# =============================================================================
+# PRIVATE APPLICATION NETWORK
+# =============================================================================
+
+networks:
+  smartx-network:
+    driver: bridge

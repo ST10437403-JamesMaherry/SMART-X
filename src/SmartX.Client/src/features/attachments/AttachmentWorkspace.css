@@ -1,0 +1,596 @@
+/*
+ * ==========================================================================
+ * ATTACHMENT WORKSPACE
+ * ==========================================================================
+ *
+ * The file-management interface follows the same minimal Smart-X language:
+ * structural borders, near-black surfaces, text-only actions and restrained
+ * use of the single blue accent.
+ */
+
+.attachment-workspace {
+  max-width: 68rem;
+
+  margin-top: clamp(5rem, 10vw, 8rem);
+  padding-top: 2rem;
+
+  border-top: 1px solid var(--border);
+}
+
+.attachment-workspace-heading {
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.attachment-workspace-label {
+  margin: 0 0 0.8rem;
+
+  color: var(--accent);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.14em;
+}
+
+.attachment-workspace-heading h2 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.attachment-workspace-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(17rem, 0.8fr)
+    minmax(0, 1.2fr);
+
+  gap: clamp(2rem, 5vw, 4rem);
+}
+
+.attachment-panel {
+  min-width: 0;
+}
+
+.attachment-list-panel {
+  padding-left: clamp(2rem, 5vw, 4rem);
+
+  border-left: 1px solid var(--border);
+}
+
+.attachment-panel-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1.75rem;
+}
+
+.attachment-panel-heading h3 {
+  margin: 0;
+
+  color: var(--heading);
+
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.attachment-count {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+
+  letter-spacing: 0.08em;
+}
+
+/*
+ * ==========================================================================
+ * SELECTED SENSOR
+ * ==========================================================================
+ */
+
+.attachment-sensor-context {
+  display: grid;
+  gap: 0.4rem;
+
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.attachment-sensor-context strong {
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+
+  letter-spacing: -0.015em;
+}
+
+.attachment-sensor-context span {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  overflow-wrap: anywhere;
+}
+
+/*
+ * ==========================================================================
+ * CATEGORY + FILE SELECTION
+ * ==========================================================================
+ */
+
+.attachment-upload-form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.attachment-field label {
+  display: block;
+
+  margin-bottom: 0.55rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.attachment-field select {
+  width: 100%;
+  min-height: 3rem;
+
+  padding: 0.7rem 0.8rem;
+
+  border: 1px solid var(--border);
+  border-radius: 2px;
+
+  color: var(--heading);
+  background: var(--background);
+
+  font-family: var(--font-interface);
+  font-size: 0.8rem;
+
+  transition: border-color 120ms ease;
+}
+
+.attachment-field select:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.attachment-field select:focus {
+  border-color: var(--accent);
+}
+
+.attachment-guidance {
+  margin: 0.55rem 0 0;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+
+  line-height: 1.5;
+}
+
+/*
+ * The drop region is intentionally flat rather than styled as a large rounded
+ * dashboard card.
+ */
+.attachment-drop-zone {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+
+  min-height: 5.5rem;
+
+  padding: 1rem;
+
+  border: 1px dashed var(--border-strong);
+  border-radius: 2px;
+
+  background: transparent;
+
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.attachment-drop-zone--dragging {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.attachment-file-input {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  padding: 0;
+  margin: -1px;
+
+  overflow: hidden;
+
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+
+  border: 0;
+}
+
+.attachment-file-input:focus-visible + .attachment-file-picker {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.attachment-file-picker {
+  flex: 0 0 auto;
+
+  padding: 0.65rem 0.8rem;
+
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+
+  color: var(--heading);
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.attachment-file-picker:hover {
+  border-color: var(--heading);
+}
+
+.attachment-file-input:disabled + .attachment-file-picker {
+  color: var(--text-muted);
+
+  cursor: wait;
+}
+
+.attachment-drop-copy {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+}
+
+/*
+ * ==========================================================================
+ * SELECTED FILE + PROGRESS
+ * ==========================================================================
+ */
+
+.attachment-selection {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+
+  padding-bottom: 1rem;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+}
+
+.attachment-selection span:first-child {
+  min-width: 0;
+
+  color: var(--heading);
+
+  overflow-wrap: anywhere;
+}
+
+.attachment-selection span:last-child {
+  flex: 0 0 auto;
+}
+
+.attachment-progress {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.attachment-progress-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.attachment-progress-track {
+  width: 100%;
+  height: 2px;
+
+  overflow: hidden;
+
+  background: var(--border);
+}
+
+.attachment-progress-track span {
+  display: block;
+
+  height: 100%;
+
+  background: var(--accent);
+
+  transition: width 100ms linear;
+}
+
+/*
+ * ==========================================================================
+ * ACTIONS + FEEDBACK
+ * ==========================================================================
+ */
+
+.attachment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.attachment-primary-action,
+.attachment-secondary-action,
+.attachment-download-action {
+  min-height: 2.75rem;
+
+  padding: 0.7rem 0.9rem;
+
+  border-radius: 2px;
+
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.attachment-primary-action {
+  border: 1px solid var(--heading);
+
+  color: var(--background);
+  background: var(--heading);
+}
+
+.attachment-primary-action:hover:not(:disabled) {
+  background: var(--text);
+}
+
+.attachment-primary-action:disabled {
+  border-color: var(--border);
+
+  color: var(--text-muted);
+  background: var(--surface);
+
+  cursor: not-allowed;
+}
+
+.attachment-secondary-action,
+.attachment-download-action {
+  border: 1px solid var(--border-strong);
+
+  color: var(--heading);
+  background: transparent;
+}
+
+.attachment-secondary-action:hover:not(:disabled),
+.attachment-download-action:hover:not(:disabled) {
+  border-color: var(--heading);
+}
+
+.attachment-secondary-action:disabled,
+.attachment-download-action:disabled {
+  color: var(--text-muted);
+
+  cursor: wait;
+}
+
+.attachment-feedback {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+
+  line-height: 1.55;
+}
+
+.attachment-feedback--success {
+  color: var(--success);
+}
+
+.attachment-feedback--error {
+  color: var(--danger);
+}
+
+/*
+ * ==========================================================================
+ * ATTACHMENT LIST
+ * ==========================================================================
+ */
+
+.attachment-empty-state,
+.attachment-no-sensor {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+
+  line-height: 1.6;
+}
+
+.attachment-empty-state p {
+  margin: 0;
+}
+
+.attachment-list {
+  margin: 0;
+  padding: 0;
+
+  border-top: 1px solid var(--border);
+
+  list-style: none;
+}
+
+.attachment-list li {
+  border-bottom: 1px solid var(--border);
+}
+
+.attachment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+
+  padding: 1.1rem 0;
+}
+
+.attachment-row-primary {
+  display: grid;
+  gap: 0.4rem;
+
+  min-width: 0;
+}
+
+.attachment-row-primary strong {
+  color: var(--heading);
+
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 400;
+
+  letter-spacing: -0.015em;
+
+  overflow-wrap: anywhere;
+}
+
+.attachment-row-primary span {
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.62rem;
+
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.attachment-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+
+  grid-column: 1;
+
+  color: var(--text-muted);
+
+  font-family: var(--font-interface);
+  font-size: 0.62rem;
+
+  line-height: 1.5;
+}
+
+.attachment-download-action {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+
+  align-self: center;
+}
+
+/*
+ * ==========================================================================
+ * RESPONSIVE ATTACHMENTS
+ * ==========================================================================
+ */
+
+@media (max-width: 900px) {
+  .attachment-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .attachment-list-panel {
+    padding-top: 2.5rem;
+    padding-left: 0;
+
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .attachment-workspace {
+    margin-top: 4.5rem;
+  }
+
+  .attachment-drop-zone {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .attachment-primary-action {
+    width: 100%;
+  }
+
+  .attachment-selection {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .attachment-row {
+    grid-template-columns: 1fr;
+  }
+
+  .attachment-row-meta {
+    grid-column: 1;
+  }
+
+  .attachment-download-action {
+    grid-column: 1;
+    grid-row: auto;
+
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attachment-field select,
+  .attachment-drop-zone,
+  .attachment-progress-track span {
+    transition: none;
+  }
+}
