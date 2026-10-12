@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 
 import { getApiErrorMessage } from '../../api/apiTypes';
 import {
@@ -7,8 +7,8 @@ import {
   type TelemetryDataType,
 } from '../../api/sensorsApi';
 import { ingestTelemetry, type TelemetryReadingResponse } from '../../api/telemetryApi';
+import { useDraftField, useTelemetryDraft } from '../../state/useWorkspaceDrafts';
 import {
-  createTelemetryFormValues,
   hasTelemetryErrors,
   toTelemetryRequest,
   validateTelemetryForm,
@@ -18,15 +18,6 @@ interface TelemetrySimulatorProps {
   readonly sensor: SensorResponse;
   readonly onTelemetryAccepted: (reading: TelemetryReadingResponse) => void;
 }
-
-/**
- * Represents feedback from the most recent telemetry submission.
- */
-type SubmissionState =
-  | { kind: 'idle' }
-  | { kind: 'submitting' }
-  | { kind: 'success'; message: string }
-  | { kind: 'error'; message: string };
 
 /**
  * Converts transport telemetry type names into concise labels.
@@ -47,35 +38,15 @@ function formatTelemetryType(telemetryType: TelemetryDataType): string {
  * registered telemetry contract.
  */
 function TelemetrySimulator({ sensor, onTelemetryAccepted }: TelemetrySimulatorProps) {
-  const [values, setValues] = useState(() => createTelemetryFormValues(sensor.telemetryDataType));
+  const [draft, setDraft] = useTelemetryDraft(sensor);
 
-  const [touched, setTouched] = useState(false);
+  const [values, setValues] = useDraftField(draft, setDraft, 'values');
 
-  const [submissionState, setSubmissionState] = useState<SubmissionState>({
-    kind: 'idle',
-  });
+  const [touched, setTouched] = useDraftField(draft, setDraft, 'touched');
+
+  const [submissionState, setSubmissionState] = useDraftField(draft, setDraft, 'submissionState');
 
   const validationErrors = validateTelemetryForm(values, sensor.telemetryDataType);
-
-  /**
-   * Reset simulator state whenever the selected sensor changes.
-   *
-   * Scheduling the update outside the synchronous effect phase keeps the
-   * component compatible with the React hooks lint rules used by Smart-X.
-   */
-  useEffect(() => {
-    const resetTimer = window.setTimeout(() => {
-      setValues(createTelemetryFormValues(sensor.telemetryDataType));
-      setTouched(false);
-      setSubmissionState({
-        kind: 'idle',
-      });
-    }, 0);
-
-    return () => {
-      window.clearTimeout(resetTimer);
-    };
-  }, [sensor.id, sensor.telemetryDataType]);
 
   /**
    * Updates the selected telemetry type and clears stale submission feedback.
@@ -98,6 +69,10 @@ function TelemetrySimulator({ sensor, onTelemetryAccepted }: TelemetrySimulatorP
    */
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+
+    if (submissionState.kind === 'submitting') {
+      return;
+    }
 
     setTouched(true);
 
@@ -167,6 +142,7 @@ function TelemetrySimulator({ sensor, onTelemetryAccepted }: TelemetrySimulatorP
           <select
             id="telemetry-type"
             name="telemetryType"
+            disabled={submissionState.kind === 'submitting'}
             value={values.telemetryType}
             aria-invalid={Boolean(typeError)}
             aria-describedby={typeError ? 'telemetry-type-error' : undefined}
@@ -195,6 +171,7 @@ function TelemetrySimulator({ sensor, onTelemetryAccepted }: TelemetrySimulatorP
             <select
               id="telemetry-boolean-value"
               name="booleanValue"
+              disabled={submissionState.kind === 'submitting'}
               value={values.booleanValue}
               onChange={(event) => {
                 setValues((currentValues) => ({
@@ -218,6 +195,7 @@ function TelemetrySimulator({ sensor, onTelemetryAccepted }: TelemetrySimulatorP
             <input
               id="telemetry-numeric-value"
               name="numericValue"
+              disabled={submissionState.kind === 'submitting'}
               type="number"
               step={values.telemetryType === 'Integer' ? '1' : 'any'}
               inputMode="decimal"
