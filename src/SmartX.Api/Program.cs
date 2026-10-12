@@ -4,6 +4,7 @@ using SmartX.Api.Dashboard;
 using SmartX.Api.ExceptionHandling;
 using SmartX.Application.Attachments;
 using SmartX.Application.Dashboard;
+using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
 using SmartX.Domain.Dashboard;
@@ -131,6 +132,10 @@ builder.Services.AddSingleton<ISensorRepository, InMemorySensorRepository>();
 builder.Services.AddScoped<SensorRegistrationService>();
 
 builder.Services.AddScoped<SensorManagementService>();
+
+// Part 2 reads project the existing singleton sensor authority into detached
+// transport values. They do not create another registry or own device state.
+builder.Services.AddScoped<RealtimeSnapshotService>();
 
 // -------------------------------------------------------------------------
 // Telemetry persistence and Application services

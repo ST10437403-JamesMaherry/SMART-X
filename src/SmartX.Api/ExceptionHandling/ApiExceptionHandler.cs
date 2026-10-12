@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using SmartX.Application.Attachments;
 using SmartX.Application.Dashboard;
+using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
 using SmartX.Domain.Exceptions;
@@ -107,6 +108,12 @@ public sealed class ApiExceptionHandler : IExceptionHandler
     {
         return exception switch
         {
+            RealtimeDeviceNotFoundException =>
+                new ExceptionMapping(
+                    StatusCodes.Status404NotFound,
+                    "Device not found",
+                    true),
+
             SensorNotFoundException =>
                 new ExceptionMapping(
                     StatusCodes.Status404NotFound,
