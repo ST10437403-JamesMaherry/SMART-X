@@ -742,6 +742,23 @@ public sealed class SensorTelemetryServiceTests
             return Task.FromResult(result);
         }
 
+        public Task<SensorProfile?> GetByDeviceIdentifierAsync(
+            DeviceIdentifier deviceIdentifier,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(deviceIdentifier);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            SensorProfile? sensor =
+                _sensor is not null &&
+                _sensor.DeviceIdentifier == deviceIdentifier
+                    ? _sensor
+                    : null;
+
+            return Task.FromResult(sensor);
+        }
+
         public Task<bool> UpdateAsync(
             SensorProfile sensor,
             CancellationToken cancellationToken = default)

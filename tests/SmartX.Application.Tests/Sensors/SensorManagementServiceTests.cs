@@ -390,6 +390,21 @@ public sealed class SensorManagementServiceTests
             return Task.FromResult(sensor);
         }
 
+        public Task<SensorProfile?> GetByDeviceIdentifierAsync(
+            DeviceIdentifier deviceIdentifier,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(deviceIdentifier);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            SensorProfile? sensor =
+                _sensors.Values.FirstOrDefault(
+                    existing => existing.DeviceIdentifier == deviceIdentifier);
+
+            return Task.FromResult(sensor);
+        }
+
         public Task<bool> UpdateAsync(
             SensorProfile sensor,
             CancellationToken cancellationToken = default)
