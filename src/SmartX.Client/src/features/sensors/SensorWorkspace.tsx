@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getApiErrorMessage } from '../../api/apiTypes';
 import { getSensors, type SensorResponse } from '../../api/sensorsApi';
 import IngestionSectionNavigation from '../../components/IngestionSectionNavigation';
+import { useWorkspaceState } from '../../state/workspaceState';
 import AttachmentWorkspace from '../attachments/AttachmentWorkspace';
 import AdaptiveAnomalySpotlight from '../dashboard/AdaptiveAnomalySpotlight';
 import TelemetryWorkspace from '../telemetry/TelemetryWorkspace';
@@ -19,7 +20,7 @@ import './SensorWorkspace.css';
 function SensorWorkspace() {
   const [sensors, setSensors] = useState<readonly SensorResponse[]>([]);
 
-  const [selectedSensorId, setSelectedSensorId] = useState<string | null>(null);
+  const { selectedSensorId, setSelectedSensorId } = useWorkspaceState();
 
   const [registryState, setRegistryState] = useState<'loading' | 'ready' | 'error'>('loading');
 
@@ -29,17 +30,20 @@ function SensorWorkspace() {
    * Applies a newly retrieved sensor collection while preserving the current
    * sensor selection whenever that sensor still exists.
    */
-  const applySensorCollection = useCallback((response: readonly SensorResponse[]): void => {
-    setSensors(response);
+  const applySensorCollection = useCallback(
+    (response: readonly SensorResponse[]): void => {
+      setSensors(response);
 
-    setSelectedSensorId((currentSensorId) => {
-      if (currentSensorId && response.some((sensor) => sensor.id === currentSensorId)) {
-        return currentSensorId;
-      }
+      setSelectedSensorId((currentSensorId) => {
+        if (currentSensorId && response.some((sensor) => sensor.id === currentSensorId)) {
+          return currentSensorId;
+        }
 
-      return response[0]?.id ?? null;
-    });
-  }, []);
+        return response[0]?.id ?? null;
+      });
+    },
+    [setSelectedSensorId],
+  );
 
   /**
    * Performs the primary sensor-registry load with visible loading and failure
@@ -62,7 +66,8 @@ function SensorWorkspace() {
         }
 
         setSensors([]);
-        setSelectedSensorId(null);
+        // A failed fetch does not prove the selected device was removed.
+        // Reconcile its identity only after a successful registry response.
         setRegistryState('error');
 
         setRegistryError(
@@ -210,7 +215,15 @@ function SensorWorkspace() {
 
       {isRegistryReady && (
         <>
-          <TelemetryWorkspace sensor={selectedSensor} />
+          {/* Keep pending history updates scoped to their original device. */}
+          <TelemetryWorkspace
+            key={
+              selectedSensor
+                ? `${selectedSensor.id}:${selectedSensor.telemetryDataType}`
+                : 'no-sensor'
+            }
+            sensor={selectedSensor}
+          />
 
           {/*
            * Remount attachment state whenever the physical device context

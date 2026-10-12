@@ -128,7 +128,11 @@ function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
       </header>
 
       <div className="telemetry-workspace-grid">
-        <TelemetrySimulator sensor={sensor} onTelemetryAccepted={handleTelemetryAccepted} />
+        <TelemetrySimulator
+          key={`${sensor.id}:${sensor.telemetryDataType}`}
+          sensor={sensor}
+          onTelemetryAccepted={handleTelemetryAccepted}
+        />
 
         <TelemetryHistory
           sensor={sensor}
@@ -142,7 +146,7 @@ function TelemetryWorkspace({ sensor }: TelemetryWorkspaceProps) {
       </div>
 
       <TelemetryBatchSimulator
-        key={sensor.id}
+        key={`${sensor.id}:${sensor.telemetryDataType}`}
         sensor={sensor}
         onBatchAccepted={handleBatchAccepted}
       />
