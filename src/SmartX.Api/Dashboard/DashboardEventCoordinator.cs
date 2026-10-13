@@ -71,12 +71,12 @@ public sealed class DashboardEventCoordinator
     /// Reacts to successfully persisted telemetry.
     ///
     /// A previously Offline sensor is first promoted to Online because valid
-    /// telemetry proves gateway connectivity. The current telemetry sequence
-    /// is then analysed for anomalies and repeated failures.
+    /// telemetry proves gateway connectivity. The exact classification captured at acceptance
+    /// is then applied once, independently of HTTP request cancellation.
     /// </summary>
-    public Task AnalyzeTelemetryAsync(
+    public Task AnalyzeAcceptedTelemetryAsync(
         Guid sensorProfileId,
-        CancellationToken cancellationToken = default)
+        TelemetryAnomalyObservation observation)
     {
         return ExecuteAndPublishAsync(
             sensorProfileId,
@@ -102,11 +102,12 @@ public sealed class DashboardEventCoordinator
                 }
 
                 await _analysisService
-                    .AnalyzeLatestTelemetryAsync(
+                    .AnalyzeAcceptedTelemetryAsync(
                         sensorProfileId,
+                        observation,
                         token);
             },
-            cancellationToken);
+            CancellationToken.None);
     }
 
     /// <summary>

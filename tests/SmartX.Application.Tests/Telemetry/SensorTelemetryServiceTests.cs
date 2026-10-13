@@ -1,5 +1,8 @@
+using SmartX.Application.Dashboard;
+using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
+using SmartX.Application.Tests.Realtime;
 using SmartX.Contracts.Telemetry;
 using SmartX.Domain.Sensors;
 using SmartX.Domain.Telemetry;
@@ -147,9 +150,7 @@ public sealed class SensorTelemetryServiceTests
     public async Task IngestAsync_WhenSensorMissing_ThrowsSensorNotFoundException()
     {
         var service =
-            new SensorTelemetryService(
-                new StubSensorRepository(null),
-                new RecordingTelemetryRepository());
+            CreateService(null, new RecordingTelemetryRepository());
 
         var missingId =
             Guid.NewGuid();
@@ -630,12 +631,19 @@ public sealed class SensorTelemetryServiceTests
     }
 
     private static SensorTelemetryService CreateService(
-        SensorProfile sensor,
+        SensorProfile? sensor,
         RecordingTelemetryRepository telemetryRepository)
     {
         return new SensorTelemetryService(
             new StubSensorRepository(sensor),
-            telemetryRepository);
+            telemetryRepository,
+            new TelemetryAcceptanceService(
+                telemetryRepository,
+                new RecordingTelemetryWorkBuffer(),
+                new TelemetryIngestionGate(),
+                new TelemetryAnomalyClassifier(new AdaptiveAnomalyPolicy()),
+                new RecordingTelemetryAcceptanceObserver(),
+                TimeProvider.System));
     }
 
     private static SensorProfile CreateSensor(

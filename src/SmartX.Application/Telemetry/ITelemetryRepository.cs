@@ -26,6 +26,9 @@ public interface ITelemetryRepository
     ///
     /// HistoricalTelemetryBuffer preserves the sequence and original batch
     /// boundaries established from the raw jagged input.
+    /// Implementations must commit the complete batch atomically: cancellation
+    /// or a validation failure must not leave a partially persisted batch.
+    /// Successful return is the acceptance boundary for queued processing.
     /// </summary>
     Task AddBatchAsync<T>(
         Guid sensorProfileId,

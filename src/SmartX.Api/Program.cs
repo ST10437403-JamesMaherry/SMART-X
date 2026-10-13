@@ -9,6 +9,7 @@ using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
 using SmartX.Domain.Dashboard;
 using SmartX.Infrastructure.Attachments;
+using SmartX.Infrastructure.Realtime;
 using SmartX.Infrastructure.Sensors;
 using SmartX.Infrastructure.Telemetry;
 
@@ -146,6 +147,12 @@ builder.Services.AddScoped<RealtimeSnapshotService>();
 // later Smart-X phase without changing controllers or Application services.
 builder.Services.AddSingleton<ITelemetryRepository, InMemoryTelemetryRepository>();
 
+// Admission is shared across requests; the hosted consumer follows in P2-03 Commit 3.
+builder.Services.AddSingleton<ITelemetryWorkBuffer, InMemoryTelemetryWorkBuffer>();
+builder.Services.AddSingleton<TelemetryIngestionGate>();
+builder.Services.AddSingleton<TelemetryAnomalyClassifier>();
+builder.Services.AddScoped<ITelemetryAcceptanceObserver, DashboardTelemetryAcceptanceObserver>();
+builder.Services.AddScoped<TelemetryAcceptanceService>();
 builder.Services.AddScoped<SensorTelemetryService>();
 
 // -------------------------------------------------------------------------
