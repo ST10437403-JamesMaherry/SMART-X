@@ -14,9 +14,16 @@ namespace SmartX.Api.Controllers;
 public sealed class RealtimeController : ControllerBase
 {
     private readonly RealtimeSnapshotService _snapshotService;
+    private readonly ITelemetryWorkBuffer _buffer;
+    private readonly ITelemetryProcessingStore _processing;
+    private readonly IRealtimeNotifier _notifier;
 
-    public RealtimeController(RealtimeSnapshotService snapshotService)
+    public RealtimeController(RealtimeSnapshotService snapshotService,
+        ITelemetryWorkBuffer buffer, ITelemetryProcessingStore processing, IRealtimeNotifier notifier)
     {
+        _buffer = buffer;
+        _processing = processing;
+        _notifier = notifier;
         _snapshotService = snapshotService ??
             throw new ArgumentNullException(nameof(snapshotService));
     }
@@ -74,4 +81,26 @@ public sealed class RealtimeController : ControllerBase
 
         return Ok(snapshot);
     }
+
+    /// <summary>Lifetime metrics and the last 100 actual dispatches.</summary>
+    [HttpGet("processing")]
+    [ProducesResponseType<TelemetryProcessingResponse>(StatusCodes.Status200OK)]
+    public ActionResult<TelemetryProcessingResponse> GetProcessing()
+        => Ok(TelemetryProcessingMapper.ToResponse(_processing.GetSnapshot()));
+
+    /// <summary>
+    /// SIMULATION CONTROL: pause/resume ordinary dispatch. Ingestion and the
+    /// critical lane stay live. A dispatch already executing is not preempted.
+    /// </summary>
+    [HttpPut("simulation/ordinary-dispatch")]
+    [ProducesResponseType<TelemetryProcessingResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<TelemetryProcessingResponse>> SetOrdinaryDispatch(
+        SetOrdinaryDispatchRequest request)
+    {
+        _buffer.SetOrdinaryDispatchPaused(request.Paused!.Value);
+        await _notifier.PublishAsync("SimulationChanged");
+        return Ok(TelemetryProcessingMapper.ToResponse(_processing.GetSnapshot()));
+    }
+
 }

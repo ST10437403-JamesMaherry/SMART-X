@@ -149,6 +149,8 @@ public sealed class SensorsController
                 request,
                 cancellationToken);
 
+        await _dashboardEvents.NotifySensorUpdatedAsync(sensor.Id);
+
         return Ok(
             sensor);
     }

@@ -1,4 +1,5 @@
 using SmartX.Application.Dashboard;
+using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Domain.Sensors;
 
@@ -21,14 +22,18 @@ public sealed class DashboardEventCoordinator
     private readonly AdaptiveAnomalyAnalysisService _analysisService;
     private readonly SensorManagementService _sensorManagementService;
     private readonly DashboardRealtimeNotifier _notifier;
+    private readonly IRealtimeNotifier _realtimeNotifier;
     private readonly ILogger<DashboardEventCoordinator> _logger;
 
     public DashboardEventCoordinator(
         AdaptiveAnomalyAnalysisService analysisService,
         SensorManagementService sensorManagementService,
         DashboardRealtimeNotifier notifier,
-        ILogger<DashboardEventCoordinator> logger)
+        ILogger<DashboardEventCoordinator> logger,
+        IRealtimeNotifier realtimeNotifier)
     {
+        _realtimeNotifier = realtimeNotifier;
+
         _analysisService =
             analysisService ??
             throw new ArgumentNullException(
@@ -66,6 +71,10 @@ public sealed class DashboardEventCoordinator
             sensorProfileId,
             cancellationToken);
     }
+
+    /// <summary>Invalidates device metadata after a successful profile edit.</summary>
+    public Task NotifySensorUpdatedAsync(Guid sensorProfileId)
+        => PublishSafelyAsync("sensor-updated", sensorProfileId, CancellationToken.None);
 
     /// <summary>
     /// Reacts to successfully persisted telemetry.
@@ -233,5 +242,17 @@ public sealed class DashboardEventCoordinator
                 "Dashboard SignalR notification failed for reason {Reason}.",
                 reason);
         }
+
+        // Part 2 device/processing reads also change on these operations.
+        // Keep this independent of the Part 1 hub's delivery result.
+        try
+        {
+            await _realtimeNotifier.PublishAsync(reason, sensorProfileId, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Real-time invalidation failed for {Reason}.", reason);
+        }
+
     }
 }

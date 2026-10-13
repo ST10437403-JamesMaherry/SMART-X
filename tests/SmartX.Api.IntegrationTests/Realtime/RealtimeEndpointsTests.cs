@@ -138,9 +138,16 @@ public sealed class RealtimeEndpointsTests : IDisposable
         Assert.Equal(sensor.Id, accepted.SensorProfileId);
         Assert.Equal("Online", device.Status);
 
-        // This commit adds reads. A later worker supplies processing evidence.
-        Assert.Null(device.LatestProcessedTelemetry);
-        Assert.Null(device.LastProcessedAtUtc);
+        // Acceptance and processing are deliberately separate. Wait for a
+        // completion condition instead of assuming the worker beats HTTP.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (device.LatestProcessedTelemetry is null)
+        {
+            await Task.Delay(10, timeout.Token);
+            device = Assert.Single((await GetSnapshotAsync()).Devices);
+        }
+        Assert.Equal(accepted, device.LatestProcessedTelemetry);
+        Assert.NotNull(device.LastProcessedAtUtc);
     }
 
     [Fact]

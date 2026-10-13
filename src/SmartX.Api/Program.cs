@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using SmartX.Api.Dashboard;
 using SmartX.Api.ExceptionHandling;
+using SmartX.Api.Realtime;
 using SmartX.Application.Attachments;
 using SmartX.Application.Dashboard;
 using SmartX.Application.Realtime;
@@ -147,8 +148,12 @@ builder.Services.AddScoped<RealtimeSnapshotService>();
 // later Smart-X phase without changing controllers or Application services.
 builder.Services.AddSingleton<ITelemetryRepository, InMemoryTelemetryRepository>();
 
-// Admission is shared across requests; the hosted consumer follows in P2-03 Commit 3.
+// Process-wide queues and operational state are shared by admission and one worker.
 builder.Services.AddSingleton<ITelemetryWorkBuffer, InMemoryTelemetryWorkBuffer>();
+builder.Services.AddSingleton<ITelemetryProcessingStore, InMemoryTelemetryProcessingStore>();
+builder.Services.AddScoped<ITelemetryProcessor, TelemetryProcessingService>();
+builder.Services.AddSingleton<IRealtimeNotifier, RealtimeNotifier>();
+builder.Services.AddHostedService<TelemetryProcessingWorker>();
 builder.Services.AddSingleton<TelemetryIngestionGate>();
 builder.Services.AddSingleton<TelemetryAnomalyClassifier>();
 builder.Services.AddScoped<ITelemetryAcceptanceObserver, DashboardTelemetryAcceptanceObserver>();
@@ -271,6 +276,7 @@ app.MapControllers();
  * invalidation events and retrieve authoritative issue state over HTTP.
  */
 app.MapHub<DashboardHub>("/hubs/dashboard");
+app.MapHub<RealtimeHub>("/hubs/realtime");
 
 app.Run();
 
