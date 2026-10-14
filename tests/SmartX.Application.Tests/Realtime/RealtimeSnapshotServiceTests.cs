@@ -1,6 +1,7 @@
 using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Contracts.Realtime;
+using SmartX.Domain.Realtime;
 using SmartX.Domain.Sensors;
 
 namespace SmartX.Application.Tests.Realtime;
@@ -101,7 +102,7 @@ public sealed class RealtimeSnapshotServiceTests
 
     private static RealtimeSnapshotService CreateService(ISensorRepository repository)
     {
-        return new RealtimeSnapshotService(repository, new FixedTimeProvider());
+        return new RealtimeSnapshotService(repository, new FixedTimeProvider(), new EmptyProcessingStore());
     }
 
     private static SensorProfile CreateSensor(string macAddress)
@@ -113,6 +114,19 @@ public sealed class RealtimeSnapshotServiceTests
             SensorCategory.Environmental,
             TelemetryDataType.Float,
             BaseTime.AddMinutes(-5));
+    }
+
+    private sealed class EmptyProcessingStore : ITelemetryProcessingStore
+    {
+        public TelemetryDeviceProcessingState? GetDeviceState(Guid id) => null;
+        public TelemetryProcessingSnapshot GetSnapshot() => new(
+            new TelemetryWorkBufferSnapshot(0, 0, false, [], []), 0,
+            TelemetryWorkerStatus.Waiting, null, null, []);
+        public void MarkWaiting() => throw new NotSupportedException();
+        public void Begin(TelemetryDispatch dispatch, DateTimeOffset at) => throw new NotSupportedException();
+        public void Complete(TelemetryDispatch dispatch, DateTimeOffset at) => throw new NotSupportedException();
+        public void MarkFaulted(DateTimeOffset at) => throw new NotSupportedException();
+        public void MarkStopped(DateTimeOffset at) => throw new NotSupportedException();
     }
 
     private sealed class FixedTimeProvider : TimeProvider

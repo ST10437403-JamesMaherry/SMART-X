@@ -1,0 +1,289 @@
+{
+  "recordedAtUtc": "2026-10-14T08:35:38.226868+00:00",
+  "apiBaseUrl": "http://127.0.0.1:5221",
+  "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+  "baseline": {
+    "acceptedCount": 0,
+    "dispatchedCount": 0,
+    "processedCount": 0,
+    "ordinaryPendingCount": 0,
+    "criticalPendingCount": 0,
+    "pendingCount": 0,
+    "outstandingDispatchedCount": 0,
+    "ordinaryDispatchPaused": false,
+    "workerStatus": "Waiting",
+    "failure": null,
+    "currentDispatch": null,
+    "recentDispatches": []
+  },
+  "ordinaryPendingBeforeC": {
+    "acceptedCount": 2,
+    "dispatchedCount": 0,
+    "processedCount": 0,
+    "ordinaryPendingCount": 2,
+    "criticalPendingCount": 0,
+    "pendingCount": 2,
+    "outstandingDispatchedCount": 0,
+    "ordinaryDispatchPaused": true,
+    "workerStatus": "Waiting",
+    "failure": null,
+    "currentDispatch": null,
+    "recentDispatches": []
+  },
+  "criticalCompletedWhilePaused": {
+    "acceptedCount": 3,
+    "dispatchedCount": 1,
+    "processedCount": 1,
+    "ordinaryPendingCount": 2,
+    "criticalPendingCount": 0,
+    "pendingCount": 2,
+    "outstandingDispatchedCount": 0,
+    "ordinaryDispatchPaused": true,
+    "workerStatus": "Waiting",
+    "failure": null,
+    "currentDispatch": null,
+    "recentDispatches": [
+      {
+        "enqueueSequence": 3,
+        "dequeueSequence": 1,
+        "lane": "Critical",
+        "severity": "Critical",
+        "telemetry": {
+          "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+          "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+          "telemetryDataType": "Integer",
+          "floatValue": null,
+          "integerValue": 100,
+          "booleanValue": null,
+          "capturedAtUtc": "2026-10-14T08:35:37.03387+00:00"
+        },
+        "acceptedAtUtc": "2026-10-14T08:35:38.0913346+00:00",
+        "startedAtUtc": "2026-10-14T08:35:38.0925204+00:00",
+        "finishedAtUtc": "2026-10-14T08:35:38.0944691+00:00",
+        "outcome": "Processed",
+        "updatedLatestObservation": true
+      }
+    ]
+  },
+  "completed": {
+    "acceptedCount": 3,
+    "dispatchedCount": 3,
+    "processedCount": 3,
+    "ordinaryPendingCount": 0,
+    "criticalPendingCount": 0,
+    "pendingCount": 0,
+    "outstandingDispatchedCount": 0,
+    "ordinaryDispatchPaused": false,
+    "workerStatus": "Waiting",
+    "failure": null,
+    "currentDispatch": null,
+    "recentDispatches": [
+      {
+        "enqueueSequence": 3,
+        "dequeueSequence": 1,
+        "lane": "Critical",
+        "severity": "Critical",
+        "telemetry": {
+          "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+          "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+          "telemetryDataType": "Integer",
+          "floatValue": null,
+          "integerValue": 100,
+          "booleanValue": null,
+          "capturedAtUtc": "2026-10-14T08:35:37.03387+00:00"
+        },
+        "acceptedAtUtc": "2026-10-14T08:35:38.0913346+00:00",
+        "startedAtUtc": "2026-10-14T08:35:38.0925204+00:00",
+        "finishedAtUtc": "2026-10-14T08:35:38.0944691+00:00",
+        "outcome": "Processed",
+        "updatedLatestObservation": true
+      },
+      {
+        "enqueueSequence": 1,
+        "dequeueSequence": 2,
+        "lane": "Ordinary",
+        "severity": "Information",
+        "telemetry": {
+          "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+          "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+          "telemetryDataType": "Integer",
+          "floatValue": null,
+          "integerValue": 10,
+          "booleanValue": null,
+          "capturedAtUtc": "2026-10-14T08:35:35.03387+00:00"
+        },
+        "acceptedAtUtc": "2026-10-14T08:35:38.0616397+00:00",
+        "startedAtUtc": "2026-10-14T08:35:38.149771+00:00",
+        "finishedAtUtc": "2026-10-14T08:35:38.1503374+00:00",
+        "outcome": "Processed",
+        "updatedLatestObservation": false
+      },
+      {
+        "enqueueSequence": 2,
+        "dequeueSequence": 3,
+        "lane": "Ordinary",
+        "severity": "Information",
+        "telemetry": {
+          "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+          "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+          "telemetryDataType": "Integer",
+          "floatValue": null,
+          "integerValue": 11,
+          "booleanValue": null,
+          "capturedAtUtc": "2026-10-14T08:35:36.03387+00:00"
+        },
+        "acceptedAtUtc": "2026-10-14T08:35:38.0759022+00:00",
+        "startedAtUtc": "2026-10-14T08:35:38.1504112+00:00",
+        "finishedAtUtc": "2026-10-14T08:35:38.1512055+00:00",
+        "outcome": "Processed",
+        "updatedLatestObservation": false
+      }
+    ]
+  },
+  "acceptedReadings": [
+    {
+      "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+      "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+      "telemetryDataType": "Integer",
+      "floatValue": null,
+      "integerValue": 10,
+      "booleanValue": null,
+      "capturedAtUtc": "2026-10-14T08:35:35.03387+00:00"
+    },
+    {
+      "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+      "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+      "telemetryDataType": "Integer",
+      "floatValue": null,
+      "integerValue": 11,
+      "booleanValue": null,
+      "capturedAtUtc": "2026-10-14T08:35:36.03387+00:00"
+    },
+    {
+      "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+      "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+      "telemetryDataType": "Integer",
+      "floatValue": null,
+      "integerValue": 100,
+      "booleanValue": null,
+      "capturedAtUtc": "2026-10-14T08:35:37.03387+00:00"
+    }
+  ],
+  "actualDispatches": [
+    {
+      "enqueueSequence": 3,
+      "dequeueSequence": 1,
+      "lane": "Critical",
+      "severity": "Critical",
+      "telemetry": {
+        "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+        "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+        "telemetryDataType": "Integer",
+        "floatValue": null,
+        "integerValue": 100,
+        "booleanValue": null,
+        "capturedAtUtc": "2026-10-14T08:35:37.03387+00:00"
+      },
+      "acceptedAtUtc": "2026-10-14T08:35:38.0913346+00:00",
+      "startedAtUtc": "2026-10-14T08:35:38.0925204+00:00",
+      "finishedAtUtc": "2026-10-14T08:35:38.0944691+00:00",
+      "outcome": "Processed",
+      "updatedLatestObservation": true
+    },
+    {
+      "enqueueSequence": 1,
+      "dequeueSequence": 2,
+      "lane": "Ordinary",
+      "severity": "Information",
+      "telemetry": {
+        "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+        "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+        "telemetryDataType": "Integer",
+        "floatValue": null,
+        "integerValue": 10,
+        "booleanValue": null,
+        "capturedAtUtc": "2026-10-14T08:35:35.03387+00:00"
+      },
+      "acceptedAtUtc": "2026-10-14T08:35:38.0616397+00:00",
+      "startedAtUtc": "2026-10-14T08:35:38.149771+00:00",
+      "finishedAtUtc": "2026-10-14T08:35:38.1503374+00:00",
+      "outcome": "Processed",
+      "updatedLatestObservation": false
+    },
+    {
+      "enqueueSequence": 2,
+      "dequeueSequence": 3,
+      "lane": "Ordinary",
+      "severity": "Information",
+      "telemetry": {
+        "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+        "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+        "telemetryDataType": "Integer",
+        "floatValue": null,
+        "integerValue": 11,
+        "booleanValue": null,
+        "capturedAtUtc": "2026-10-14T08:35:36.03387+00:00"
+      },
+      "acceptedAtUtc": "2026-10-14T08:35:38.0759022+00:00",
+      "startedAtUtc": "2026-10-14T08:35:38.1504112+00:00",
+      "finishedAtUtc": "2026-10-14T08:35:38.1512055+00:00",
+      "outcome": "Processed",
+      "updatedLatestObservation": false
+    }
+  ],
+  "deviceAfterProcessing": {
+    "id": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+    "name": "Critical bypass evidence",
+    "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+    "identifierKind": "UniqueIdentifier",
+    "deploymentLocation": {
+      "facility": "Evidence Demo",
+      "zone": "Priority",
+      "nodeId": "ABC"
+    },
+    "category": "Environmental",
+    "status": "Online",
+    "telemetryDataType": "Integer",
+    "createdAtUtc": "2026-10-14T08:35:38.006628+00:00",
+    "updatedAtUtc": "2026-10-14T08:35:38.0645792+00:00",
+    "latestProcessedTelemetry": {
+      "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+      "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+      "telemetryDataType": "Integer",
+      "floatValue": null,
+      "integerValue": 100,
+      "booleanValue": null,
+      "capturedAtUtc": "2026-10-14T08:35:37.03387+00:00"
+    },
+    "lastProcessedAtUtc": "2026-10-14T08:35:38.1512055+00:00"
+  },
+  "recentHistory": [
+    {
+      "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+      "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+      "telemetryDataType": "Integer",
+      "floatValue": null,
+      "integerValue": 10,
+      "booleanValue": null,
+      "capturedAtUtc": "2026-10-14T08:35:35.03387+00:00"
+    },
+    {
+      "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+      "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+      "telemetryDataType": "Integer",
+      "floatValue": null,
+      "integerValue": 11,
+      "booleanValue": null,
+      "capturedAtUtc": "2026-10-14T08:35:36.03387+00:00"
+    },
+    {
+      "sensorProfileId": "018b360e-7047-4a57-b963-80ca4e4bd78d",
+      "deviceIdentifier": "priority-evidence-dda713a4bd06497094468fbf8a795280",
+      "telemetryDataType": "Integer",
+      "floatValue": null,
+      "integerValue": 100,
+      "booleanValue": null,
+      "capturedAtUtc": "2026-10-14T08:35:37.03387+00:00"
+    }
+  ]
+}

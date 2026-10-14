@@ -13,13 +13,17 @@ public sealed class RealtimeSnapshotService
 {
     private readonly ISensorRepository _sensorRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly ITelemetryProcessingStore _processing;
 
     public RealtimeSnapshotService(
         ISensorRepository sensorRepository,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ITelemetryProcessingStore processing)
     {
         _sensorRepository = sensorRepository ??
             throw new ArgumentNullException(nameof(sensorRepository));
+
+        _processing = processing ?? throw new ArgumentNullException(nameof(processing));
 
         _timeProvider = timeProvider ??
             throw new ArgumentNullException(nameof(timeProvider));
@@ -87,14 +91,16 @@ public sealed class RealtimeSnapshotService
         return new RealtimeSnapshotResponse(
             _timeProvider.GetUtcNow().ToUniversalTime(),
             devices.Count,
-            devices);
+            devices,
+            TelemetryProcessingMapper.ToResponse(_processing.GetSnapshot()));
     }
 
-    private static RealtimeDeviceResponse ToResponse(SensorProfile sensor)
+    private RealtimeDeviceResponse ToResponse(SensorProfile sensor)
     {
         // The established mapper copies every public profile field, including
         // deployment metadata, without returning mutable Domain entities.
         var profile = SensorContractMapper.ToResponse(sensor);
+        var processed = _processing.GetDeviceState(sensor.Id);
 
         return new RealtimeDeviceResponse(
             profile.Id,
@@ -107,7 +113,7 @@ public sealed class RealtimeSnapshotService
             profile.TelemetryDataType,
             profile.CreatedAtUtc,
             profile.UpdatedAtUtc,
-            null,
-            null);
+            processed is null ? null : TelemetryProcessingMapper.ToReading(processed.LatestObservation),
+            processed?.LastProcessedAtUtc);
     }
 }

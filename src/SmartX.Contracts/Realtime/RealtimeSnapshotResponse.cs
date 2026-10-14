@@ -1,10 +1,10 @@
 namespace SmartX.Contracts.Realtime;
 
 /// <summary>
-/// One server-generated device snapshot. Later Part 2 workflows extend this
-/// response with their genuine processing and active-condition projections.
+/// One server-generated device snapshot with actual processing diagnostics.
 /// </summary>
 public sealed record RealtimeSnapshotResponse(
     DateTimeOffset GeneratedAtUtc,
     int DeviceCount,
-    IReadOnlyList<RealtimeDeviceResponse> Devices);
+    IReadOnlyList<RealtimeDeviceResponse> Devices,
+    TelemetryProcessingResponse Processing);
