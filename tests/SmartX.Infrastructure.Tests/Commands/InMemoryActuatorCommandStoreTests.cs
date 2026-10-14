@@ -5,8 +5,8 @@ using SmartX.Infrastructure.Commands;
 namespace SmartX.Infrastructure.Tests.Commands;
 
 /// <summary>
-/// Verifies the real process-local command store, per-device serialisation,
-/// immutable snapshots, and failure behaviour.
+/// Verifies the real process-local actuator store, per-device serialisation,
+/// Stack-backed Undo, detached snapshots, and failure preservation.
 /// </summary>
 public sealed class InMemoryActuatorCommandStoreTests
 {
@@ -25,27 +25,17 @@ public sealed class InMemoryActuatorCommandStoreTests
         Assert.Equal(deviceId, snapshot.TargetDeviceId);
         Assert.Equal(RelayState.Off, snapshot.CurrentState);
         Assert.Empty(snapshot.AuditTrail);
+        Assert.Null(snapshot.LatestUndoableCommandId);
+        Assert.Equal(0, snapshot.UndoDepth);
     }
 
     [Fact]
-    public async Task Record_ValidCommand_UpdatesStateAndAudit()
+    public async Task Record_ValidCommand_UpdatesStateAuditAndStack()
     {
         var store = new InMemoryActuatorCommandStore();
         Guid deviceId = Guid.NewGuid();
 
-        await store.ExecuteSerializedAsync(
-            deviceId,
-            (transaction, _) =>
-            {
-                CommandRecord command = CreateCommand(
-                    deviceId,
-                    transaction.CurrentState,
-                    RelayCommandType.RelayOn);
-
-                transaction.Record(command);
-
-                return Task.FromResult(true);
-            });
+        await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
 
         ActuatorStateSnapshot snapshot =
             await store.GetSnapshotAsync(deviceId);
@@ -53,33 +43,332 @@ public sealed class InMemoryActuatorCommandStoreTests
         Assert.Equal(RelayState.On, snapshot.CurrentState);
         Assert.Single(snapshot.AuditTrail);
         Assert.True(snapshot.AuditTrail[0].StateChanged);
+        Assert.Equal(1, snapshot.UndoDepth);
+        Assert.Equal(
+            snapshot.AuditTrail[0].Id,
+            snapshot.LatestUndoableCommandId);
     }
 
     [Fact]
-    public async Task Record_NoOp_IsAuditedWithoutChangingState()
+    public async Task Record_NoOp_IsAuditedWithoutChangingStack()
     {
         var store = new InMemoryActuatorCommandStore();
         Guid deviceId = Guid.NewGuid();
 
-        await store.ExecuteSerializedAsync(
-            deviceId,
-            (transaction, _) =>
-            {
-                CommandRecord command = CreateCommand(
-                    deviceId,
-                    transaction.CurrentState,
-                    RelayCommandType.RelayOff);
-
-                transaction.Record(command);
-
-                return Task.FromResult(true);
-            });
+        await RecordAsync(store, deviceId, RelayCommandType.RelayOff);
 
         ActuatorStateSnapshot snapshot =
             await store.GetSnapshotAsync(deviceId);
 
         Assert.Equal(RelayState.Off, snapshot.CurrentState);
         Assert.False(Assert.Single(snapshot.AuditTrail).StateChanged);
+        Assert.Equal(0, snapshot.UndoDepth);
+        Assert.Null(snapshot.LatestUndoableCommandId);
+    }
+
+    [Fact]
+    public async Task Record_NoOpAfterChange_PreservesLatestUndoableCommand()
+    {
+        var store = new InMemoryActuatorCommandStore();
+        Guid deviceId = Guid.NewGuid();
+
+        CommandRecord original =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        ActuatorStateSnapshot snapshot =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(RelayState.On, snapshot.CurrentState);
+        Assert.Equal(2, snapshot.AuditTrail.Count);
+        Assert.Equal(1, snapshot.UndoDepth);
+        Assert.Equal(original.Id, snapshot.LatestUndoableCommandId);
+    }
+
+    [Fact]
+    public async Task Record_MultipleChanges_UsesLatestCommandAsStackTop()
+    {
+        var store = new InMemoryActuatorCommandStore();
+        Guid deviceId = Guid.NewGuid();
+
+        CommandRecord first =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        CommandRecord second =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOff);
+
+        CommandRecord third =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        ActuatorStateSnapshot snapshot =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(RelayState.On, snapshot.CurrentState);
+        Assert.Equal(3, snapshot.UndoDepth);
+        Assert.Equal(third.Id, snapshot.LatestUndoableCommandId);
+
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.NotEqual(second.Id, third.Id);
+    }
+
+    [Fact]
+    public async Task Restore_ValidLatestCommand_RestoresAndRetainsAudit()
+    {
+        var store = new InMemoryActuatorCommandStore();
+        Guid deviceId = Guid.NewGuid();
+
+        CommandRecord original =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        CommandRecord reversal =
+            await RestoreLatestAsync(store, deviceId);
+
+        ActuatorStateSnapshot snapshot =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(RelayState.Off, snapshot.CurrentState);
+        Assert.Equal(0, snapshot.UndoDepth);
+        Assert.Null(snapshot.LatestUndoableCommandId);
+
+        Assert.Equal(2, snapshot.AuditTrail.Count);
+        Assert.Equal(original.Id, snapshot.AuditTrail[0].Id);
+        Assert.Equal(reversal.Id, snapshot.AuditTrail[1].Id);
+
+        Assert.True(snapshot.AuditTrail[1].IsReversal);
+        Assert.Equal(
+            original.Id,
+            snapshot.AuditTrail[1].ReversesCommandId);
+    }
+
+    [Fact]
+    public async Task Restore_MultipleChanges_UsesLifoOrdering()
+    {
+        var store = new InMemoryActuatorCommandStore();
+        Guid deviceId = Guid.NewGuid();
+
+        CommandRecord first =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        CommandRecord second =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOff);
+
+        CommandRecord third =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        CommandRecord undoThird =
+            await RestoreLatestAsync(store, deviceId);
+
+        ActuatorStateSnapshot afterFirstUndo =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(third.Id, undoThird.ReversesCommandId);
+        Assert.Equal(RelayState.Off, afterFirstUndo.CurrentState);
+        Assert.Equal(2, afterFirstUndo.UndoDepth);
+        Assert.Equal(second.Id, afterFirstUndo.LatestUndoableCommandId);
+
+        CommandRecord undoSecond =
+            await RestoreLatestAsync(store, deviceId);
+
+        ActuatorStateSnapshot afterSecondUndo =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(second.Id, undoSecond.ReversesCommandId);
+        Assert.Equal(RelayState.On, afterSecondUndo.CurrentState);
+        Assert.Equal(1, afterSecondUndo.UndoDepth);
+        Assert.Equal(first.Id, afterSecondUndo.LatestUndoableCommandId);
+
+        CommandRecord undoFirst =
+            await RestoreLatestAsync(store, deviceId);
+
+        ActuatorStateSnapshot finished =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(first.Id, undoFirst.ReversesCommandId);
+        Assert.Equal(RelayState.Off, finished.CurrentState);
+        Assert.Equal(0, finished.UndoDepth);
+        Assert.Equal(6, finished.AuditTrail.Count);
+    }
+
+    [Fact]
+    public async Task Restore_StaleExpectedCommand_LeavesStackAndAuditIntact()
+    {
+        var store = new InMemoryActuatorCommandStore();
+        Guid deviceId = Guid.NewGuid();
+
+        CommandRecord first =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        CommandRecord second =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOff);
+
+        CommandRecord reversalOfFirst = CreateReversal(first);
+
+        await Assert.ThrowsAsync<ActuatorCommandConflictException>(
+            () => store.ExecuteSerializedAsync(
+                deviceId,
+                (transaction, _) =>
+                {
+                    transaction.Restore(first, reversalOfFirst);
+
+                    return Task.FromResult(true);
+                }));
+
+        ActuatorStateSnapshot snapshot =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(RelayState.Off, snapshot.CurrentState);
+        Assert.Equal(2, snapshot.UndoDepth);
+        Assert.Equal(second.Id, snapshot.LatestUndoableCommandId);
+        Assert.Equal(2, snapshot.AuditTrail.Count);
+    }
+
+    [Fact]
+    public async Task Restore_InvalidReversalLink_LeavesStackAndAuditIntact()
+    {
+        var store = new InMemoryActuatorCommandStore();
+        Guid deviceId = Guid.NewGuid();
+
+        CommandRecord original =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        // State values are correct, but the reversal references the
+        // wrong command ID. This must not remove the Stack entry.
+        CommandRecord invalidReversal = new(
+            Guid.NewGuid(),
+            deviceId,
+            RelayCommandType.RelayOff,
+            BaseTime.AddMinutes(1),
+            RelayState.On,
+            RelayState.Off,
+            Guid.NewGuid());
+
+        await Assert.ThrowsAsync<ActuatorCommandConflictException>(
+            () => store.ExecuteSerializedAsync(
+                deviceId,
+                (transaction, _) =>
+                {
+                    transaction.Restore(original, invalidReversal);
+
+                    return Task.FromResult(true);
+                }));
+
+        ActuatorStateSnapshot snapshot =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(RelayState.On, snapshot.CurrentState);
+        Assert.Equal(1, snapshot.UndoDepth);
+        Assert.Equal(original.Id, snapshot.LatestUndoableCommandId);
+        Assert.Single(snapshot.AuditTrail);
+
+        // A valid reversal must still work after the failed attempt.
+        await RestoreLatestAsync(store, deviceId);
+
+        ActuatorStateSnapshot restored =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(RelayState.Off, restored.CurrentState);
+        Assert.Equal(0, restored.UndoDepth);
+    }
+
+    [Fact]
+    public async Task Restore_IncorrectResultingState_RejectsWithoutMutation()
+    {
+        var store = new InMemoryActuatorCommandStore();
+        Guid deviceId = Guid.NewGuid();
+
+        CommandRecord original =
+            await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
+
+        // This would leave the relay On instead of restoring Off.
+        CommandRecord invalidReversal = new(
+            Guid.NewGuid(),
+            deviceId,
+            RelayCommandType.RelayOn,
+            BaseTime.AddMinutes(1),
+            RelayState.On,
+            RelayState.On,
+            original.Id);
+
+        await Assert.ThrowsAsync<ActuatorCommandConflictException>(
+            () => store.ExecuteSerializedAsync(
+                deviceId,
+                (transaction, _) =>
+                {
+                    transaction.Restore(original, invalidReversal);
+
+                    return Task.FromResult(true);
+                }));
+
+        ActuatorStateSnapshot snapshot =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(RelayState.On, snapshot.CurrentState);
+        Assert.Single(snapshot.AuditTrail);
+        Assert.Equal(1, snapshot.UndoDepth);
+        Assert.Equal(original.Id, snapshot.LatestUndoableCommandId);
+    }
+
+    [Fact]
+    public async Task Restore_EmptyStack_RejectsWithoutAudit()
+    {
+        var store = new InMemoryActuatorCommandStore();
+        Guid deviceId = Guid.NewGuid();
+
+        CommandRecord fabricated = CreateCommand(
+            deviceId,
+            RelayState.Off,
+            RelayCommandType.RelayOn);
+
+        await Assert.ThrowsAsync<ActuatorCommandConflictException>(
+            () => store.ExecuteSerializedAsync(
+                deviceId,
+                (transaction, _) =>
+                {
+                    transaction.Restore(
+                        fabricated,
+                        CreateReversal(fabricated));
+
+                    return Task.FromResult(true);
+                }));
+
+        ActuatorStateSnapshot snapshot =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(RelayState.Off, snapshot.CurrentState);
+        Assert.Empty(snapshot.AuditTrail);
+        Assert.Equal(0, snapshot.UndoDepth);
+    }
+
+    [Fact]
+    public async Task Record_ReversalCannotBeAddedAsManualUndoableCommand()
+    {
+        var store = new InMemoryActuatorCommandStore();
+        Guid deviceId = Guid.NewGuid();
+
+        CommandRecord original = CreateCommand(
+            deviceId,
+            RelayState.Off,
+            RelayCommandType.RelayOn);
+
+        CommandRecord reversal = CreateReversal(original);
+
+        await Assert.ThrowsAsync<ActuatorCommandConflictException>(
+            () => store.ExecuteSerializedAsync(
+                deviceId,
+                (transaction, _) =>
+                {
+                    transaction.Record(reversal);
+
+                    return Task.FromResult(true);
+                }));
+
+        ActuatorStateSnapshot snapshot =
+            await store.GetSnapshotAsync(deviceId);
+
+        Assert.Equal(RelayState.Off, snapshot.CurrentState);
+        Assert.Equal(0, snapshot.UndoDepth);
+        Assert.Empty(snapshot.AuditTrail);
     }
 
     [Fact]
@@ -100,9 +389,11 @@ public sealed class InMemoryActuatorCommandStoreTests
 
         Assert.Equal(RelayState.On, previous.CurrentState);
         Assert.Single(previous.AuditTrail);
+        Assert.Equal(1, previous.UndoDepth);
 
         Assert.Equal(RelayState.Off, current.CurrentState);
         Assert.Equal(2, current.AuditTrail.Count);
+        Assert.Equal(2, current.UndoDepth);
 
         var list = Assert.IsAssignableFrom<IList<CommandRecord>>(
             previous.AuditTrail);
@@ -125,7 +416,6 @@ public sealed class InMemoryActuatorCommandStoreTests
         var release = new TaskCompletionSource<bool>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
-        // Hold the first device transaction before applying its change.
         Task<bool> first = store.ExecuteSerializedAsync(
             deviceId,
             async (transaction, _) =>
@@ -144,7 +434,6 @@ public sealed class InMemoryActuatorCommandStoreTests
 
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        // This transaction must not enter until the first has committed.
         Task<RelayState> second = store.ExecuteSerializedAsync(
             deviceId,
             (transaction, _) =>
@@ -160,11 +449,8 @@ public sealed class InMemoryActuatorCommandStoreTests
             await second.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(RelayState.On, observed);
-
-        ActuatorStateSnapshot snapshot =
-            await store.GetSnapshotAsync(deviceId);
-
-        Assert.Single(snapshot.AuditTrail);
+        Assert.Single(
+            (await store.GetSnapshotAsync(deviceId)).AuditTrail);
     }
 
     [Fact]
@@ -186,7 +472,9 @@ public sealed class InMemoryActuatorCommandStoreTests
             async (_, _) =>
             {
                 entered.TrySetResult(true);
+
                 await release.Task;
+
                 return 1;
             });
 
@@ -224,6 +512,7 @@ public sealed class InMemoryActuatorCommandStoreTests
                 (transaction, _) =>
                 {
                     transaction.Record(stale);
+
                     return Task.FromResult(true);
                 }));
 
@@ -232,6 +521,7 @@ public sealed class InMemoryActuatorCommandStoreTests
 
         Assert.Equal(RelayState.Off, snapshot.CurrentState);
         Assert.Empty(snapshot.AuditTrail);
+        Assert.Equal(0, snapshot.UndoDepth);
     }
 
     [Fact]
@@ -253,11 +543,15 @@ public sealed class InMemoryActuatorCommandStoreTests
                 (transaction, _) =>
                 {
                     transaction.Record(wrongTarget);
+
                     return Task.FromResult(true);
                 }));
 
-        Assert.Empty(
-            (await store.GetSnapshotAsync(correctDevice)).AuditTrail);
+        ActuatorStateSnapshot snapshot =
+            await store.GetSnapshotAsync(correctDevice);
+
+        Assert.Empty(snapshot.AuditTrail);
+        Assert.Equal(0, snapshot.UndoDepth);
     }
 
     [Fact]
@@ -269,9 +563,10 @@ public sealed class InMemoryActuatorCommandStoreTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => store.ExecuteSerializedAsync<int>(
                 deviceId,
-                (_, _) => throw new InvalidOperationException("Injected failure")));
+                (_, _) => throw new InvalidOperationException(
+                    "Injected failure")));
 
-        // A later command must still be able to obtain the same gate.
+        // The gate must remain usable after a failed operation.
         await RecordAsync(store, deviceId, RelayCommandType.RelayOn);
 
         ActuatorStateSnapshot snapshot =
@@ -279,23 +574,52 @@ public sealed class InMemoryActuatorCommandStoreTests
 
         Assert.Equal(RelayState.On, snapshot.CurrentState);
         Assert.Single(snapshot.AuditTrail);
+        Assert.Equal(1, snapshot.UndoDepth);
     }
 
-    private static async Task RecordAsync(
+    /// <summary>
+    /// Applies a valid manual command through the real store transaction.
+    /// </summary>
+    private static Task<CommandRecord> RecordAsync(
         InMemoryActuatorCommandStore store,
         Guid deviceId,
         RelayCommandType commandType)
     {
-        await store.ExecuteSerializedAsync(
+        return store.ExecuteSerializedAsync(
             deviceId,
             (transaction, _) =>
             {
-                transaction.Record(CreateCommand(
+                CommandRecord command = CreateCommand(
                     deviceId,
                     transaction.CurrentState,
-                    commandType));
+                    commandType);
 
-                return Task.FromResult(true);
+                transaction.Record(command);
+
+                return Task.FromResult(command);
+            });
+    }
+
+    /// <summary>
+    /// Executes a valid reversal using the real current Stack top.
+    /// </summary>
+    private static Task<CommandRecord> RestoreLatestAsync(
+        InMemoryActuatorCommandStore store,
+        Guid deviceId)
+    {
+        return store.ExecuteSerializedAsync(
+            deviceId,
+            (transaction, _) =>
+            {
+                CommandRecord original =
+                    Assert.IsType<CommandRecord>(
+                        transaction.LatestUndoableCommand);
+
+                CommandRecord reversal = CreateReversal(original);
+
+                transaction.Restore(original, reversal);
+
+                return Task.FromResult(reversal);
             });
     }
 
@@ -316,5 +640,22 @@ public sealed class InMemoryActuatorCommandStoreTests
             BaseTime,
             previousState,
             resultingState);
+    }
+
+    private static CommandRecord CreateReversal(CommandRecord original)
+    {
+        RelayCommandType reversalType =
+            original.PreviousState == RelayState.On
+                ? RelayCommandType.RelayOn
+                : RelayCommandType.RelayOff;
+
+        return new CommandRecord(
+            Guid.NewGuid(),
+            original.TargetDeviceId,
+            reversalType,
+            BaseTime.AddMinutes(1),
+            original.ResultingState,
+            original.PreviousState,
+            original.Id);
     }
 }

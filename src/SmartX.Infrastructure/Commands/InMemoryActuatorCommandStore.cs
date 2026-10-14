@@ -6,22 +6,24 @@ using SmartX.Domain.Commands;
 namespace SmartX.Infrastructure.Commands;
 
 /// <summary>
-/// Process-local commanded actuator state with independent per-device gates.
+/// Process-local simulated actuator state, audit history, and genuine
+/// per-device Stack-backed Undo.
 ///
-/// The sensor repository remains the registration authority. This store owns
-/// only simulated relay state and command audit records, not device metadata,
-/// telemetry readings, or operational health.
+/// Registration and device eligibility remain owned by the existing
+/// sensor repository. This store owns commanded relay state only.
+///
+/// Independent SemaphoreSlim gates serialise complete command and Undo
+/// transactions for each device without holding monitor locks across awaits.
 /// </summary>
 public sealed class InMemoryActuatorCommandStore : IActuatorCommandStore
 {
     private readonly ConcurrentDictionary<Guid, DeviceEntry> _devices = new();
 
     /// <summary>
-    /// Serialises each target's entire command operation using SemaphoreSlim.
+    /// Executes one complete operation under the target device's gate.
     ///
-    /// Commands for different targets are independent. The gate also covers
-    /// awaited authority validation, preventing another command for the same
-    /// target from intervening between validation and application.
+    /// Concurrent operations for the same device cannot interleave.
+    /// Different devices may execute independently.
     /// </summary>
     public async Task<TResult> ExecuteSerializedAsync<TResult>(
         Guid targetDeviceId,
@@ -43,8 +45,8 @@ public sealed class InMemoryActuatorCommandStore : IActuatorCommandStore
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Only the holder of this device's gate may access the mutable
-            // transaction. No mutable collection is returned to the caller.
+            // Mutable state is accessible only through this transaction.
+            // The same gate covers both ordinary commands and Undo.
             return await operation(
                 new DeviceTransaction(device),
                 cancellationToken);
@@ -56,10 +58,10 @@ public sealed class InMemoryActuatorCommandStore : IActuatorCommandStore
     }
 
     /// <summary>
-    /// Returns a detached state and audit snapshot under the same gate.
+    /// Returns a detached state, audit, and Undo metadata snapshot.
     ///
-    /// An uncommanded device is explicitly Off. Read operations do not need
-    /// to materialise an entry in the command dictionary.
+    /// The real Stack and mutable audit List are never returned.
+    /// An uncommanded device has the explicit initial state Off.
     /// </summary>
     public async Task<ActuatorStateSnapshot> GetSnapshotAsync(
         Guid targetDeviceId,
@@ -73,7 +75,9 @@ public sealed class InMemoryActuatorCommandStore : IActuatorCommandStore
             return new ActuatorStateSnapshot(
                 targetDeviceId,
                 RelayState.Off,
-                Array.AsReadOnly(Array.Empty<CommandRecord>()));
+                Array.AsReadOnly(Array.Empty<CommandRecord>()),
+                null,
+                0);
         }
 
         await device.Gate.WaitAsync(cancellationToken);
@@ -82,10 +86,17 @@ public sealed class InMemoryActuatorCommandStore : IActuatorCommandStore
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            Guid? latestUndoableCommandId =
+                device.UndoStack.TryPeek(out CommandRecord? latest)
+                    ? latest.Id
+                    : null;
+
             return new ActuatorStateSnapshot(
                 targetDeviceId,
                 device.CurrentState,
-                Array.AsReadOnly(device.AuditTrail.ToArray()));
+                Array.AsReadOnly(device.AuditTrail.ToArray()),
+                latestUndoableCommandId,
+                device.UndoStack.Count);
         }
         finally
         {
@@ -104,10 +115,11 @@ public sealed class InMemoryActuatorCommandStore : IActuatorCommandStore
     }
 
     /// <summary>
-    /// One process-local device's private state.
+    /// Private process-local state for exactly one device.
     ///
-    /// The command audit is deliberately separate from the Undo stack that
-    /// will be introduced in Commit 2. Audit records must survive reversals.
+    /// UndoStack is the real LIFO collection required by the assessment.
+    /// AuditTrail is deliberately separate so originals and reversals
+    /// remain visible after Stack entries have been removed.
     /// </summary>
     private sealed class DeviceEntry
     {
@@ -122,14 +134,17 @@ public sealed class InMemoryActuatorCommandStore : IActuatorCommandStore
 
         public RelayState CurrentState { get; set; } = RelayState.Off;
 
+        public Stack<CommandRecord> UndoStack { get; } = new();
+
         public List<CommandRecord> AuditTrail { get; } = [];
     }
 
     /// <summary>
-    /// Restricts mutation to a holder of the target's serialisation gate.
+    /// Provides mutation operations while the owning DeviceEntry gate
+    /// is held by ExecuteSerializedAsync.
     ///
-    /// The current state and target identity are checked again at recording
-    /// time so stale or mismatched command records cannot corrupt the store.
+    /// All checks occur before mutation. No asynchronous work is executed
+    /// between the state, audit, and Stack updates.
     /// </summary>
     private sealed class DeviceTransaction : IActuatorCommandTransaction
     {
@@ -142,6 +157,26 @@ public sealed class InMemoryActuatorCommandStore : IActuatorCommandStore
 
         public RelayState CurrentState => _device.CurrentState;
 
+        public int UndoDepth => _device.UndoStack.Count;
+
+        /// <summary>
+        /// Inspects the actual Stack top without removing it.
+        /// </summary>
+        public CommandRecord? LatestUndoableCommand =>
+            _device.UndoStack.TryPeek(out CommandRecord? latest)
+                ? latest
+                : null;
+
+        /// <summary>
+        /// Applies an accepted manual command.
+        ///
+        /// A genuine state change is pushed onto the per-device Stack.
+        /// A no-op is audited but never pushed.
+        ///
+        /// If audit insertion fails after a successful Stack push, the
+        /// pushed entry is removed before the exception escapes.
+        /// State is assigned only after both operations succeed.
+        /// </summary>
         public void Record(CommandRecord command)
         {
             ArgumentNullException.ThrowIfNull(command);
@@ -165,11 +200,133 @@ public sealed class InMemoryActuatorCommandStore : IActuatorCommandStore
                     "was prepared.");
             }
 
-            // Append before assigning the new state. If audit insertion
-            // fails, the commanded state remains unchanged.
-            _device.AuditTrail.Add(command);
+            if (command.StateChanged)
+            {
+                // Genuine LIFO Undo history:
+                // only successful state-changing manual commands enter.
+                _device.UndoStack.Push(command);
+
+                try
+                {
+                    _device.AuditTrail.Add(command);
+                }
+                catch
+                {
+                    // Compensate for an unsuccessful audit insertion.
+                    // The previous commanded state has not been changed.
+                    _device.UndoStack.Pop();
+
+                    throw;
+                }
+            }
+            else
+            {
+                // Accepted no-ops remain auditable but are not undoable.
+                _device.AuditTrail.Add(command);
+            }
 
             _device.CurrentState = command.ResultingState;
+        }
+
+        /// <summary>
+        /// Performs genuine Undo of the expected latest command.
+        ///
+        /// Validation:
+        /// 1. Both records belong to this device.
+        /// 2. The actual Stack top matches the expected original.
+        /// 3. The original is a state-changing manual command.
+        /// 4. Current relay state matches the original resulting state.
+        /// 5. The reversal references that exact original command.
+        /// 6. The reversal restores the original previous state.
+        ///
+        /// Commit order:
+        /// 1. Append the reversal audit record.
+        /// 2. Restore the commanded state.
+        /// 3. Pop the original from the real Stack.
+        ///
+        /// The Stack is never popped before successful reversal recording
+        /// and state restoration. Reversals are never pushed back onto it.
+        /// </summary>
+        public void Restore(
+            CommandRecord expectedLatestCommand,
+            CommandRecord reversal)
+        {
+            ArgumentNullException.ThrowIfNull(expectedLatestCommand);
+            ArgumentNullException.ThrowIfNull(reversal);
+
+            if (expectedLatestCommand.TargetDeviceId != _device.TargetDeviceId ||
+                reversal.TargetDeviceId != _device.TargetDeviceId)
+            {
+                throw new ActuatorCommandConflictException(
+                    "The Undo operation targets a different device.");
+            }
+
+            if (_device.UndoStack.Count == 0)
+            {
+                throw new ActuatorCommandConflictException(
+                    "This device has no state-changing command to undo.");
+            }
+
+            // Use the actual Stack.Peek() result, not a caller-supplied
+            // description of what might have been the latest command.
+            CommandRecord actualLatest = _device.UndoStack.Peek();
+
+            if (actualLatest.Id != expectedLatestCommand.Id ||
+                actualLatest != expectedLatestCommand)
+            {
+                throw new ActuatorCommandConflictException(
+                    "The expected command is no longer the latest " +
+                    "undoable command.");
+            }
+
+            if (!actualLatest.StateChanged ||
+                actualLatest.IsReversal)
+            {
+                throw new ActuatorCommandConflictException(
+                    "Only successful manual state changes can be undone.");
+            }
+
+            if (_device.CurrentState != actualLatest.ResultingState)
+            {
+                throw new ActuatorCommandConflictException(
+                    "The actuator state no longer matches the " +
+                    "latest undoable command.");
+            }
+
+            if (!reversal.IsReversal ||
+                !reversal.StateChanged ||
+                reversal.ReversesCommandId != actualLatest.Id)
+            {
+                throw new ActuatorCommandConflictException(
+                    "The reversal must reference the latest " +
+                    "state-changing command.");
+            }
+
+            if (reversal.PreviousState != _device.CurrentState ||
+                reversal.ResultingState != actualLatest.PreviousState)
+            {
+                throw new ActuatorCommandConflictException(
+                    "The reversal does not restore the recorded " +
+                    "previous actuator state.");
+            }
+
+            // All validation is complete.
+            //
+            // Audit insertion is performed before state and Stack mutation.
+            // If insertion throws, both commanded state and Stack remain
+            // unchanged. The original command remains undoable.
+            _device.AuditTrail.Add(reversal);
+
+            // These in-memory operations are performed under the same gate,
+            // without another callback or await between them.
+            _device.CurrentState = reversal.ResultingState;
+
+            // This removes the original only after restoration succeeds.
+            // The validated Stack cannot be changed concurrently.
+            _device.UndoStack.Pop();
+
+            // Do not push the reversal. Otherwise repeated Undo calls
+            // could create an infinite On/Off reversal loop.
         }
     }
 }
