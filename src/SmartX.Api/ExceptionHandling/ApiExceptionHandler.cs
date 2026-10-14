@@ -3,8 +3,8 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-
 using SmartX.Application.Attachments;
+using SmartX.Application.Commands;
 using SmartX.Application.Dashboard;
 using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
@@ -103,6 +103,14 @@ public sealed class ApiExceptionHandler : IExceptionHandler
             });
     }
 
+    /// <summary>
+    /// Preserves established Part 1/P2-03 exception mappings and
+    /// adds explicit, safe command-operation response codes.
+    ///
+    /// Malformed command input becomes 400, unavailable registered
+    /// targets become 404 through SensorNotFoundException, and
+    /// state/eligibility/Undo conflicts become 409.
+    /// </summary>
     private static ExceptionMapping MapException(
         Exception exception)
     {
@@ -118,6 +126,18 @@ public sealed class ApiExceptionHandler : IExceptionHandler
                 new ExceptionMapping(
                     StatusCodes.Status404NotFound,
                     "Sensor not found",
+                    true),
+
+            ActuatorCommandValidationException =>
+                new ExceptionMapping(
+                    StatusCodes.Status400BadRequest,
+                    "Invalid actuator command",
+                    true),
+
+            ActuatorCommandConflictException =>
+                new ExceptionMapping(
+                    StatusCodes.Status409Conflict,
+                    "Actuator command conflict",
                     true),
 
             DuplicateSensorIdentifierException =>

@@ -1,37 +1,55 @@
+using SmartX.Application.Commands;
 using SmartX.Application.Sensors;
+using SmartX.Contracts.Commands;
 using SmartX.Contracts.Realtime;
+using SmartX.Domain.Commands;
 using SmartX.Domain.Sensors;
 
 namespace SmartX.Application.Realtime;
 
 /// <summary>
-/// Projects the existing registered sensors into immutable Part 2 responses.
-/// Each read queries the same repository used by registration, metadata,
-/// status and telemetry workflows; no transport response is cached as state.
+/// Projects the authoritative registered sensor repository into
+/// immutable Part 2 HTTP responses.
+///
+/// Device identity and metadata continue to come exclusively from
+/// ISensorRepository. Processing diagnostics come from the existing
+/// telemetry processing store.
+///
+/// Simulated relay state comes from the separate command store.
+/// No independently maintained device registry is introduced.
 /// </summary>
 public sealed class RealtimeSnapshotService
 {
     private readonly ISensorRepository _sensorRepository;
     private readonly TimeProvider _timeProvider;
     private readonly ITelemetryProcessingStore _processing;
+    private readonly IActuatorCommandStore _commandStore;
 
     public RealtimeSnapshotService(
         ISensorRepository sensorRepository,
         TimeProvider timeProvider,
-        ITelemetryProcessingStore processing)
+        ITelemetryProcessingStore processing,
+        IActuatorCommandStore commandStore)
     {
         _sensorRepository = sensorRepository ??
             throw new ArgumentNullException(nameof(sensorRepository));
 
-        _processing = processing ?? throw new ArgumentNullException(nameof(processing));
-
         _timeProvider = timeProvider ??
             throw new ArgumentNullException(nameof(timeProvider));
+
+        _processing = processing ??
+            throw new ArgumentNullException(nameof(processing));
+
+        _commandStore = commandStore ??
+            throw new ArgumentNullException(nameof(commandStore));
     }
 
     /// <summary>
-    /// Returns detached values in the deterministic Part 1 registry order.
-    /// The collection wrapper prevents callers from replacing its elements.
+    /// Returns detached values in deterministic Part 1 registry order.
+    ///
+    /// The registered-sensor collection is read from the original
+    /// repository. Command metadata is added only for devices whose
+    /// registered category and telemetry type support relay commands.
     /// </summary>
     public async Task<IReadOnlyList<RealtimeDeviceResponse>> GetDevicesAsync(
         CancellationToken cancellationToken = default)
@@ -43,15 +61,22 @@ public sealed class RealtimeSnapshotService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        RealtimeDeviceResponse[] devices =
-            sensors.Select(ToResponse).ToArray();
+        var devices = new List<RealtimeDeviceResponse>(sensors.Count);
 
-        return Array.AsReadOnly(devices);
+        foreach (SensorProfile sensor in sensors)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            devices.Add(
+                await ToResponseAsync(sensor, cancellationToken));
+        }
+
+        return Array.AsReadOnly(devices.ToArray());
     }
 
     /// <summary>
-    /// Reuses registration's identifier parsing before direct Dictionary
-    /// lookup. This path never loads or scans the complete sensor collection.
+    /// Reuses the existing identifier parser and canonical Dictionary
+    /// lookup. Exact lookup does not scan the registered-device list.
     /// </summary>
     public async Task<RealtimeDeviceResponse> GetByDeviceIdentifierAsync(
         string? deviceIdentifier,
@@ -61,10 +86,14 @@ public sealed class RealtimeSnapshotService
         cancellationToken.ThrowIfCancellationRequested();
 
         DeviceIdentifier canonical =
-            SensorContractMapper.MapDeviceIdentifier(deviceIdentifier, identifierKind);
+            SensorContractMapper.MapDeviceIdentifier(
+                deviceIdentifier,
+                identifierKind);
 
         SensorProfile? sensor =
-            await _sensorRepository.GetByDeviceIdentifierAsync(canonical, cancellationToken);
+            await _sensorRepository.GetByDeviceIdentifierAsync(
+                canonical,
+                cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -73,12 +102,12 @@ public sealed class RealtimeSnapshotService
             throw new RealtimeDeviceNotFoundException(canonical);
         }
 
-        return ToResponse(sensor);
+        return await ToResponseAsync(sensor, cancellationToken);
     }
 
     /// <summary>
-    /// Counts the same detached collection included in the response and uses
-    /// the injected clock for a UTC generation timestamp.
+    /// Returns the current device and processing state without changing
+    /// P2-03 telemetry queue accounting or dispatch diagnostics.
     /// </summary>
     public async Task<RealtimeSnapshotResponse> GetSnapshotAsync(
         CancellationToken cancellationToken = default)
@@ -92,15 +121,90 @@ public sealed class RealtimeSnapshotService
             _timeProvider.GetUtcNow().ToUniversalTime(),
             devices.Count,
             devices,
-            TelemetryProcessingMapper.ToResponse(_processing.GetSnapshot()));
+            TelemetryProcessingMapper.ToResponse(
+                _processing.GetSnapshot()));
     }
 
-    private RealtimeDeviceResponse ToResponse(SensorProfile sensor)
+    /// <summary>
+    /// Returns the actual commanded relay state and bounded command
+    /// audit for a registered Actuator/Boolean device.
+    ///
+    /// The sensor repository is checked before reading command state.
+    /// Operational status does not prevent an operator from inspecting
+    /// command history, even though a non-Online device cannot execute
+    /// new commands or Undo.
+    /// </summary>
+    public async Task<ActuatorCommandHistoryResponse> GetActuatorHistoryAsync(
+        Guid targetDeviceId,
+        CancellationToken cancellationToken = default)
     {
-        // The established mapper copies every public profile field, including
-        // deployment metadata, without returning mutable Domain entities.
+        if (targetDeviceId == Guid.Empty)
+        {
+            throw new ActuatorCommandValidationException(
+                "A valid target device ID is required.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        SensorProfile? sensor =
+            await _sensorRepository.GetByIdAsync(
+                targetDeviceId,
+                cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (sensor is null)
+        {
+            throw new SensorNotFoundException(targetDeviceId);
+        }
+
+        if (!SupportsRelayCommands(sensor))
+        {
+            throw new ActuatorCommandConflictException(
+                "Command history is available only for registered " +
+                "Actuator devices with Boolean telemetry.");
+        }
+
+        ActuatorStateSnapshot snapshot =
+            await _commandStore.GetSnapshotAsync(
+                targetDeviceId,
+                cancellationToken);
+
+        return ActuatorCommandContractMapper.ToHistoryResponse(snapshot);
+    }
+
+    /// <summary>
+    /// Copies every existing public profile field and attaches the
+    /// latest processed observation as before.
+    ///
+    /// Only the optional commanded actuator projection is new.
+    /// A sensor's latest reported reading never overwrites a manual
+    /// command's actual simulated relay state.
+    /// </summary>
+    private async Task<RealtimeDeviceResponse> ToResponseAsync(
+        SensorProfile sensor,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var profile = SensorContractMapper.ToResponse(sensor);
         var processed = _processing.GetDeviceState(sensor.Id);
+
+        ActuatorCommandStateResponse? actuatorState = null;
+
+        if (SupportsRelayCommands(sensor))
+        {
+            ActuatorStateSnapshot commandSnapshot =
+                await _commandStore.GetSnapshotAsync(
+                    sensor.Id,
+                    cancellationToken);
+
+            actuatorState =
+                ActuatorCommandContractMapper.ToStateResponse(
+                    commandSnapshot);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         return new RealtimeDeviceResponse(
             profile.Id,
@@ -113,7 +217,24 @@ public sealed class RealtimeSnapshotService
             profile.TelemetryDataType,
             profile.CreatedAtUtc,
             profile.UpdatedAtUtc,
-            processed is null ? null : TelemetryProcessingMapper.ToReading(processed.LatestObservation),
-            processed?.LastProcessedAtUtc);
+            processed is null
+                ? null
+                : TelemetryProcessingMapper.ToReading(
+                    processed.LatestObservation),
+            processed?.LastProcessedAtUtc,
+            actuatorState);
+    }
+
+    /// <summary>
+    /// The registered profile, not the stored commanded state, decides
+    /// whether a device is capable of supporting Boolean relay control.
+    ///
+    /// Online eligibility is checked separately by the command service
+    /// when a state-changing operation actually executes.
+    /// </summary>
+    private static bool SupportsRelayCommands(SensorProfile sensor)
+    {
+        return sensor.Category == SensorCategory.Actuator &&
+               sensor.DataType == TelemetryDataType.Boolean;
     }
 }

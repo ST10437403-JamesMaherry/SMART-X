@@ -4,12 +4,14 @@ using SmartX.Api.Dashboard;
 using SmartX.Api.ExceptionHandling;
 using SmartX.Api.Realtime;
 using SmartX.Application.Attachments;
+using SmartX.Application.Commands;
 using SmartX.Application.Dashboard;
 using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
 using SmartX.Domain.Dashboard;
 using SmartX.Infrastructure.Attachments;
+using SmartX.Infrastructure.Commands;
 using SmartX.Infrastructure.Realtime;
 using SmartX.Infrastructure.Sensors;
 using SmartX.Infrastructure.Telemetry;
@@ -109,7 +111,8 @@ builder.Services
 builder.Services.AddOpenApi();
 
 // SignalR provides lightweight server-push notifications for the Adaptive
-// Anomaly Spotlight. HTTP remains the authoritative state-transfer channel.
+// Anomaly Spotlight and Part 2 processing/command invalidations.
+// HTTP remains the authoritative state-transfer channel.
 builder.Services.AddSignalR();
 
 // -------------------------------------------------------------------------
@@ -135,8 +138,25 @@ builder.Services.AddScoped<SensorRegistrationService>();
 
 builder.Services.AddScoped<SensorManagementService>();
 
-// Part 2 reads project the existing singleton sensor authority into detached
-// transport values. They do not create another registry or own device state.
+// -------------------------------------------------------------------------
+// Part 2 manual actuator command infrastructure
+// -------------------------------------------------------------------------
+
+// The process-wide store retains commanded state, permanent command audit,
+// and genuine per-device Stack<CommandRecord> history.
+//
+// Command execution and Undo share the same per-device serialisation gates.
+builder.Services.AddSingleton<
+    IActuatorCommandStore,
+    InMemoryActuatorCommandStore>();
+
+// Application services are request-scoped. They validate every command
+// against the existing authoritative registered-sensor repository.
+builder.Services.AddScoped<ActuatorCommandService>();
+
+// Part 2 reads combine authoritative registered-device metadata,
+// telemetry processing state, and separate commanded actuator state.
+// This service owns no duplicate device registry.
 builder.Services.AddScoped<RealtimeSnapshotService>();
 
 // -------------------------------------------------------------------------
@@ -272,8 +292,10 @@ app.UseAuthorization();
 app.MapControllers();
 
 /*
- * Connected React clients subscribe here for lightweight dashboard
- * invalidation events and retrieve authoritative issue state over HTTP.
+ * Connected React clients subscribe to lightweight state invalidations
+ * and retrieve authoritative device, command, and dashboard state over HTTP.
+ *
+ * Command execution itself remains an ordinary validated HTTP operation.
  */
 app.MapHub<DashboardHub>("/hubs/dashboard");
 app.MapHub<RealtimeHub>("/hubs/realtime");
