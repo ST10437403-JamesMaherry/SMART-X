@@ -317,3 +317,182 @@
     animation: none !important;
   }
 }
+
+/* P2-07 COMMIT 2: live connection and actual server-driven operation panels. */
+.realtime-connectivity {
+  padding: 0.2rem 0 0.2rem 0.7rem;
+  border-left: 2px solid var(--border-strong);
+  color: var(--text-muted);
+  font-size: 0.69rem;
+  line-height: 1.5;
+}
+
+.realtime-connectivity--connected {
+  border-left-color: var(--success);
+  color: var(--success);
+}
+
+.realtime-connectivity--reconnecting,
+.realtime-connectivity--connecting {
+  border-left-color: var(--warning);
+  color: var(--warning);
+}
+
+.realtime-connectivity--disconnected {
+  border-left-color: var(--danger);
+  color: var(--danger);
+}
+
+.realtime-dispatches,
+.realtime-operator-panels {
+  margin-top: 3.2rem;
+}
+
+.realtime-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1.5rem 0 0;
+}
+
+.realtime-button-row .realtime-action {
+  flex: 1 1 auto;
+}
+
+.realtime-action--primary {
+  background: var(--heading);
+  border-color: var(--heading);
+  color: var(--background);
+}
+
+.realtime-action--primary:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--background);
+}
+
+.realtime-action--primary:disabled {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.realtime-command-facts {
+  margin-top: 0.3rem;
+}
+
+.realtime-inline-error {
+  margin: 1.3rem 0 0;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--danger);
+  color: var(--heading);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.realtime-inline-error p {
+  margin: 0 0 0.7rem;
+}
+
+.realtime-confirmation {
+  margin: 1.3rem 0 0;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--success);
+  color: var(--success);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.realtime-audit {
+  margin-top: 1.6rem;
+}
+
+.realtime-audit h4 {
+  margin: 0 0 0.9rem;
+  color: var(--heading);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.realtime-audit ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.realtime-audit li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.71rem;
+  line-height: 1.6;
+}
+
+.realtime-audit li span:first-child {
+  color: var(--heading);
+}
+
+.realtime-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-top: 1px solid var(--border-strong);
+}
+
+.realtime-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-family: var(--font-interface);
+}
+
+.realtime-table th,
+.realtime-table td {
+  min-width: 4.2rem;
+  padding: 0.75rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.67rem;
+  line-height: 1.6;
+  vertical-align: top;
+}
+
+.realtime-table th {
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.realtime-table td {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.realtime-table td:first-child {
+  color: var(--heading);
+}
+
+.realtime-table .realtime-device-id-cell {
+  max-width: 11rem;
+}
+
+.realtime-history-context {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--accent);
+  font-size: 0.63rem;
+}
+
+@media (max-width: 520px) {
+  .realtime-button-row .realtime-action {
+    flex: 1 1 100%;
+  }
+
+  .realtime-table th,
+  .realtime-table td {
+    font-size: 0.64rem;
+  }
+}

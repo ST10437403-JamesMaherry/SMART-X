@@ -5,21 +5,26 @@ import { getApiErrorMessage } from '../../api/apiTypes';
 import {
   getRealtimeActiveConditions,
   getRealtimeSnapshot,
+  type RealtimeActiveConditionsResponse,
   type RealtimeDeviceResponse,
   type RealtimeSnapshotResponse,
-  type RealtimeActiveConditionsResponse,
+  type TelemetryDispatchResponse,
 } from '../../api/realtimeApi';
 import type { TelemetryReadingResponse } from '../../api/telemetryApi';
 import { routes } from '../../routing/routes';
 import { useWorkspaceState } from '../../state/workspaceState';
+import RealtimeCommandPanel from './RealtimeCommandPanel';
+import RealtimeHistoryPanel from './RealtimeHistoryPanel';
+import { useRealtimeStream, type RealtimeConnectionState } from './useRealtimeStream';
 import './RealtimeWorkspace.css';
 
 type ViewState = 'loading' | 'ready' | 'error';
 
-/** Format timestamps supplied by the server without inventing local events. */
+const invalidationWindowMs = 150;
+const visibleDispatchCount = 8;
+
 function formatTime(timestamp: string | null): string {
   if (!timestamp) return 'Not recorded';
-
   const instant = new Date(timestamp);
   if (Number.isNaN(instant.getTime())) return timestamp;
 
@@ -34,10 +39,9 @@ function formatTime(timestamp: string | null): string {
   }).format(instant);
 }
 
-/** A zero or false payload is real data, not an absent observation. */
+/** Preserve real zero and false values; neither means "no observation". */
 function formatReading(reading: TelemetryReadingResponse | null): string {
   if (!reading) return 'Awaiting processing';
-
   switch (reading.telemetryDataType) {
     case 'Float':
       return reading.floatValue === null ? 'Unavailable' : String(reading.floatValue);
@@ -48,18 +52,38 @@ function formatReading(reading: TelemetryReadingResponse | null): string {
   }
 }
 
-function formatCount(count: number): string {
-  return count.toLocaleString('en-ZA');
+function formatCount(value: number): string {
+  return value.toLocaleString('en-ZA');
+}
+
+function connectionLabel(state: RealtimeConnectionState): string {
+  switch (state) {
+    case 'connected':
+      return 'SignalR connected';
+    case 'connecting':
+      return 'SignalR connecting';
+    case 'reconnecting':
+      return 'SignalR reconnecting';
+    case 'disconnected':
+      return 'SignalR disconnected';
+  }
+}
+
+function describeDispatch(dispatch: TelemetryDispatchResponse): string {
+  const value = formatReading(dispatch.telemetry);
+  return `${dispatch.telemetry.telemetryDataType} ${value}`;
 }
 
 /**
- * Commit 1 provides a useful read-only operator workspace from the real API.
- * Command execution, chronological history interaction and coalesced SignalR
- * refresh are integrated in Commit 2, without changing this source of truth.
+ * P2-07 operator console, backed entirely by HTTP snapshots and real API
+ * mutations. SignalR transports only invalidations, never mutable device data.
  *
- * Only the selected device ID is stored across routes. The registry, queue,
- * reported telemetry, commanded state and active conditions are never faked
- * or retained as an independent client-side device store.
+ * Important safeguards:
+ * - Coalesce notification bursts before starting HTTP work.
+ * - Abort superseded reads and ignore late/stale completions.
+ * - Preserve the last successful snapshot during network/SignalR outages.
+ * - Refresh after hub reconnect and after accepted command operations.
+ * - Keep only selectedSensorId in the existing application-wide provider.
  */
 function RealtimeWorkspace() {
   const { selectedSensorId, setSelectedSensorId } = useWorkspaceState();
@@ -70,19 +94,20 @@ function RealtimeWorkspace() {
   const [initialError, setInitialError] = useState<string | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   const requestRef = useRef<AbortController | null>(null);
+  const requestNumberRef = useRef(0);
   const hasSnapshotRef = useRef(false);
+  const invalidationTimerRef = useRef<number | null>(null);
 
-  /**
-   * Load both projections concurrently. Superseded requests are cancelled;
-   * only the most recent request can publish state. On a later failure the
-   * operator retains the last successfully loaded snapshot.
-   */
+  /** Reload device and active-condition projections as one UI update. */
   const refreshSnapshot = useCallback(async (): Promise<void> => {
     requestRef.current?.abort();
     const controller = new AbortController();
+    const requestNumber = ++requestNumberRef.current;
     requestRef.current = controller;
+
     setRefreshing(true);
     setRefreshError(null);
 
@@ -92,15 +117,18 @@ function RealtimeWorkspace() {
         getRealtimeActiveConditions(controller.signal),
       ]);
 
-      if (controller.signal.aborted || requestRef.current !== controller) return;
+      if (controller.signal.aborted || requestNumberRef.current !== requestNumber) return;
 
       setSnapshot(nextSnapshot);
       setConditions(nextConditions);
       setViewState('ready');
       setInitialError(null);
       hasSnapshotRef.current = true;
+      // This token makes the selected device panels reload their own HTTP
+      // histories without using the worker's bounded diagnostic records.
+      setRefreshToken((current) => current + 1);
     } catch (error) {
-      if (controller.signal.aborted || requestRef.current !== controller) return;
+      if (controller.signal.aborted || requestNumberRef.current !== requestNumber) return;
 
       const message = getApiErrorMessage(
         error,
@@ -121,20 +149,41 @@ function RealtimeWorkspace() {
     }
   }, []);
 
+  /**
+   * Multiple worker completions can emit dozens of invalidations in a burst.
+   * One fixed 150 ms window turns them into a single HTTP refresh. A new
+   * window will start after that request if additional events arrive.
+   */
+  const scheduleRefresh = useCallback((): void => {
+    if (invalidationTimerRef.current !== null) return;
+
+    invalidationTimerRef.current = window.setTimeout(() => {
+      invalidationTimerRef.current = null;
+      void refreshSnapshot();
+    }, invalidationWindowMs);
+  }, [refreshSnapshot]);
+
+  // The hook retries initial SignalR failures, handles reconnects, and
+  // invokes scheduleRefresh after connection/reconnection and new events.
+  const connectionState = useRealtimeStream(scheduleRefresh);
+
   useEffect(() => {
-    // Delay initial network-driven React state updates beyond the effect's
-    // synchronous phase, matching the established Smart-X hooks convention.
-    const timer = window.setTimeout(() => void refreshSnapshot(), 0);
+    const initialTimer = window.setTimeout(() => void refreshSnapshot(), 0);
 
     return () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(initialTimer);
+      if (invalidationTimerRef.current !== null) {
+        window.clearTimeout(invalidationTimerRef.current);
+        invalidationTimerRef.current = null;
+      }
       requestRef.current?.abort();
       requestRef.current = null;
+      requestNumberRef.current += 1;
     };
   }, [refreshSnapshot]);
 
-  // Reuse the Part 1 selection when available. If the device was removed,
-  // display an existing device without writing an imaginary selection.
+  // One selection shared with Part 1; neither the queue nor an alternative
+  // registry is recreated in browser state.
   const selectedDevice: RealtimeDeviceResponse | null =
     snapshot?.devices.find((device) => device.id === selectedSensorId) ??
     snapshot?.devices[0] ??
@@ -145,6 +194,8 @@ function RealtimeWorkspace() {
     [];
 
   const processing = snapshot?.processing;
+  const recentDispatches =
+    processing?.recentDispatches.slice(-visibleDispatchCount).reverse() ?? [];
 
   return (
     <section className="realtime-workspace" aria-labelledby="realtime-workspace-title">
@@ -153,11 +204,18 @@ function RealtimeWorkspace() {
           <p className="realtime-kicker">OPERATIONS / SERVER STATE</p>
           <h2 id="realtime-workspace-title">Operations console</h2>
           <p className="realtime-subtitle">
-            Accepted traffic, completed processing and commanded relay state are separate facts.
+            Live queue processing, independent relay commands and timestamp-ordered device history.
+            HTTP remains authoritative when SignalR is unavailable.
           </p>
         </div>
-
         <div className="realtime-refresh-controls">
+          <span
+            className={`realtime-connectivity realtime-connectivity--${connectionState}`}
+            role="status"
+            aria-live="polite"
+          >
+            {connectionLabel(connectionState)}
+          </span>
           <span className="realtime-read-status" role="status" aria-live="polite">
             {refreshing
               ? 'Refreshing server state'
@@ -178,7 +236,7 @@ function RealtimeWorkspace() {
 
       {viewState === 'loading' && (
         <p className="realtime-message" role="status">
-          Loading registered devices and live processing diagnostics...
+          Loading registered devices and actual processing diagnostics...
         </p>
       )}
 
@@ -196,7 +254,7 @@ function RealtimeWorkspace() {
           <p className="realtime-snapshot-time">
             Snapshot received{' '}
             <time dateTime={snapshot.generatedAtUtc}>{formatTime(snapshot.generatedAtUtc)}</time>
-            {' · '}Process-wide telemetry counters
+            {' · '}Process-wide counters
           </p>
 
           <div className="realtime-metrics" aria-label="Process-wide telemetry counters">
@@ -287,8 +345,8 @@ function RealtimeWorkspace() {
                     )}
                   </dl>
                   <p className="realtime-explainer">
-                    Latest processed telemetry is not the last accepted reading. Relay commands
-                    cannot overwrite reported Boolean telemetry or sensor status.
+                    Latest processed telemetry is separate from latest accepted traffic, operational
+                    sensor status and simulated commanded relay state.
                   </p>
                 </>
               ) : (
@@ -331,18 +389,81 @@ function RealtimeWorkspace() {
                 </div>
               </dl>
               <p className="realtime-explainer">
-                These are actual worker/queue counts across all devices. Pausing ordinary simulation
-                dispatch does not pause the critical lane or ingestion.
+                Worker counts include all devices. Ordinary-lane pausing is a simulation control;
+                the critical lane remains live. Scenario controls arrive in Commit 3.
               </p>
             </section>
           </div>
+
+          <section
+            className="realtime-section realtime-dispatches"
+            aria-labelledby="realtime-dispatches-title"
+          >
+            <header className="realtime-section-header">
+              <p className="realtime-kicker">03 / QUEUE COMPLETIONS</p>
+              <h3 id="realtime-dispatches-title">Recent worker dispatches</h3>
+              <p className="realtime-section-detail">
+                The last {visibleDispatchCount} entries in the server's bounded 100-dispatch
+                diagnostic window.
+              </p>
+            </header>
+            {recentDispatches.length === 0 ? (
+              <p className="realtime-empty">No worker dispatches recorded yet.</p>
+            ) : (
+              <div className="realtime-table-scroll">
+                <table className="realtime-table" aria-label="Recent worker dispatches">
+                  <thead>
+                    <tr>
+                      <th scope="col">Dequeue</th>
+                      <th scope="col">Lane</th>
+                      <th scope="col">Outcome</th>
+                      <th scope="col">Typed value</th>
+                      <th scope="col">Device</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentDispatches.map((dispatch) => (
+                      <tr key={dispatch.dequeueSequence}>
+                        <td>{dispatch.dequeueSequence}</td>
+                        <td>
+                          {dispatch.lane} / {dispatch.severity}
+                        </td>
+                        <td>{dispatch.outcome}</td>
+                        <td>{describeDispatch(dispatch)}</td>
+                        <td className="realtime-device-id-cell">
+                          {snapshot.devices.find((d) => d.id === dispatch.telemetry.sensorProfileId)
+                            ?.name ?? dispatch.telemetry.deviceIdentifier}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          {selectedDevice && (
+            <div className="realtime-columns realtime-operator-panels">
+              <RealtimeCommandPanel
+                key={`command-${selectedDevice.id}`}
+                device={selectedDevice}
+                refreshToken={refreshToken}
+                onCommandCommitted={() => void refreshSnapshot()}
+              />
+              <RealtimeHistoryPanel
+                key={`history-${selectedDevice.id}`}
+                deviceId={selectedDevice.id}
+                refreshToken={refreshToken}
+              />
+            </div>
+          )}
 
           <section
             className="realtime-section realtime-conditions"
             aria-labelledby="realtime-conditions-title"
           >
             <header className="realtime-section-header">
-              <p className="realtime-kicker">03 / UNIQUE ACTIVE CONDITIONS</p>
+              <p className="realtime-kicker">06 / UNIQUE ACTIVE CONDITIONS</p>
               <h3 id="realtime-conditions-title">Active conditions</h3>
               <p className="realtime-section-detail">
                 {formatCount(conditions?.activeConditionCount ?? 0)} active system-wide
@@ -350,7 +471,6 @@ function RealtimeWorkspace() {
                 {formatCount(conditions?.unacknowledgedConditionCount ?? 0)} unacknowledged
               </p>
             </header>
-
             {!selectedDevice ? (
               <p className="realtime-empty">Select a registered device to inspect conditions.</p>
             ) : selectedConditions.length === 0 ? (
