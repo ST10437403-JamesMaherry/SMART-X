@@ -26,5 +26,6 @@
   },
   "[yaml]": {
     "editor.defaultFormatter": "redhat.vscode-yaml"
-  }
+  },
+  "postman.settings.dotenv-detection-notification-visibility": false
 }
