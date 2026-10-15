@@ -165,6 +165,9 @@ builder.Services.AddScoped<ActuatorCommandService>();
 
 // Preserves P2-02/P2-03 snapshots and P2-04 commanded-state projection.
 builder.Services.AddScoped<RealtimeSnapshotService>();
+// Read-only P2-08 discovery reuses the Dictionary-backed registry and
+// the original HashSet-backed dashboard issues; it owns no separate index.
+builder.Services.AddScoped<RealtimeDeviceSearchService>();
 
 builder.Services.AddSingleton<
     ITelemetryRepository,

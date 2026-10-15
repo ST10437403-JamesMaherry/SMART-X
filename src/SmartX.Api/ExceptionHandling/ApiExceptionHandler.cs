@@ -105,7 +105,8 @@ public sealed class ApiExceptionHandler : IExceptionHandler
     /// <summary>
     /// Preserves the established API error contract.
     ///
-    /// P2-05 adds only InvalidRealtimeHistoryQueryException -> 400.
+    /// P2-08 adds InvalidRealtimeDeviceSearchQueryException -> 400,
+    /// while retaining the existing P2-05 history-query handling.
     /// Unknown registered devices continue to produce 404.
     /// Invalid command/Undo operations retain their existing mappings.
     /// </summary>
@@ -124,6 +125,12 @@ public sealed class ApiExceptionHandler : IExceptionHandler
                 new ExceptionMapping(
                     StatusCodes.Status404NotFound,
                     "Sensor not found",
+                    true),
+
+            InvalidRealtimeDeviceSearchQueryException =>
+                new ExceptionMapping(
+                    StatusCodes.Status400BadRequest,
+                    "Invalid device search query",
                     true),
 
             InvalidRealtimeHistoryQueryException =>
