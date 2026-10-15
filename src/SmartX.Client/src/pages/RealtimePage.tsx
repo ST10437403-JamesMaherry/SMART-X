@@ -1,38 +1,31 @@
 import ApplicationShell from '../components/ApplicationShell';
 import PillarNavigation from '../components/PillarNavigation';
+import RealtimeWorkspace from '../features/realtime/RealtimeWorkspace';
 
 /**
- * Establishes the Part 2 route using the existing Smart-X visual shell.
- * Live processing and command controls arrive with their backend workflows.
+ * Activates the genuine Part 2 operations workspace under the existing
+ * three-pillar navigation. The shared workspace provider remains mounted
+ * across navigation, so selected devices are retained without copying
+ * telemetry, command or queue state into client-side storage.
  */
 function RealtimePage() {
   return (
     <ApplicationShell>
       <section className="page-intro module-heading" aria-labelledby="page-title">
         <p className="eyebrow">PART 2 / ACTIVE</p>
-
         <h1 className="page-title" id="page-title">
           Real-Time
           <br />
           Command Stream
         </h1>
-
-        <p className="page-description">Device commands and operational history.</p>
+        <p className="page-description">
+          Inspect real worker state, device telemetry, actuator state and unique operational
+          conditions from the Smart-X API.
+        </p>
       </section>
 
       <PillarNavigation />
-
-      <section className="system-status" aria-labelledby="command-workspace-title">
-        <p className="status-label">Command workspace</p>
-
-        <h2 className="status-title" id="command-workspace-title">
-          Live controls coming soon
-        </h2>
-
-        <p className="status-message">
-          Continue managing sensors and telemetry in the ingestion workspace.
-        </p>
-      </section>
+      <RealtimeWorkspace />
     </ApplicationShell>
   );
 }

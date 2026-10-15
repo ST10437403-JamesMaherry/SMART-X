@@ -1,0 +1,319 @@
+/*
+ * P2-07 / REAL-TIME OPERATIONS
+ *
+ * Extend the existing Smart-X near-black / serif / monospace design.
+ * Structural rules and typography create hierarchy without gradients,
+ * shadows, fake hardware diagrams or decorative status badges.
+ */
+
+.realtime-workspace {
+  min-width: 0;
+  margin-top: clamp(4rem, 8vw, 6.5rem);
+  border-top: 1px solid var(--border-strong);
+}
+
+.realtime-workspace-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2rem 0 1.8rem;
+}
+
+.realtime-kicker {
+  margin: 0 0 0.8rem;
+  color: var(--accent);
+  font-family: var(--font-interface);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+}
+
+.realtime-workspace h2,
+.realtime-workspace h3,
+.realtime-device-name {
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+
+.realtime-workspace h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.realtime-subtitle,
+.realtime-explainer,
+.realtime-section-detail {
+  color: var(--text-muted);
+  font-size: 0.77rem;
+  line-height: 1.75;
+}
+
+.realtime-subtitle {
+  max-width: 37rem;
+  margin: 0.8rem 0 0;
+}
+
+.realtime-refresh-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.9rem;
+  padding-top: 0.4rem;
+}
+
+.realtime-read-status,
+.realtime-snapshot-time,
+.realtime-label {
+  color: var(--text-muted);
+  font-family: var(--font-interface);
+  font-size: 0.7rem;
+}
+
+.realtime-snapshot-time {
+  margin: 0 0 1.6rem;
+  overflow-wrap: anywhere;
+}
+
+.realtime-action {
+  min-height: 2.65rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  color: var(--heading);
+  background: transparent;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.realtime-action:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.realtime-action:disabled {
+  color: var(--text-muted);
+  cursor: wait;
+}
+
+.realtime-message {
+  margin: 1.5rem 0;
+  padding: 1.1rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.78rem;
+  line-height: 1.8;
+}
+
+.realtime-message--error {
+  border-color: var(--danger);
+  color: var(--heading);
+}
+
+.realtime-message--error .realtime-action {
+  margin-top: 0.4rem;
+}
+
+.realtime-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin: 0 0 3rem;
+}
+
+.realtime-metric {
+  min-width: 0;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.realtime-metric span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.realtime-metric strong {
+  display: block;
+  margin-top: 0.65rem;
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+}
+
+.realtime-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: clamp(2rem, 4vw, 3.5rem);
+}
+
+.realtime-section {
+  min-width: 0;
+  padding: 1.25rem 0 0;
+  border-top: 1px solid var(--border-strong);
+}
+
+.realtime-section-header {
+  margin-bottom: 1.5rem;
+}
+
+.realtime-section h3 {
+  margin: 0;
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
+}
+
+.realtime-label {
+  display: block;
+  margin: 0 0 0.6rem;
+}
+
+.realtime-device-select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 2.9rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  color: var(--heading);
+  background: var(--surface);
+  font-size: 0.78rem;
+}
+
+.realtime-device-name {
+  margin: 1.75rem 0 0.3rem;
+  font-size: 1.45rem;
+  overflow-wrap: anywhere;
+}
+
+.realtime-device-identifier {
+  margin: 0 0 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.realtime-facts {
+  margin: 0;
+}
+
+.realtime-facts > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.78rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.realtime-facts dt,
+.realtime-facts dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.73rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.realtime-facts dt {
+  color: var(--text-muted);
+}
+
+.realtime-facts dd {
+  color: var(--heading);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.realtime-explainer {
+  margin: 1.5rem 0 0;
+}
+
+.realtime-conditions {
+  margin-top: 3rem;
+}
+
+.realtime-section-detail {
+  margin: 0.75rem 0 0;
+}
+
+.realtime-empty {
+  padding: 1.3rem 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.8;
+}
+
+.realtime-empty a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.realtime-conditions-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.realtime-condition {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+}
+
+.realtime-condition strong {
+  color: var(--heading);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.realtime-condition span {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 800px) {
+  .realtime-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .realtime-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .realtime-workspace-heading {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .realtime-refresh-controls {
+    align-items: flex-start;
+  }
+
+  .realtime-condition {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .realtime-workspace *,
+  .realtime-workspace *::before,
+  .realtime-workspace *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
