@@ -238,9 +238,17 @@ test.describe('Smart-X Part 1 regression', () => {
       })
       .click();
 
-    const criticalSpike = page.locator('article.spotlight-issue').filter({
-      hasText: 'Critical telemetry spike',
-    });
+    /*
+     * All Playwright scenarios share one process-local API instance.
+     * Earlier P2-07 tests may leave other sensors' critical spike episodes
+     * visible in the Spotlight, including acknowledged but unresolved ones.
+     * Scope this locator to the exact sensor registered by this test.
+     * Never use .first(): doing so could acknowledge another sensor's issue.
+     */
+    const criticalSpike = page
+      .locator('article.spotlight-issue')
+      .filter({ hasText: 'Critical telemetry spike' })
+      .filter({ hasText: sensorName });
 
     await expect(criticalSpike).toBeVisible({
       timeout: 15_000,
