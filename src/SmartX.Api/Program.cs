@@ -8,6 +8,7 @@ using SmartX.Application.Commands;
 using SmartX.Application.Dashboard;
 using SmartX.Application.Interactions;
 using SmartX.Application.Realtime;
+using SmartX.Application.Recommendations;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
 using SmartX.Domain.Dashboard;
@@ -15,6 +16,7 @@ using SmartX.Infrastructure.Attachments;
 using SmartX.Infrastructure.Commands;
 using SmartX.Infrastructure.Interactions;
 using SmartX.Infrastructure.Realtime;
+using SmartX.Infrastructure.Recommendations;
 using SmartX.Infrastructure.Sensors;
 using SmartX.Infrastructure.Telemetry;
 
@@ -162,6 +164,13 @@ builder.Services.AddSingleton<
 // One bounded process-local interaction stream; no personal operator profiles.
 builder.Services.AddSingleton<IOperatorInteractionStore, InMemoryOperatorInteractionStore>();
 builder.Services.AddScoped<OperatorInteractionService>();
+
+// P2-09: one bounded Dictionary-backed pattern projection, learned only
+// after the existing command transaction and P2-08 interaction succeed.
+// TimeProvider and policy are shared across recording and read paths.
+builder.Services.AddSingleton(new PatternLearningPolicy());
+builder.Services.AddSingleton<IInteractionPatternStore, InMemoryInteractionPatternStore>();
+builder.Services.AddScoped<PredictivePatternLearningService>();
 builder.Services.AddScoped<ActuatorCommandService>();
 
 // -------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 using SmartX.Application.Interactions;
 using SmartX.Application.Realtime;
+using SmartX.Application.Recommendations;
 using SmartX.Application.Sensors;
 using SmartX.Domain.Commands;
 using SmartX.Domain.Interactions;
@@ -25,13 +26,15 @@ public sealed class ActuatorCommandService
     private readonly TimeProvider _timeProvider;
     private readonly OperationalHistoryRecorder? _historyRecorder;
     private readonly IOperatorInteractionStore? _interactions;
+    private readonly PredictivePatternLearningService? _patternLearner;
 
     public ActuatorCommandService(
         ISensorRepository sensorRepository,
         IActuatorCommandStore commandStore,
         TimeProvider timeProvider,
         OperationalHistoryRecorder? historyRecorder = null,
-        IOperatorInteractionStore? interactions = null)
+        IOperatorInteractionStore? interactions = null,
+        PredictivePatternLearningService? patternLearner = null)
     {
         _sensorRepository = sensorRepository ??
             throw new ArgumentNullException(nameof(sensorRepository));
@@ -46,6 +49,7 @@ public sealed class ActuatorCommandService
         // Production DI supplies the shared registered recorder.
         _historyRecorder = historyRecorder;
         _interactions = interactions;
+        _patternLearner = patternLearner;
     }
 
     /// <summary>
@@ -111,6 +115,22 @@ public sealed class ActuatorCommandService
                 _historyRecorder?.RecordAcceptedCommand(command);
                 _interactions?.Append(OperatorInteractionKind.CommandExecuted,
                     deviceId: targetDeviceId, commandId: command.Id);
+
+                // P2-09 learns only from the authoritative accepted command.
+                // No-op commands, browser claims and Undo never teach remedies.
+                // This projection has no path back to command execution.
+                try
+                {
+                    _patternLearner?.ObserveAcceptedCommand(command);
+                }
+                catch (Exception exception)
+                {
+                    // Suggestions are a secondary, process-local projection.
+                    // If learning fails, a command that already succeeded must
+                    // not be represented to the operator as a failed command.
+                    System.Diagnostics.Trace.TraceWarning(
+                        $"Prediction evidence projection failed: {exception.GetType().Name}");
+                }
 
                 return CreateExecutionResult(command, transaction);
             },
