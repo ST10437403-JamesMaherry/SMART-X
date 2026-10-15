@@ -1,5 +1,6 @@
 import { createContext, useContext, type Dispatch, type SetStateAction } from 'react';
 
+import type { DeviceSearchFilters } from '../api/deviceSearchApi';
 import type { TelemetryBatchIngestionResponse } from '../api/telemetryApi';
 import type {
   SensorRegistrationField,
@@ -51,6 +52,16 @@ export interface TelemetryBatchDraft {
 export interface WorkspaceState {
   readonly selectedSensorId: string | null;
   readonly setSelectedSensorId: Dispatch<SetStateAction<string | null>>;
+  /** Safe search input and the last server-validated submitted filters. */
+  readonly deviceSearchDraft: DeviceSearchFilters;
+  readonly setDeviceSearchDraft: Dispatch<SetStateAction<DeviceSearchFilters>>;
+  readonly deviceSearchApplied: DeviceSearchFilters;
+  readonly setDeviceSearchApplied: Dispatch<SetStateAction<DeviceSearchFilters>>;
+  readonly deviceSearchOffset: number;
+  readonly setDeviceSearchOffset: Dispatch<SetStateAction<number>>;
+  /** Explicitly inspected unresolved alert episode for cross-device discovery. */
+  readonly sourceAlertEpisodeId: string | null;
+  readonly setSourceAlertEpisodeId: Dispatch<SetStateAction<string | null>>;
   readonly registrationDraft: RegistrationDraft;
   readonly setRegistrationDraft: Dispatch<SetStateAction<RegistrationDraft>>;
   readonly telemetryDrafts: Readonly<Record<string, TelemetryDraft>>;

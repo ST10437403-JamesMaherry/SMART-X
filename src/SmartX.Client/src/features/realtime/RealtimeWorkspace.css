@@ -731,3 +731,10 @@
     animation: none !important;
   }
 }
+
+/* The explicit alert-view action occupies its own row of the condition grid.
+ * Without this, the fourth child could create an implicit overflow column. */
+.realtime-conditions-list .realtime-action {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
