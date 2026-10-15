@@ -171,6 +171,11 @@ builder.Services.AddScoped<OperatorInteractionService>();
 builder.Services.AddSingleton(new PatternLearningPolicy());
 builder.Services.AddSingleton<IInteractionPatternStore, InMemoryInteractionPatternStore>();
 builder.Services.AddScoped<PredictivePatternLearningService>();
+
+// P2-09: evaluated per request from the same pattern, active-condition,
+// registry and command-state authorities. Reading never trains or executes.
+builder.Services.AddScoped<PredictiveActionService>();
+
 builder.Services.AddScoped<ActuatorCommandService>();
 
 // -------------------------------------------------------------------------
