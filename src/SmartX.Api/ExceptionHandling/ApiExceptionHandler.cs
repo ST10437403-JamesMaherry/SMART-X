@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartX.Application.Attachments;
 using SmartX.Application.Commands;
 using SmartX.Application.Dashboard;
+using SmartX.Application.Interactions;
 using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
@@ -126,6 +127,10 @@ public sealed class ApiExceptionHandler : IExceptionHandler
                     StatusCodes.Status404NotFound,
                     "Sensor not found",
                     true),
+
+            InvalidOperatorInteractionException =>
+                new ExceptionMapping(StatusCodes.Status400BadRequest,
+                    "Invalid operator interaction", true),
 
             InvalidRealtimeDeviceSearchQueryException =>
                 new ExceptionMapping(
