@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 
+import { initialDeviceSearchFilters, type DeviceSearchFilters } from '../api/deviceSearchApi';
 import { createInitialSensorRegistrationValues } from '../features/sensors/sensorValidation';
 import {
   WorkspaceStateContext,
@@ -20,6 +21,17 @@ interface WorkspaceStateProviderProps {
 function WorkspaceStateProvider({ children }: WorkspaceStateProviderProps) {
   const [selectedSensorId, setSelectedSensorId] = useState<string | null>(null);
 
+  // Store only search criteria, never result rows or command/alert data.
+  // The provider survives route transitions but resets on full-page reload.
+  const [deviceSearchDraft, setDeviceSearchDraft] = useState<DeviceSearchFilters>(
+    initialDeviceSearchFilters,
+  );
+  const [deviceSearchApplied, setDeviceSearchApplied] = useState<DeviceSearchFilters>(
+    initialDeviceSearchFilters,
+  );
+  const [deviceSearchOffset, setDeviceSearchOffset] = useState(0);
+  const [sourceAlertEpisodeId, setSourceAlertEpisodeId] = useState<string | null>(null);
+
   const [registrationDraft, setRegistrationDraft] = useState<RegistrationDraft>(() => ({
     values: createInitialSensorRegistrationValues(),
     touched: {},
@@ -36,6 +48,14 @@ function WorkspaceStateProvider({ children }: WorkspaceStateProviderProps) {
     () => ({
       selectedSensorId,
       setSelectedSensorId,
+      deviceSearchDraft,
+      setDeviceSearchDraft,
+      deviceSearchApplied,
+      setDeviceSearchApplied,
+      deviceSearchOffset,
+      setDeviceSearchOffset,
+      sourceAlertEpisodeId,
+      setSourceAlertEpisodeId,
       registrationDraft,
       setRegistrationDraft,
       telemetryDrafts,
@@ -43,7 +63,16 @@ function WorkspaceStateProvider({ children }: WorkspaceStateProviderProps) {
       batchDrafts,
       setBatchDrafts,
     }),
-    [selectedSensorId, registrationDraft, telemetryDrafts, batchDrafts],
+    [
+      selectedSensorId,
+      deviceSearchDraft,
+      deviceSearchApplied,
+      deviceSearchOffset,
+      sourceAlertEpisodeId,
+      registrationDraft,
+      telemetryDrafts,
+      batchDrafts,
+    ],
   );
 
   return <WorkspaceStateContext.Provider value={value}>{children}</WorkspaceStateContext.Provider>;

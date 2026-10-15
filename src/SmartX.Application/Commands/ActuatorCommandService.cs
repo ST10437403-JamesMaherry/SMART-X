@@ -1,6 +1,8 @@
+using SmartX.Application.Interactions;
 using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Domain.Commands;
+using SmartX.Domain.Interactions;
 using SmartX.Domain.Sensors;
 
 namespace SmartX.Application.Commands;
@@ -22,12 +24,14 @@ public sealed class ActuatorCommandService
     private readonly IActuatorCommandStore _commandStore;
     private readonly TimeProvider _timeProvider;
     private readonly OperationalHistoryRecorder? _historyRecorder;
+    private readonly IOperatorInteractionStore? _interactions;
 
     public ActuatorCommandService(
         ISensorRepository sensorRepository,
         IActuatorCommandStore commandStore,
         TimeProvider timeProvider,
-        OperationalHistoryRecorder? historyRecorder = null)
+        OperationalHistoryRecorder? historyRecorder = null,
+        IOperatorInteractionStore? interactions = null)
     {
         _sensorRepository = sensorRepository ??
             throw new ArgumentNullException(nameof(sensorRepository));
@@ -41,6 +45,7 @@ public sealed class ActuatorCommandService
         // Optional to preserve existing P2-04 direct-construction tests.
         // Production DI supplies the shared registered recorder.
         _historyRecorder = historyRecorder;
+        _interactions = interactions;
     }
 
     /// <summary>
@@ -104,6 +109,8 @@ public sealed class ActuatorCommandService
                 // Failures in this secondary projection do not create
                 // misleading HTTP failures for already-applied commands.
                 _historyRecorder?.RecordAcceptedCommand(command);
+                _interactions?.Append(OperatorInteractionKind.CommandExecuted,
+                    deviceId: targetDeviceId, commandId: command.Id);
 
                 return CreateExecutionResult(command, transaction);
             },
@@ -209,6 +216,8 @@ public sealed class ActuatorCommandService
                 // Record only after the actual reversal succeeds.
                 // The original command ID remains linked permanently.
                 _historyRecorder?.RecordAcceptedCommand(reversal);
+                _interactions?.Append(OperatorInteractionKind.CommandUndone,
+                    deviceId: targetDeviceId, commandId: reversal.Id);
 
                 return CreateExecutionResult(reversal, transaction);
             },

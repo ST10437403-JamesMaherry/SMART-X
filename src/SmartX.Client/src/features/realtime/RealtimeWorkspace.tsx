@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { getApiErrorMessage } from '../../api/apiTypes';
+import { recordOperatorView } from '../../api/operatorInteractionsApi';
 import {
   getRealtimeActiveConditions,
   getRealtimeSnapshot,
@@ -13,6 +14,7 @@ import {
 import type { TelemetryReadingResponse } from '../../api/telemetryApi';
 import { routes } from '../../routing/routes';
 import { useWorkspaceState } from '../../state/workspaceState';
+import DeviceSearch from './DeviceSearch';
 import RealtimeCommandPanel from './RealtimeCommandPanel';
 import RealtimeHistoryPanel from './RealtimeHistoryPanel';
 import RealtimeSimulator from './RealtimeSimulator';
@@ -84,10 +86,10 @@ function describeDispatch(dispatch: TelemetryDispatchResponse): string {
  * - Abort superseded reads and ignore late/stale completions.
  * - Preserve the last successful snapshot during network/SignalR outages.
  * - Refresh after hub reconnect and after accepted command operations.
- * - Keep only selectedSensorId in the existing application-wide provider.
+ * - Keep safe selection/search context in the existing application-wide provider.
  */
 function RealtimeWorkspace() {
-  const { selectedSensorId, setSelectedSensorId } = useWorkspaceState();
+  const { selectedSensorId, setSelectedSensorId, setSourceAlertEpisodeId } = useWorkspaceState();
 
   const [snapshot, setSnapshot] = useState<RealtimeSnapshotResponse | null>(null);
   const [conditions, setConditions] = useState<RealtimeActiveConditionsResponse | null>(null);
@@ -96,6 +98,7 @@ function RealtimeWorkspace() {
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [operatorViewError, setOperatorViewError] = useState<string | null>(null);
 
   const requestRef = useRef<AbortController | null>(null);
   const requestNumberRef = useRef(0);
@@ -182,6 +185,37 @@ function RealtimeWorkspace() {
       requestNumberRef.current += 1;
     };
   }, [refreshSnapshot]);
+
+  /**
+   * Only an explicit operator inspection creates a DeviceViewed event.
+   * Registration, initial selection, simulator selections, HTTP GETs, and
+   * SignalR invalidations must never invent an operator interaction.
+   */
+  async function inspectDevice(deviceId: string): Promise<void> {
+    setSelectedSensorId(deviceId);
+    setOperatorViewError(null);
+    try {
+      await recordOperatorView(deviceId);
+    } catch (error) {
+      setOperatorViewError(
+        getApiErrorMessage(error, 'Device selected, but the view could not be recorded.'),
+      );
+    }
+  }
+
+  /** Record the actual active issue episode before retaining its source context. */
+  async function inspectAlert(deviceId: string, episodeId: string): Promise<void> {
+    setSelectedSensorId(deviceId);
+    setOperatorViewError(null);
+    try {
+      await recordOperatorView(deviceId, episodeId);
+      setSourceAlertEpisodeId(episodeId);
+    } catch (error) {
+      setOperatorViewError(
+        getApiErrorMessage(error, 'The alert view could not be recorded or confirmed.'),
+      );
+    }
+  }
 
   // One selection shared with Part 1; neither the queue nor an alternative
   // registry is recreated in browser state.
@@ -283,6 +317,20 @@ function RealtimeWorkspace() {
             </p>
           )}
 
+          <DeviceSearch
+            refreshToken={refreshToken}
+            activeConditions={conditions?.activeConditions ?? []}
+            onInspectDevice={inspectDevice}
+            onInspectAlert={inspectAlert}
+            onSelectAssociatedDevice={setSelectedSensorId}
+          />
+
+          {operatorViewError && (
+            <p className="realtime-inline-error" role="alert">
+              {operatorViewError}
+            </p>
+          )}
+
           <div className="realtime-columns">
             <section className="realtime-section" aria-labelledby="realtime-device-title">
               <header className="realtime-section-header">
@@ -299,7 +347,7 @@ function RealtimeWorkspace() {
                     id="realtime-device-select"
                     className="realtime-device-select"
                     value={selectedDevice.id}
-                    onChange={(event) => setSelectedSensorId(event.target.value)}
+                    onChange={(event) => void inspectDevice(event.target.value)}
                   >
                     {snapshot.devices.map((device) => (
                       <option key={device.id} value={device.id}>
@@ -492,6 +540,13 @@ function RealtimeWorkspace() {
                       {condition.severity} / {condition.state}
                     </span>
                     <span>{formatCount(condition.occurrenceCount)} occurrence(s)</span>
+                    <button
+                      className="realtime-action"
+                      type="button"
+                      onClick={() => void inspectAlert(selectedDevice.id, condition.issueId)}
+                    >
+                      View alert
+                    </button>
                   </li>
                 ))}
               </ol>

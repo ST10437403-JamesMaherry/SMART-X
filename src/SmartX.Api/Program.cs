@@ -6,12 +6,14 @@ using SmartX.Api.Realtime;
 using SmartX.Application.Attachments;
 using SmartX.Application.Commands;
 using SmartX.Application.Dashboard;
+using SmartX.Application.Interactions;
 using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
 using SmartX.Domain.Dashboard;
 using SmartX.Infrastructure.Attachments;
 using SmartX.Infrastructure.Commands;
+using SmartX.Infrastructure.Interactions;
 using SmartX.Infrastructure.Realtime;
 using SmartX.Infrastructure.Sensors;
 using SmartX.Infrastructure.Telemetry;
@@ -157,6 +159,9 @@ builder.Services.AddSingleton<
 
 // Commands and Undo are validated through the same application service.
 // DI now also provides the shared operational history recorder.
+// One bounded process-local interaction stream; no personal operator profiles.
+builder.Services.AddSingleton<IOperatorInteractionStore, InMemoryOperatorInteractionStore>();
+builder.Services.AddScoped<OperatorInteractionService>();
 builder.Services.AddScoped<ActuatorCommandService>();
 
 // -------------------------------------------------------------------------
@@ -165,6 +170,9 @@ builder.Services.AddScoped<ActuatorCommandService>();
 
 // Preserves P2-02/P2-03 snapshots and P2-04 commanded-state projection.
 builder.Services.AddScoped<RealtimeSnapshotService>();
+// Read-only P2-08 discovery reuses the Dictionary-backed registry and
+// the original HashSet-backed dashboard issues; it owns no separate index.
+builder.Services.AddScoped<RealtimeDeviceSearchService>();
 
 builder.Services.AddSingleton<
     ITelemetryRepository,
