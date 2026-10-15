@@ -3,12 +3,14 @@ using System.Net;
 using System.Net.Http.Json;
 
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using SmartX.Application.Realtime;
+using SmartX.Application.Recommendations;
 using SmartX.Contracts.Commands;
 using SmartX.Contracts.Dashboard;
 using SmartX.Contracts.Realtime;
@@ -275,6 +277,157 @@ public sealed class PredictiveRecommendationsEndpointTests : IDisposable
         Assert.Equal(new[] { "ActuatorCommandRecorded", "ActuatorCommandUndone" },
             messages.Select(change => change.Reason).ToArray());
         Assert.All(messages, change => Assert.Equal(target.Id, change.DeviceId));
+    }
+
+
+    [Fact]
+    public async Task UnrelatedLaterSearchAndForgedCommandEvent_CannotTrainATarget()
+    {
+        // Use only genuine HTTP operations. The server must prefer the most
+        // recent selected search and reject any client-claimed command event.
+        (SensorResponse source, SensorResponse target) = await RegisterPair();
+        SensorResponse other = await Register("Alternative relay", "Actuator", "Boolean");
+        await ChangeStatus(other.Id, "Online");
+        await ChangeStatus(source.Id, "Offline");
+        DashboardIssueResponse episode = await GetCurrentDisconnect(source.Id);
+        long prior = (await GetInteractionHistory()).TotalRecorded;
+
+        using HttpResponseMessage view = await _client.PostAsJsonAsync(
+            "/api/realtime/interactions/view",
+            new RecordOperatorViewRequest(source.Id, episode.Id));
+        Assert.Equal(HttpStatusCode.Created, view.StatusCode);
+
+        using HttpResponseMessage targetSearch = await _client.PostAsJsonAsync(
+            "/api/realtime/interactions/search", new RecordDeviceSearchRequest(
+                "SearchSubmitted", null, null, target.Name, "Actuator", "Online",
+                null, null, "25", "0", target.Id, episode.Id));
+        Assert.Equal(HttpStatusCode.Created, targetSearch.StatusCode);
+
+        // Intervening selection for a different real actuator invalidates the
+        // earlier source -> target association for the next command.
+        using HttpResponseMessage unrelated = await _client.PostAsJsonAsync(
+            "/api/realtime/interactions/search", new RecordDeviceSearchRequest(
+                "SearchSubmitted", null, null, other.Name, "Actuator", "Online",
+                null, null, "25", "0", other.Id, episode.Id));
+        Assert.Equal(HttpStatusCode.Created, unrelated.StatusCode);
+
+        using HttpResponseMessage forged = await _client.PostAsJsonAsync(
+            "/api/realtime/interactions/search", new RecordDeviceSearchRequest(
+                "CommandExecuted", null, null, target.Name, null, null,
+                null, null, "25", "0", target.Id, episode.Id));
+        Assert.Equal(HttpStatusCode.BadRequest, forged.StatusCode);
+
+        string path = $"/api/realtime/devices/{target.Id}/commands";
+        using HttpResponseMessage result = await _client.PostAsJsonAsync(path,
+            new RelayCommandRequest("RelayOn"));
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        RelayCommandResponse executed = (await result.Content
+            .ReadFromJsonAsync<RelayCommandResponse>())!;
+        Assert.True(executed.Command.StateChanged);
+
+        using HttpResponseMessage undone = await _client.PostAsJsonAsync(path + "/undo",
+            new UndoRelayCommandRequest(executed.Command.CommandId));
+        Assert.Equal(HttpStatusCode.OK, undone.StatusCode);
+
+        var patterns = _factory.Services.GetRequiredService<IInteractionPatternStore>();
+        Assert.Empty(patterns.GetSnapshot());
+        Assert.Empty((await GetRecommendations()).Recommendations);
+        Assert.Equal(prior + 5, (await GetInteractionHistory()).TotalRecorded);
+    }
+
+    [Fact]
+    public async Task RejectedOfflineCommandAndStaleUndo_DoNotProduceAdditionalSupport()
+    {
+        SensorResponse source = await Register("Disconnected source", "Environmental", "Float");
+        SensorResponse target = await Register("Offline relay", "Actuator", "Boolean");
+        await ChangeStatus(source.Id, "Online");
+        await ChangeStatus(source.Id, "Offline");
+        DashboardIssueResponse episode = await GetCurrentDisconnect(source.Id);
+
+        using HttpResponseMessage viewed = await _client.PostAsJsonAsync(
+            "/api/realtime/interactions/view",
+            new RecordOperatorViewRequest(source.Id, episode.Id));
+        Assert.Equal(HttpStatusCode.Created, viewed.StatusCode);
+
+        using HttpResponseMessage selected = await _client.PostAsJsonAsync(
+            "/api/realtime/interactions/search", new RecordDeviceSearchRequest(
+                "SearchSubmitted", null, null, target.Name, "Actuator", "Offline",
+                null, null, "25", "0", target.Id, episode.Id));
+        Assert.Equal(HttpStatusCode.Created, selected.StatusCode);
+
+        string path = $"/api/realtime/devices/{target.Id}/commands";
+        long beforeFailure = (await GetInteractionHistory()).TotalRecorded;
+        using HttpResponseMessage rejected = await _client.PostAsJsonAsync(path,
+            new RelayCommandRequest("RelayOn"));
+        // An otherwise valid command conflicts with the authoritative Offline
+        // actuator state. Invalid command SYNTAX would instead produce 400.
+        Assert.Equal(HttpStatusCode.Conflict, rejected.StatusCode);
+        ProblemDetails conflict = (await rejected.Content
+            .ReadFromJsonAsync<ProblemDetails>())!;
+        Assert.NotNull(conflict);
+        Assert.Equal((int)HttpStatusCode.Conflict, conflict.Status);
+        Assert.Equal("Actuator command conflict", conflict.Title);
+        Assert.Equal(beforeFailure, (await GetInteractionHistory()).TotalRecorded);
+
+        var patterns = _factory.Services.GetRequiredService<IInteractionPatternStore>();
+        Assert.Empty(patterns.GetSnapshot());
+
+        // The SAME deliberate association may now lead to a legitimate
+        // server-confirmed command once the actual actuator comes online.
+        await ChangeStatus(target.Id, "Online");
+        using HttpResponseMessage accepted = await _client.PostAsJsonAsync(path,
+            new RelayCommandRequest("RelayOn"));
+        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        RelayCommandResponse command = (await accepted.Content
+            .ReadFromJsonAsync<RelayCommandResponse>())!;
+        Assert.True(command.Command.StateChanged);
+        Assert.Equal(1, Assert.Single(patterns.GetSnapshot()).SupportingEpisodes);
+
+        using HttpResponseMessage undo = await _client.PostAsJsonAsync(path + "/undo",
+            new UndoRelayCommandRequest(command.Command.CommandId));
+        Assert.Equal(HttpStatusCode.OK, undo.StatusCode);
+        long afterUndo = (await GetInteractionHistory()).TotalRecorded;
+
+        using HttpResponseMessage stale = await _client.PostAsJsonAsync(path + "/undo",
+            new UndoRelayCommandRequest(command.Command.CommandId));
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        Assert.Equal(afterUndo, (await GetInteractionHistory()).TotalRecorded);
+        Assert.Equal(1, Assert.Single(patterns.GetSnapshot()).SupportingEpisodes);
+        Assert.Empty((await GetRecommendations()).Recommendations); // Below 3.
+    }
+
+    [Fact]
+    public async Task CompetingRealTargets_AppearDisappearWithLiveEligibilityWithoutRetraining()
+    {
+        (SensorResponse source, SensorResponse first) = await RegisterPair();
+        SensorResponse second = await Register("Backup relay", "Actuator", "Boolean");
+        await ChangeStatus(second.Id, "Online");
+        await TrainAsync(source, first, episodes: 3);
+        await TrainAsync(source, second, episodes: 3);
+        await ChangeStatus(source.Id, "Offline");
+
+        long beforeReads = (await GetInteractionHistory()).TotalRecorded;
+        PredictedRecommendationResponse[] both = (await GetRecommendations())
+            .Recommendations.ToArray();
+        Assert.Equal(2, both.Length);
+        Assert.Equal(new[] { first.Id, second.Id }.OrderBy(id => id),
+            both.Select(item => item.TargetActuatorId).OrderBy(id => id));
+        Assert.All(both, item => Assert.Equal(3, item.SupportingEpisodes));
+
+        await ChangeStatus(second.Id, "Offline");
+        Assert.Equal(first.Id, Assert.Single((await GetRecommendations())
+            .Recommendations).TargetActuatorId);
+        await ChangeStatus(second.Id, "Online");
+        Assert.Equal(2, (await GetRecommendations()).Recommendations.Count);
+        await ChangeStatus(source.Id, "Online");
+        Assert.Empty((await GetRecommendations()).Recommendations);
+
+        // Re-evaluation changes advice; it must not change learned support.
+        var patterns = _factory.Services.GetRequiredService<IInteractionPatternStore>();
+        Assert.Equal(2, patterns.GetSnapshot().Count);
+        Assert.All(patterns.GetSnapshot(), item =>
+            Assert.Equal(3, item.SupportingEpisodes));
+        Assert.Equal(beforeReads, (await GetInteractionHistory()).TotalRecorded);
     }
 
     private async Task<(SensorResponse Source, SensorResponse Target)> RegisterPair()

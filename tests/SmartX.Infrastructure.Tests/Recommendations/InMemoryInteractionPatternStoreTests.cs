@@ -132,6 +132,57 @@ public sealed class InMemoryInteractionPatternStoreTests
         Assert.Empty(store.GetSnapshot());
     }
 
+
+    [Fact]
+    public async Task ConcurrentWritersAndSnapshots_NeverExceedCapacityOrExposeDuplicateEpisodes()
+    {
+        // Keep the clock fixed so retention cannot affect the race. Writers
+        // contend for both the Dictionary capacity and per-key episode limit,
+        // while readers continuously request detached, ordered statistics.
+        var clock = new MutableTimeProvider(BaseTime);
+        var policy = new PatternLearningPolicy(maximumPatterns: 5,
+            maximumEpisodesPerPattern: 9);
+        var store = new InMemoryInteractionPatternStore(clock, policy);
+        InteractionPatternKey[] keys = Enumerable.Range(0, 7)
+            .Select(_ => Key()).ToArray();
+
+        Task[] writers = Enumerable.Range(0, keys.Length)
+            .Select(worker => Task.Run(() =>
+            {
+                for (int episode = 0; episode < 30; episode++)
+                {
+                    store.Observe(Evidence(keys[worker], Guid.NewGuid(), BaseTime));
+                }
+            })).ToArray();
+
+        Task[] readers = Enumerable.Range(0, 4)
+            .Select(_ => Task.Run(() =>
+            {
+                for (int read = 0; read < 40; read++)
+                {
+                    VerifyBoundedSnapshot(store.GetSnapshot());
+                }
+            })).ToArray();
+
+        await Task.WhenAll(writers.Concat(readers));
+        VerifyBoundedSnapshot(store.GetSnapshot());
+
+        static void VerifyBoundedSnapshot(IReadOnlyList<PatternStatistics> snapshot)
+        {
+            Assert.InRange(snapshot.Count, 0, 5);
+            Assert.Equal(snapshot.Count, snapshot.Select(item => item.Key).Distinct().Count());
+            foreach (PatternStatistics pattern in snapshot)
+            {
+                Assert.InRange(pattern.SupportingEpisodes, 1, 9);
+                Assert.Equal(pattern.SupportingEpisodes, pattern.Episodes.Count);
+                Assert.Equal(pattern.SupportingEpisodes, pattern.Episodes
+                    .Select(item => item.AlertEpisodeId).Distinct().Count());
+                Assert.Equal(pattern.Episodes[^1].ObservedAtUtc,
+                    pattern.LastObservedAtUtc);
+            }
+        }
+    }
+
     private static InteractionPatternKey Key() =>
         new(Guid.NewGuid(), DashboardIssueType.TelemetrySpike,
             DashboardIssueSeverity.Critical, TelemetryMovementDirection.Decrease,

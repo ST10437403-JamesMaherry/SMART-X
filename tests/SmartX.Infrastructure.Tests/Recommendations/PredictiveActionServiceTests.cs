@@ -411,6 +411,81 @@ public sealed class PredictiveActionServiceTests
             new PatternLearningPolicy(maximumRecommendations: 0));
     }
 
+
+    [Fact]
+    public async Task FourGenuineEpisodes_ExpireToThreeThenTwo_AndNewEpisodeRestoresSuggestion()
+    {
+        // A current alert must remain eligible while the supporting evidence
+        // moves through the exact seven-day cutoff. No counts are injected:
+        // every observation comes from the real command, interaction and Undo path.
+        var policy = new PatternLearningPolicy(
+            maximumCurrentConditionAge: TimeSpan.FromDays(30));
+        Fixture fixture = await Fixture.CreateAsync(policy);
+
+        for (int i = 0; i < 4; i++)
+        {
+            await fixture.TrainAsync();
+        }
+
+        PredictedAction four = Assert.Single(
+            (await fixture.Predictor.GetSnapshotAsync()).Actions);
+        Assert.Equal(4, four.SupportingEpisodes);
+        Assert.Equal(BaseTime.AddDays(7).AddMinutes(1), four.ExpiresAtUtc);
+
+        // Exactly one tick beyond the first episode's expiry leaves three.
+        DateTimeOffset firstCutoff = BaseTime.AddDays(7).AddTicks(1);
+        fixture.Clock.Advance(firstCutoff - fixture.Clock.UtcNow);
+        fixture.Activate();
+
+        PredictedAction three = Assert.Single(
+            (await fixture.Predictor.GetSnapshotAsync()).Actions);
+        Assert.Equal(3, three.SupportingEpisodes);
+        Assert.Equal(four.ExpiresAtUtc, three.ExpiresAtUtc);
+
+        // Once the second-oldest expires, support falls below the threshold.
+        DateTimeOffset secondCutoff = BaseTime.AddDays(7)
+            .AddMinutes(1).AddTicks(1);
+        fixture.Clock.Advance(secondCutoff - fixture.Clock.UtcNow);
+        fixture.Activate();
+        Assert.Empty((await fixture.Predictor.GetSnapshotAsync()).Actions);
+        Assert.Equal(2, Assert.Single(fixture.Patterns.GetSnapshot()).SupportingEpisodes);
+
+        // A new, different episode with a genuine state-changing command and
+        // Undo restores support. Passive reads have not trained anything.
+        // The fixture normally advances the clock one minute AFTER a command.
+        // Advancing here would also expire the third-oldest episode, so the
+        // effective support would fall to two again before the assertion.
+        // Keep this precise boundary test at the controlled instant instead.
+        await fixture.TrainAsync(advanceClock: false);
+        Assert.Equal(3, Assert.Single(fixture.Patterns.GetSnapshot())
+            .SupportingEpisodes);
+
+        PredictedAction recovered = Assert.Single(
+            (await fixture.Predictor.GetSnapshotAsync()).Actions);
+        Assert.Equal(3, recovered.SupportingEpisodes);
+        Assert.Equal(fixture.Clock.UtcNow, recovered.LastLearnedAtUtc);
+        Assert.Equal(BaseTime.AddDays(7).AddMinutes(2), recovered.ExpiresAtUtc);
+        Assert.Equal(3, Assert.Single(fixture.Patterns.GetSnapshot())
+            .Episodes.Select(evidence => evidence.AlertEpisodeId).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task DecommissionedSourceSuppressesSuggestionsButDoesNotForgeOrDeleteEvidence()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        await fixture.TrainThreeAsync();
+        Assert.Single((await fixture.Predictor.GetSnapshotAsync()).Actions);
+
+        long interactionsBefore = fixture.Interactions.Read().TotalRecorded;
+        int recordedEpisodes = Assert.Single(fixture.Patterns.GetSnapshot()).SupportingEpisodes;
+        fixture.Source.ChangeStatus(SensorStatus.Decommissioned, fixture.Clock.UtcNow);
+
+        Assert.Empty((await fixture.Predictor.GetSnapshotAsync()).Actions);
+        Assert.Equal(recordedEpisodes,
+            Assert.Single(fixture.Patterns.GetSnapshot()).SupportingEpisodes);
+        Assert.Equal(interactionsBefore, fixture.Interactions.Read().TotalRecorded);
+    }
+
     private sealed class Fixture
     {
         public MutableTimeProvider Clock { get; } = new(BaseTime);
