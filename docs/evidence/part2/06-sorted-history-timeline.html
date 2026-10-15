@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart-X P2-05 | Verified SortedDictionary chronology</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0a0a0a;color:#f3f1ec;font:15px Georgia,serif}
+main{max-width:1390px;margin:auto;padding:46px 54px 38px}
+.mono,th,td,.eyebrow,.kicker,.meta,.label{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.kicker{color:#86abed;letter-spacing:.15em;font-size:11px}h1{font-weight:400;font-size:43px;letter-spacing:-.04em;margin:12px 0 8px}
+p.lead{font-size:16px;color:#aaa8a2;max-width:900px;line-height:1.5;margin:0 0 26px}
+.top-rule{height:1px;background:#363636;margin:20px 0 23px}h2{font-weight:400;font-size:22px;margin:28px 0 12px}
+.orders{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #393939}
+.order{padding:18px 20px;min-height:144px;border-right:1px solid #393939}.order:last-child{border:0}
+.eyebrow{color:#b4b4b4;font-size:10px;letter-spacing:.1em}.order-name{color:#f1f1f1;font-size:15px;margin:5px 0 12px}
+.order strong{display:block;color:#86abed;font-size:20px;font-weight:500;letter-spacing:.03em}.order p{color:#999;font-size:12px;margin:9px 0 0}
+.metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:22px 0 0}
+.metric{padding:10px 0 13px;border-top:1px solid #414141}.metric .label{display:block;color:#aaa;font-size:10px;letter-spacing:.08em}
+.metric strong{display:block;font-size:27px;font-weight:400;margin:6px 0 0}
+.two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:34px}
+.section-label{font-size:11px;letter-spacing:.1em;color:#86abed}
+table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #333;padding:11px 8px;text-align:left;font-size:12px;white-space:nowrap}
+th{color:#aaa;font-size:10px;letter-spacing:.04em;font-weight:400}td{color:#e9e9e9}
+tr.highlight td:first-child{color:#86abed}tbody tr:last-child td{border-bottom:0}
+.note{margin-top:19px;padding:14px 17px;border-left:2px solid #86abed;background:#121212;color:#c3c3c3;line-height:1.5;font-size:13px}
+.meta{margin-top:25px;padding-top:15px;border-top:1px solid #343434;color:#8f8f8f;font-size:10px;line-height:1.9;overflow-wrap:anywhere}
+@media(max-width:850px){main{padding:24px}.orders,.metric-row,.two-col{grid-template-columns:1fr}.order{border-right:0;border-bottom:1px solid #393939}h1{font-size:34px}}
+</style></head><body><main>
+<div class="kicker">SMART-X / PROG7312 / PART 2 / P2-05 / VERIFIED LOCAL API EVIDENCE</div>
+<h1>One system. Three correct orders.</h1>
+<p class="lead">The same four actual packets were ingested, dispatched and displayed in different legitimate orders. A real per-device SortedDictionary sorts occurrence timestamps and retains colliding events, while Part 1 persistence and P2-03 worker behaviour remain unchanged.</p>
+<div class="orders"><div class="order"><div class="mono eyebrow">PART 1</div><div class="order-name">INGESTION</div><strong class="mono">A  /  B  /  C  /  D</strong><p>Original order of accepted readings</p></div><div class="order"><div class="mono eyebrow">P2-03</div><div class="order-name">PROCESSING</div><strong class="mono">C  /  A  /  B  /  D</strong><p>Critical-first, then ordinary FIFO</p></div><div class="order"><div class="mono eyebrow">P2-05</div><div class="order-name">CHRONOLOGY</div><strong class="mono">D  /  A  /  C  /  B</strong><p>Sorted timestamp keys; stable ties</p></div></div>
+<div class="metric-row">
+<div class="metric"><span class="label">INTEGER EVENTS RETAINED</span><strong>4 / 4</strong></div>
+<div class="metric"><span class="label">EQUAL-TIME COLLISION</span><strong>B + C</strong></div>
+<div class="metric"><span class="label">LATEST PROCESSED VALUE</span><strong>100 / C</strong></div>
+<div class="metric"><span class="label">ACTUATOR EVENTS RETAINED</span><strong>4 / 4</strong></div>
+</div><div class="top-rule"></div>
+<div class="two-col"><section><div class="section-label mono">01 / INTEGER SENSOR</div><h2>Sorted capture-time timeline</h2>
+<table><thead><tr><th>ID</th><th>VALUE</th><th>OCCURRED UTC</th><th>LANE</th><th>ENQ</th><th>SEQ</th></tr></thead><tbody><tr class=""><td class="mono">D</td><td class="mono">12</td><td>10:44:28.367Z</td><td class="mono">Ordinary</td><td class="mono">4</td><td class="mono">4</td></tr><tr class=""><td class="mono">A</td><td class="mono">10</td><td>10:44:38.367Z</td><td class="mono">Ordinary</td><td class="mono">1</td><td class="mono">2</td></tr><tr class="highlight"><td class="mono">C</td><td class="mono">100</td><td>10:44:58.367Z</td><td class="mono">Critical</td><td class="mono">3</td><td class="mono">1</td></tr><tr class="highlight"><td class="mono">B</td><td class="mono">11</td><td>10:44:58.367Z</td><td class="mono">Ordinary</td><td class="mono">2</td><td class="mono">3</td></tr></tbody></table>
+<div class="note">D was accepted last but captured earliest, so it sorts first. B and C share an exact UTC timestamp. C was dispatched first as critical work and remains ahead of B within that timestamp bucket.</div>
+</section><section><div class="section-label mono">02 / BOOLEAN ACTUATOR</div><h2>Telemetry + commands + Undo</h2>
+<table><thead><tr><th>SEQ</th><th>EVENT</th><th>PAYLOAD / RESTORATION</th><th>REVERSES</th></tr></thead><tbody><tr><td class="mono">1</td><td>TELEMETRY</td><td>Reported Boolean: false</td><td class="mono">-</td></tr><tr><td class="mono">2</td><td>COMMAND</td><td>RelayOn: Off -&gt; On</td><td class="mono">-</td></tr><tr><td class="mono">3</td><td>NO-OP</td><td>RelayOn: On -&gt; On</td><td class="mono">-</td></tr><tr><td class="mono">4</td><td>UNDO</td><td>RelayOff: On -&gt; Off</td><td class="mono">2660131f</td></tr></tbody></table>
+<div class="note">RelayOn pushed one Undo entry. A repeated RelayOn was an auditable no-op. Undo restored Off and linked to the original command. A stale repeat returned HTTP 409 without adding history. The one reported Boolean reading stayed false.</div>
+</section></div>
+<div class="meta">CAPTURED 2026-10-15T10:47:28.457634+00:00 &nbsp; | &nbsp; LOCAL API http://localhost:8080<br>
+INTEGER SENSOR 94ecbefb-beb8-409c-ab01-c47dc1783774<br>ACTUATOR SENSOR e725bfa2-b0aa-48a2-9d1f-b9ff0291b022<br>
+SOURCE: verified authoritative HTTP responses retained in adjacent JSON. This HTML/PNG is a rendered evidence report, not a React dashboard screenshot. Operational histories are process-local.</div>
+</main></body></html>

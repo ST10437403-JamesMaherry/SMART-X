@@ -17,9 +17,8 @@ namespace SmartX.Api.ExceptionHandling;
 /// Converts expected Smart-X Application and Domain exceptions into
 /// consistent RFC-style ProblemDetails HTTP responses.
 ///
-/// Keeping this translation in one location prevents controllers from
-/// duplicating exception handling and ensures clients receive predictable
-/// status codes throughout the API.
+/// Central error handling avoids duplicate controller-specific mappings
+/// and keeps internal exception details away from external clients.
 /// </summary>
 public sealed class ApiExceptionHandler : IExceptionHandler
 {
@@ -42,10 +41,10 @@ public sealed class ApiExceptionHandler : IExceptionHandler
     }
 
     /// <summary>
-    /// Maps known Smart-X failures to safe client-facing ProblemDetails.
+    /// Handles known application failures using safe ProblemDetails.
     ///
-    /// Unexpected failures are logged but their internal exception messages
-    /// are deliberately hidden from API clients.
+    /// Unexpected failures are logged server-side without exposing
+    /// their private exception messages to HTTP clients.
     /// </summary>
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
@@ -55,15 +54,15 @@ public sealed class ApiExceptionHandler : IExceptionHandler
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(exception);
 
-        // A disconnected request should not be transformed into another HTTP
-        // response after the caller has already abandoned the connection.
+        // Do not attempt to write a new response after the HTTP client
+        // has explicitly cancelled or disconnected.
         if (exception is OperationCanceledException &&
             httpContext.RequestAborted.IsCancellationRequested)
         {
             return false;
         }
 
-        var mapping =
+        ExceptionMapping mapping =
             MapException(exception);
 
         if (mapping.StatusCode >=
@@ -104,12 +103,11 @@ public sealed class ApiExceptionHandler : IExceptionHandler
     }
 
     /// <summary>
-    /// Preserves established Part 1/P2-03 exception mappings and
-    /// adds explicit, safe command-operation response codes.
+    /// Preserves the established API error contract.
     ///
-    /// Malformed command input becomes 400, unavailable registered
-    /// targets become 404 through SensorNotFoundException, and
-    /// state/eligibility/Undo conflicts become 409.
+    /// P2-05 adds only InvalidRealtimeHistoryQueryException -> 400.
+    /// Unknown registered devices continue to produce 404.
+    /// Invalid command/Undo operations retain their existing mappings.
     /// </summary>
     private static ExceptionMapping MapException(
         Exception exception)
@@ -126,6 +124,12 @@ public sealed class ApiExceptionHandler : IExceptionHandler
                 new ExceptionMapping(
                     StatusCodes.Status404NotFound,
                     "Sensor not found",
+                    true),
+
+            InvalidRealtimeHistoryQueryException =>
+                new ExceptionMapping(
+                    StatusCodes.Status400BadRequest,
+                    "Invalid history query",
                     true),
 
             ActuatorCommandValidationException =>

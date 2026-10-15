@@ -1,3 +1,4 @@
+using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Domain.Commands;
 using SmartX.Domain.Sensors;
@@ -8,22 +9,25 @@ namespace SmartX.Application.Commands;
 /// Coordinates validated manual actuator commands and genuine Stack-backed
 /// Undo operations.
 ///
-/// The existing sensor repository remains authoritative for registration,
-/// category, telemetry type, and operational status.
+/// Registered sensor authority remains in ISensorRepository. Simulated
+/// commanded relay state is stored independently of sensor operational
+/// status and reported telemetry.
 ///
-/// Simulated commanded relay state is held separately from sensor health
-/// and reported telemetry.
+/// Successful commands and reversals also publish source-linked entries
+/// into the separate chronological operational history projection.
 /// </summary>
 public sealed class ActuatorCommandService
 {
     private readonly ISensorRepository _sensorRepository;
     private readonly IActuatorCommandStore _commandStore;
     private readonly TimeProvider _timeProvider;
+    private readonly OperationalHistoryRecorder? _historyRecorder;
 
     public ActuatorCommandService(
         ISensorRepository sensorRepository,
         IActuatorCommandStore commandStore,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        OperationalHistoryRecorder? historyRecorder = null)
     {
         _sensorRepository = sensorRepository ??
             throw new ArgumentNullException(nameof(sensorRepository));
@@ -33,14 +37,20 @@ public sealed class ActuatorCommandService
 
         _timeProvider = timeProvider ??
             throw new ArgumentNullException(nameof(timeProvider));
+
+        // Optional to preserve existing P2-04 direct-construction tests.
+        // Production DI supplies the shared registered recorder.
+        _historyRecorder = historyRecorder;
     }
 
     /// <summary>
     /// Executes a validated manual relay command.
     ///
-    /// The registered device is revalidated inside the per-device gate.
-    /// Successful state changes become undoable. Accepted no-ops remain
-    /// auditable but do not create additional Undo Stack entries.
+    /// The authoritative registered device is revalidated inside its
+    /// per-device gate. Successful changes are added to the Undo Stack.
+    /// Accepted no-ops are audited without becoming undoable.
+    ///
+    /// Both accepted outcomes appear in chronological operational history.
     /// </summary>
     public Task<ActuatorCommandExecutionResult> ExecuteAsync(
         Guid targetDeviceId,
@@ -61,15 +71,17 @@ public sealed class ActuatorCommandService
             targetDeviceId,
             async (transaction, operationCancellationToken) =>
             {
-                // Never rely on a device status captured by an earlier
-                // frontend snapshot or previous command.
+                // Status, category, type and registration authority must
+                // be checked at execution time, not against a previous
+                // frontend snapshot.
                 await ValidateEligibleTargetAsync(
                     targetDeviceId,
                     operationCancellationToken);
 
                 operationCancellationToken.ThrowIfCancellationRequested();
 
-                RelayState previousState = transaction.CurrentState;
+                RelayState previousState =
+                    transaction.CurrentState;
 
                 RelayState resultingState =
                     commandType == RelayCommandType.RelayOn
@@ -84,9 +96,14 @@ public sealed class ActuatorCommandService
                     previousState,
                     resultingState);
 
-                // All application validation precedes mutation.
-                // The store performs its own final state validation.
+                // The command store remains the sole authority for
+                // commanded state, the real Stack, and permanent audit.
                 transaction.Record(command);
+
+                // Publication follows the successful command transaction.
+                // Failures in this secondary projection do not create
+                // misleading HTTP failures for already-applied commands.
+                _historyRecorder?.RecordAcceptedCommand(command);
 
                 return CreateExecutionResult(command, transaction);
             },
@@ -94,17 +111,14 @@ public sealed class ActuatorCommandService
     }
 
     /// <summary>
-    /// Undoes the expected latest successful state-changing command.
+    /// Restores the recorded previous state of the expected latest
+    /// successful state-changing command.
     ///
-    /// This is a genuine restoration of the original PreviousState.
-    /// It does not blindly toggle the current relay state.
+    /// The expected command ID provides optimistic concurrency control:
+    /// stale requests cannot reverse a different Stack entry.
     ///
-    /// The expected command ID provides optimistic concurrency protection:
-    /// stale requests cannot reverse a different command that has since
-    /// become the Stack top.
-    ///
-    /// A reversal is audited with a link to the original command, but is
-    /// never pushed back onto the Undo Stack.
+    /// A successful reversal remains in both the command audit and
+    /// operational timeline, but is never pushed back onto the Undo Stack.
     /// </summary>
     public Task<ActuatorCommandExecutionResult> UndoAsync(
         Guid targetDeviceId,
@@ -125,16 +139,15 @@ public sealed class ActuatorCommandService
             targetDeviceId,
             async (transaction, operationCancellationToken) =>
             {
-                // Eligibility must still be valid when Undo executes.
-                // A device that has gone Offline, Faulted, or entered
-                // Maintenance must not receive a reversal command.
+                // A device must still be registered, Online, and an
+                // Actuator/Boolean target when Undo actually executes.
                 await ValidateEligibleTargetAsync(
                     targetDeviceId,
                     operationCancellationToken);
 
                 operationCancellationToken.ThrowIfCancellationRequested();
 
-                // Peek, do not pop. The underlying store owns the Stack.
+                // Peek without removing the original Stack entry.
                 CommandRecord? latest =
                     transaction.LatestUndoableCommand;
 
@@ -151,8 +164,6 @@ public sealed class ActuatorCommandService
                         "undoable command has changed.");
                 }
 
-                // Defensive checks prevent reversals, no-ops, or another
-                // device's commands from becoming Undo candidates.
                 if (latest.TargetDeviceId != targetDeviceId ||
                     latest.IsReversal ||
                     !latest.StateChanged)
@@ -168,9 +179,10 @@ public sealed class ActuatorCommandService
                         "latest undoable command.");
                 }
 
-                // Restore the state recorded before the original command.
-                // This is deliberately not a generic toggle operation.
-                RelayState restoredState = latest.PreviousState;
+                // Restore the actual recorded previous state.
+                // This must not become a blind Boolean toggle.
+                RelayState restoredState =
+                    latest.PreviousState;
 
                 RelayCommandType reversalType =
                     restoredState == RelayState.On
@@ -188,13 +200,15 @@ public sealed class ActuatorCommandService
 
                 operationCancellationToken.ThrowIfCancellationRequested();
 
-                // The store revalidates the expected Stack top and performs
-                // audit insertion, state restoration, and Stack removal
-                // while holding the same per-device gate.
+                // The store validates the actual Stack top and restores
+                // the previous state before popping the original command.
                 //
-                // Restore must throw without mutation if reversal validation
-                // or audit recording fails.
+                // If restoration fails, no reversal history is emitted.
                 transaction.Restore(latest, reversal);
+
+                // Record only after the actual reversal succeeds.
+                // The original command ID remains linked permanently.
+                _historyRecorder?.RecordAcceptedCommand(reversal);
 
                 return CreateExecutionResult(reversal, transaction);
             },
@@ -202,8 +216,8 @@ public sealed class ActuatorCommandService
     }
 
     /// <summary>
-    /// Returns the committed state and Undo metadata observed inside the
-    /// current serialised transaction.
+    /// Returns the actual state and Undo metadata captured while the
+    /// per-device transaction gate is still held.
     /// </summary>
     private static ActuatorCommandExecutionResult CreateExecutionResult(
         CommandRecord command,
@@ -217,10 +231,8 @@ public sealed class ActuatorCommandService
     }
 
     /// <summary>
-    /// Validates that the target is still registered and eligible.
-    ///
-    /// Both Execute and Undo call this method from inside their per-device
-    /// serialisation gate.
+    /// Reads the authoritative registered-device profile while the
+    /// command transaction is serialised.
     /// </summary>
     private async Task ValidateEligibleTargetAsync(
         Guid targetDeviceId,
@@ -242,10 +254,10 @@ public sealed class ActuatorCommandService
     }
 
     /// <summary>
-    /// Only explicitly Online Actuator/Boolean devices are eligible.
+    /// Only registered Online Actuator/Boolean devices accept commands.
     ///
-    /// Reported Boolean telemetry does not determine commanded relay state.
-    /// All non-Online operational statuses are intentionally rejected.
+    /// Operational status and reported Boolean telemetry are not
+    /// substitutes for independently commanded actuator state.
     /// </summary>
     private static void ValidateEligibility(SensorProfile sensor)
     {
@@ -266,8 +278,7 @@ public sealed class ActuatorCommandService
     }
 
     /// <summary>
-    /// Rejects malformed target identifiers before allocating transaction
-    /// state or accessing the registered-device repository.
+    /// Rejects invalid device IDs before allocating command state.
     /// </summary>
     private static void ValidateTargetId(Guid targetDeviceId)
     {
