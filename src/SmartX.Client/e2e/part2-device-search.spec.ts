@@ -277,13 +277,54 @@ test.describe('P2-08 canonical discovery and deliberate operator history', () =>
     await page.getByRole('button', { name: 'Search devices' }).click();
     await expect(page.getByTestId('device-search-count')).toHaveText('27 matching devices');
     await expect(page.getByTestId('device-search-result')).toHaveCount(25);
+    await expect(page.getByTestId('search-recorded-receipt')).toContainText('SearchSubmitted');
     const count = (await readInteractions(request)).totalRecorded;
 
+    // Confirm the actual offset=25 HTTP response, not merely a button click.
+    // This distinguishes server-side paging failures from stale React rows.
+    const nextPageResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === '/api/realtime/devices/search' &&
+        url.searchParams.get('text') === prefix &&
+        url.searchParams.get('offset') === '25'
+      );
+    });
     await page.getByRole('button', { name: 'Next page' }).click();
+    const nextPage = await nextPageResponse;
+    expect(nextPage.status()).toBe(200);
+    expect(await nextPage.json()).toMatchObject({
+      totalMatches: 27,
+      limit: 25,
+      offset: 25,
+      hasMore: false,
+    });
     await expect(page.getByTestId('device-search-result')).toHaveCount(2);
-    await expect(page.getByText('Page 2')).toBeVisible();
+    await expect(page.getByText('Showing 26-27')).toBeVisible();
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Device search pagination' })
+        .getByText('Page 2', { exact: true }),
+    ).toBeVisible();
+
+    const previousPageResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === '/api/realtime/devices/search' &&
+        url.searchParams.get('text') === prefix &&
+        url.searchParams.get('offset') === '0'
+      );
+    });
     await page.getByRole('button', { name: 'Previous page' }).click();
+    const previousPage = await previousPageResponse;
+    expect(previousPage.status()).toBe(200);
     await expect(page.getByTestId('device-search-result')).toHaveCount(25);
+    // Scope to the pager: device names in this fixture also include 'Page 1'.
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Device search pagination' })
+        .getByText('Page 1', { exact: true }),
+    ).toBeVisible();
     expect((await readInteractions(request)).totalRecorded).toBe(count);
   });
 });
