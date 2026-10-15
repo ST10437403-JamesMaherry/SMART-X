@@ -73,9 +73,20 @@ export default function DeviceSearch({
   const [actionError, setActionError] = useState<string | null>(null);
   const [recorded, setRecorded] = useState<OperatorInteractionResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [paging, setPaging] = useState(false);
   const [busyResultId, setBusyResultId] = useState<string | null>(null);
   const [retrySequence, setRetrySequence] = useState(0);
   const submitInFlight = useRef(false);
+  const pagingRequestRef = useRef<AbortController | null>(null);
+  const confirmedPageOffsetRef = useRef<number | null>(null);
+
+  // A route change cancels any operator-requested page load; it must never
+  // overwrite the result of a subsequent mount or a new submitted search.
+  useEffect(() => {
+    return () => {
+      pagingRequestRef.current?.abort();
+    };
+  }, []);
 
   // An alert episode ID denotes one genuine, currently unresolved incident.
   // A recovered episode stays in the provider for context but cannot be
@@ -84,6 +95,14 @@ export default function DeviceSearch({
   const filtersChanged = !sameDeviceSearchFilters(deviceSearchDraft, deviceSearchApplied);
 
   useEffect(() => {
+    // An explicit Next/Previous action already fetched and validated this
+    // offset before committing it to the route-retained workspace provider.
+    // Do not launch a duplicate GET merely because that offset was persisted.
+    if (confirmedPageOffsetRef.current === deviceSearchOffset) {
+      confirmedPageOffsetRef.current = null;
+      return;
+    }
+
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       async function read(): Promise<void> {
@@ -96,9 +115,13 @@ export default function DeviceSearch({
             deviceSearchOffset,
             controller.signal,
           );
-          if (!controller.signal.aborted) setResult(next);
+          // A deliberately requested page takes priority over a background
+          // SignalR/HTTP refresh of the previous offset.
+          if (!controller.signal.aborted && pagingRequestRef.current === null) {
+            setResult(next);
+          }
         } catch (reason) {
-          if (!controller.signal.aborted) {
+          if (!controller.signal.aborted && pagingRequestRef.current === null) {
             setReadError(getApiErrorMessage(reason, 'Unable to load device search results.'));
           }
         } finally {
@@ -119,6 +142,54 @@ export default function DeviceSearch({
   }
 
   /**
+   * Page changes are read-only operations. Fetch the requested page before
+   * changing the persisted offset, so a failed/aborted GET cannot leave the
+   * operator looking at page 1 while the provider claims page 2 is selected.
+   *
+   * The server determines the actual page membership. Never sort or slice
+   * the current 25 browser rows to fabricate a later page, and never POST an
+   * interaction merely because the operator paged through results.
+   */
+  async function navigatePage(offset: number): Promise<void> {
+    if (loading || submitting || pagingRequestRef.current !== null || !result) return;
+    if (offset < 0 || offset >= result.totalMatches || offset === result.offset) return;
+
+    const controller = new AbortController();
+    pagingRequestRef.current = controller;
+    setPaging(true);
+    setReadError(null);
+
+    try {
+      const next = await getDeviceSearch(
+        deviceSearchApplied,
+        deviceSearchPageSize,
+        offset,
+        controller.signal,
+      );
+
+      if (controller.signal.aborted) return;
+      if (next.offset !== offset || next.limit !== deviceSearchPageSize) {
+        throw new Error('The server returned an unexpected device search page.');
+      }
+
+      // The display and saved navigation state are updated as one confirmed
+      // React transaction. The following effect skips only this redundant GET.
+      confirmedPageOffsetRef.current = next.offset;
+      setResult(next);
+      setDeviceSearchOffset(next.offset);
+    } catch (reason) {
+      if (!controller.signal.aborted) {
+        setReadError(getApiErrorMessage(reason, 'Unable to load the requested result page.'));
+      }
+    } finally {
+      if (pagingRequestRef.current === controller) {
+        pagingRequestRef.current = null;
+        if (!controller.signal.aborted) setPaging(false);
+      }
+    }
+  }
+
+  /**
    * Perform a validated GET first; only a successful deliberate submission
    * is sent to the interaction POST endpoint. Never retry a POST silently:
    * after an uncertain network error the server may already have recorded it.
@@ -127,7 +198,7 @@ export default function DeviceSearch({
     kind: SubmittedSearchInteractionKind,
     filters: DeviceSearchFilters = deviceSearchDraft,
   ): Promise<void> {
-    if (submitInFlight.current) return;
+    if (submitInFlight.current || pagingRequestRef.current !== null) return;
     if (kind === 'FiltersChanged' && sameDeviceSearchFilters(filters, deviceSearchApplied)) return;
 
     submitInFlight.current = true;
@@ -376,14 +447,14 @@ export default function DeviceSearch({
           <button
             className="realtime-action realtime-action--primary"
             type="submit"
-            disabled={submitting}
+            disabled={submitting || paging}
           >
             {submitting ? 'Submitting...' : 'Search devices'}
           </button>
           <button
             className="realtime-action"
             type="button"
-            disabled={submitting || !filtersChanged}
+            disabled={submitting || paging || !filtersChanged}
             onClick={() => void submitSearch('FiltersChanged')}
           >
             Apply filters
@@ -392,7 +463,9 @@ export default function DeviceSearch({
             className="realtime-action"
             type="button"
             disabled={
-              submitting || sameDeviceSearchFilters(deviceSearchApplied, initialDeviceSearchFilters)
+              submitting ||
+              paging ||
+              sameDeviceSearchFilters(deviceSearchApplied, initialDeviceSearchFilters)
             }
             onClick={() => void submitSearch('FiltersChanged', initialDeviceSearchFilters)}
           >
@@ -435,11 +508,13 @@ export default function DeviceSearch({
           {result ? `${result.totalMatches} matching devices` : 'Awaiting device results'}
         </span>
         <span>
-          {loading
-            ? 'Refreshing read-only results...'
-            : result
-              ? `Showing ${first}-${last}`
-              : 'No results loaded'}
+          {paging
+            ? 'Loading requested page...'
+            : loading
+              ? 'Refreshing read-only results...'
+              : result
+                ? `Showing ${first}-${last}`
+                : 'No results loaded'}
         </span>
       </div>
 
@@ -477,7 +552,7 @@ export default function DeviceSearch({
                 <button
                   className="realtime-action"
                   type="button"
-                  disabled={busyResultId !== null || submitting}
+                  disabled={busyResultId !== null || submitting || paging}
                   onClick={() => void inspect(item, false)}
                 >
                   Inspect device
@@ -486,7 +561,7 @@ export default function DeviceSearch({
                   <button
                     className="realtime-action"
                     type="button"
-                    disabled={busyResultId !== null || submitting}
+                    disabled={busyResultId !== null || submitting || paging}
                     onClick={() => void inspect(item, true)}
                   >
                     View active alert
@@ -496,7 +571,7 @@ export default function DeviceSearch({
                   <button
                     className="realtime-action"
                     type="button"
-                    disabled={busyResultId !== null || submitting}
+                    disabled={busyResultId !== null || submitting || paging}
                     onClick={() => void associate(item)}
                   >
                     Associate with source alert
@@ -513,10 +588,8 @@ export default function DeviceSearch({
           <button
             className="realtime-action"
             type="button"
-            disabled={loading || submitting || result.offset === 0}
-            onClick={() =>
-              setDeviceSearchOffset((value) => Math.max(0, value - deviceSearchPageSize))
-            }
+            disabled={loading || submitting || paging || result.offset === 0}
+            onClick={() => void navigatePage(Math.max(0, result.offset - deviceSearchPageSize))}
           >
             Previous page
           </button>
@@ -524,8 +597,8 @@ export default function DeviceSearch({
           <button
             className="realtime-action"
             type="button"
-            disabled={loading || submitting || !result.hasMore}
-            onClick={() => setDeviceSearchOffset((value) => value + deviceSearchPageSize)}
+            disabled={loading || submitting || paging || !result.hasMore}
+            onClick={() => void navigatePage(result.offset + deviceSearchPageSize)}
           >
             Next page
           </button>
