@@ -496,3 +496,238 @@
     font-size: 0.64rem;
   }
 }
+
+/*
+ * P2-07 / COMMIT 3: bounded, real API-driven simulation controls.
+ * No new global tokens, gradients, rounded dashboard cards or fake status UI.
+ */
+.realtime-simulator {
+  margin-top: 3.25rem;
+}
+
+.realtime-simulator-lanes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  padding: 1.2rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.realtime-simulator-lanes strong,
+.realtime-scenario h4,
+.realtime-load h4,
+.realtime-simulator-result h4 {
+  color: var(--heading);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.realtime-simulator-lanes p,
+.realtime-scenario p,
+.realtime-load p,
+.realtime-simulator-progress p,
+.realtime-simulator-result p,
+.realtime-simulator-result li {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.73rem;
+  line-height: 1.75;
+}
+
+.realtime-scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 1.4rem;
+  margin-top: 2rem;
+}
+
+.realtime-scenario {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  min-height: 12rem;
+  padding: 1.2rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.realtime-scenario h4,
+.realtime-load h4 {
+  margin: 0;
+}
+
+.realtime-scenario p {
+  flex: 1;
+  margin-bottom: 1.2rem;
+}
+
+.realtime-load {
+  margin-top: 1.8rem;
+  padding: 1.4rem 0;
+  border-top: 1px solid var(--border-strong);
+}
+
+.realtime-load > div:first-child {
+  max-width: 44rem;
+}
+
+.realtime-load h4 {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 400;
+}
+
+.realtime-load-controls {
+  display: grid;
+  grid-template-columns: 1fr minmax(5rem, 8rem) 1fr minmax(5rem, 8rem);
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 1.6rem;
+}
+
+.realtime-load-controls label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.realtime-load-controls input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.7rem;
+  padding: 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  color: var(--heading);
+  background: var(--surface);
+  font-family: var(--font-interface);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.realtime-load-controls input:disabled {
+  opacity: 0.6;
+}
+
+.realtime-load-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.realtime-load-footer span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.realtime-simulator-progress {
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--accent);
+}
+
+.realtime-simulator-progress-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.realtime-simulator-progress strong {
+  color: var(--heading);
+  font-size: 0.82rem;
+}
+
+.realtime-simulator-counts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1.3rem 0 0;
+}
+
+.realtime-simulator-counts > div {
+  min-width: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.realtime-simulator-counts dt {
+  color: var(--text-muted);
+  font-size: 0.67rem;
+  line-height: 1.6;
+}
+
+.realtime-simulator-counts dd {
+  margin: 0.45rem 0 0;
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.realtime-simulator-feedback,
+.realtime-simulator-result {
+  margin: 1.5rem 0 0;
+  padding: 1.1rem 0;
+  border-top: 1px solid var(--success);
+  color: var(--heading);
+  font-size: 0.74rem;
+  line-height: 1.7;
+}
+
+.realtime-simulator-result ul {
+  margin: 1rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.realtime-simulator-result li {
+  margin: 0.35rem 0;
+}
+
+.realtime-simulator :is(button, input):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .realtime-scenario-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .realtime-scenario-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .realtime-scenario {
+    min-height: 0;
+  }
+
+  .realtime-load-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(5rem, 8rem);
+  }
+
+  .realtime-simulator-counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .realtime-simulator-progress-heading,
+  .realtime-load-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .realtime-simulator *,
+  .realtime-simulator *::before,
+  .realtime-simulator *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

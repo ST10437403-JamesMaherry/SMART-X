@@ -15,6 +15,7 @@ import { routes } from '../../routing/routes';
 import { useWorkspaceState } from '../../state/workspaceState';
 import RealtimeCommandPanel from './RealtimeCommandPanel';
 import RealtimeHistoryPanel from './RealtimeHistoryPanel';
+import RealtimeSimulator from './RealtimeSimulator';
 import { useRealtimeStream, type RealtimeConnectionState } from './useRealtimeStream';
 import './RealtimeWorkspace.css';
 
@@ -458,12 +459,19 @@ function RealtimeWorkspace() {
             </div>
           )}
 
+          {/* Real HTTP demonstration scenarios; no fabricated sensor or queue state. */}
+          <RealtimeSimulator
+            ordinaryDispatchPaused={processing.ordinaryDispatchPaused}
+            onDeviceCreated={setSelectedSensorId}
+            onDataChanged={() => void refreshSnapshot()}
+          />
+
           <section
             className="realtime-section realtime-conditions"
             aria-labelledby="realtime-conditions-title"
           >
             <header className="realtime-section-header">
-              <p className="realtime-kicker">06 / UNIQUE ACTIVE CONDITIONS</p>
+              <p className="realtime-kicker">07 / UNIQUE ACTIVE CONDITIONS</p>
               <h3 id="realtime-conditions-title">Active conditions</h3>
               <p className="realtime-section-detail">
                 {formatCount(conditions?.activeConditionCount ?? 0)} active system-wide
