@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { getApiErrorMessage } from '../../api/apiTypes';
+import { ApiError, getApiErrorMessage } from '../../api/apiTypes';
+import { executeRelayCommand } from '../../api/commandsApi';
 import {
   getPredictedRecommendations,
   type PredictedRecommendationResponse,
@@ -9,26 +10,28 @@ import {
 import './SuggestedActions.css';
 
 interface SuggestedActionsProps {
-  /**
-   * Incremented after the parent has loaded an authoritative HTTP snapshot.
-   * Existing SignalR events and reconnects already trigger that snapshot.
-   */
+  /** Changes after a real HTTP snapshot; SignalR transports invalidations only. */
   readonly refreshToken: number;
+  /** Select the acted-on target and reload genuine device, command and Undo state. */
+  readonly onCommandAccepted: (targetActuatorId: string) => void;
+  /** Reload authoritative state following a stale/rejected/unconfirmed operation. */
+  readonly onCommandStateInvalidated: () => void;
 }
 
+type ActionFeedback = {
+  readonly kind: 'success' | 'warning' | 'error';
+  readonly message: string;
+};
+
 /**
- * An empty API result does not distinguish no training history from no
- * currently eligible action. Do not claim either cause as fact in the UI.
+ * Empty results cannot distinguish a new process from insufficient evidence or
+ * changed eligibility. The client never manufactures training history.
  */
 const emptyReason =
   'No eligible recommendations right now. Smart-X requires at least three independent ' +
   'alert / search / successful-command episodes within seven days, plus a matching live ' +
   'condition and an Online Boolean actuator that would change state.';
 
-/**
- * A short, bounded fallback covers elapsed-time expiry and missed events.
- * SignalR stays an invalidation channel; every refresh uses authoritative HTTP.
- */
 const fallbackRefreshMs = 30_000;
 const minimumExpiryDelayMs = 1_000;
 
@@ -51,26 +54,59 @@ function actionLabel(command: PredictedRecommendationResponse['commandType']): s
 }
 
 /**
- * Commit 1 is display-only. The action execution capability is intentionally
- * absent until Commit 2 can reuse the authoritative normal-command API.
- * Showing a recommendation must never count as an operator search or action.
+ * All fields that define recommendation context must still match when the
+ * operator confirms. A newer ranking score alone does not change identity.
  */
-export default function SuggestedActions({ refreshToken }: SuggestedActionsProps) {
+function recommendationIdentity(action: PredictedRecommendationResponse): string {
+  return [
+    action.sourceAlertEpisodeId,
+    action.sourceDeviceId,
+    action.conditionType,
+    action.severity,
+    action.movement,
+    action.targetActuatorId,
+    action.commandType,
+  ].join(':');
+}
+
+function isUnexpired(timestamp: string, nowMs: number): boolean {
+  const expiry = Date.parse(timestamp);
+  return Number.isFinite(expiry) && expiry > nowMs;
+}
+
+/**
+ * An operator must deliberately review and confirm a suggestion. Before POST,
+ * retrieve a fresh, read-only recommendation snapshot so recovered conditions,
+ * changed evidence and expired suggestions cannot be acted on inadvertently.
+ *
+ * The ONLY mutating path remains executeRelayCommand(), shared with the manual
+ * controls. The .NET command service revalidates the target and commanded state
+ * at commit time. No browser-created Undo records or optimistic state updates.
+ */
+export default function SuggestedActions({
+  refreshToken,
+  onCommandAccepted,
+  onCommandStateInvalidated,
+}: SuggestedActionsProps) {
   const [snapshot, setSnapshot] = useState<PredictedRecommendationsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retrySequence, setRetrySequence] = useState(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [reviewingIdentity, setReviewingIdentity] = useState<string | null>(null);
+  const [submittingIdentity, setSubmittingIdentity] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
+
+  // The ref closes the small synchronous interval before React disables buttons.
+  // A double click can never submit two relay commands from this component.
+  const commandInFlightRef = useRef(false);
 
   const requestRefresh = useCallback(() => {
-    // A hidden tab or failed request must never leave time-expired advice
-    // visible merely because no authoritative response was received.
     setNowMs(Date.now());
     setRetrySequence((value) => value + 1);
   }, []);
 
-  // Cancel an obsolete request on new evidence, route unmount or manual retry.
-  // A failed refresh retains the last confirmed snapshot, with a visible warning.
+  // Cancel obsolete passive GETs; retained guidance is filtered by its expiry.
   useEffect(() => {
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
@@ -81,8 +117,20 @@ export default function SuggestedActions({ refreshToken }: SuggestedActionsProps
         try {
           const next = await getPredictedRecommendations(controller.signal);
           if (controller.signal.aborted) return;
+
+          const now = Date.now();
           setSnapshot(next);
-          setNowMs(Date.now());
+          setNowMs(now);
+          // A new server snapshot cannot leave an obsolete approval prompt open.
+          setReviewingIdentity((previous) =>
+            previous &&
+            !next.recommendations.some(
+              (item) =>
+                recommendationIdentity(item) === previous && isUnexpired(item.expiresAtUtc, now),
+            )
+              ? null
+              : previous,
+          );
         } catch (reason) {
           if (!controller.signal.aborted) {
             setError(getApiErrorMessage(reason, 'Unable to refresh Suggested Actions.'));
@@ -100,8 +148,8 @@ export default function SuggestedActions({ refreshToken }: SuggestedActionsProps
     };
   }, [refreshToken, retrySequence]);
 
-  // Check while the workspace is visible even when there are no recommendations
-  // and therefore no nextRefreshAtUtc. Returning to a hidden tab also refreshes.
+  // SignalR/reconnect refreshes are complemented by visibility and time-based
+  // refreshes, including when there are no recommendations to expire.
   useEffect(() => {
     const interval = window.setInterval(() => {
       if (!document.hidden) requestRefresh();
@@ -117,9 +165,6 @@ export default function SuggestedActions({ refreshToken }: SuggestedActionsProps
     };
   }, [requestRefresh]);
 
-  // Expiry is a real eligibility boundary, not just a server-side cache hint.
-  // Hide expired rows immediately and request a new authoritative evaluation.
-  // A minimum delay prevents repeated requests if clocks disagree slightly.
   useEffect(() => {
     if (!snapshot?.nextRefreshAtUtc) return;
 
@@ -127,7 +172,6 @@ export default function SuggestedActions({ refreshToken }: SuggestedActionsProps
     if (!Number.isFinite(expiryMs)) return;
 
     const remainingMs = expiryMs - Date.now() + 50;
-    // A stale date from a clock-skewed server must not cause a 1 Hz loop.
     const delay =
       remainingMs <= 0
         ? fallbackRefreshMs
@@ -136,13 +180,110 @@ export default function SuggestedActions({ refreshToken }: SuggestedActionsProps
     return () => window.clearTimeout(timer);
   }, [snapshot, requestRefresh]);
 
-  // Never present a recommendation whose server-computed eligibility has
-  // already expired, including after a failed refresh or missed SignalR event.
+  /**
+   * Review is not execution. Confirm rechecks recommendation eligibility via
+   * GET, then uses the SAME command endpoint as the manual Relay On/Off buttons.
+   * Failed HTTP delivery is intentionally described as unconfirmed: the server
+   * might have committed even if its response could not reach the browser.
+   */
+  // This is invoked by explicit operator confirmation, never during render.
+  // useCallback makes the event boundary explicit to React purity analysis.
+  const confirmRecommendation = useCallback(
+    async (action: PredictedRecommendationResponse): Promise<void> => {
+      if (commandInFlightRef.current) return;
+
+      const identity = recommendationIdentity(action);
+      commandInFlightRef.current = true;
+      setSubmittingIdentity(identity);
+      setFeedback(null);
+      let commandWasSent = false;
+
+      try {
+        // Never POST on the basis of a possibly expired displayed recommendation.
+        if (!isUnexpired(action.expiresAtUtc, Date.now())) {
+          setFeedback({
+            kind: 'error',
+            message:
+              'This recommendation has expired. No command was sent. Refresh the suggestions.',
+          });
+          setReviewingIdentity(null);
+          requestRefresh();
+          return;
+        }
+
+        // This GET also detects source recovery or a different current episode.
+        const current = await getPredictedRecommendations();
+        const now = Date.now();
+        const eligible = current.recommendations.some(
+          (item) =>
+            recommendationIdentity(item) === identity &&
+            isUnexpired(item.expiresAtUtc, now) &&
+            item.supportingEpisodes >= current.minimumSupportingEpisodes,
+        );
+
+        setSnapshot(current);
+        setNowMs(now);
+        if (!eligible) {
+          setReviewingIdentity(null);
+          setFeedback({
+            kind: 'error',
+            message:
+              'This recommendation is no longer eligible in the latest server evaluation. ' +
+              'No command was sent.',
+          });
+          onCommandStateInvalidated();
+          return;
+        }
+
+        // No suggestion-specific endpoint, fake state or client-generated audit.
+        commandWasSent = true;
+        const result = await executeRelayCommand(action.targetActuatorId, action.commandType);
+
+        if (result.command.stateChanged) {
+          setFeedback({
+            kind: 'success',
+            message:
+              `${action.commandType} accepted by server for ${action.targetActuatorName}: ` +
+              `${result.command.previousState} to ${result.command.resultingState}. ` +
+              'The target is now selected. Undo is available through its normal actuator controls.',
+          });
+        } else {
+          // A competing operator may have changed state between GET and POST.
+          // The backend audits an accepted no-op but does NOT push onto the Stack.
+          setFeedback({
+            kind: 'warning',
+            message:
+              `${action.commandType} was accepted as a no-op for ${action.targetActuatorName}. ` +
+              'No new Undo entry was created. Inspect the server command audit.',
+          });
+        }
+
+        setReviewingIdentity(null);
+        onCommandAccepted(action.targetActuatorId);
+        requestRefresh();
+      } catch (reason) {
+        const detail = getApiErrorMessage(reason, 'The server could not confirm this command.');
+        const message = !commandWasSent
+          ? `Unable to revalidate this recommendation: ${detail} No command was sent.`
+          : reason instanceof ApiError
+            ? `The command was rejected by the server: ${detail} Refresh the target state before retrying.`
+            : `The command outcome could not be confirmed: ${detail} Inspect the authoritative command audit before retrying.`;
+
+        setFeedback({ kind: 'error', message });
+        setReviewingIdentity(null);
+        // An unsuccessful or unknown outcome still requires a real state refresh.
+        onCommandStateInvalidated();
+        requestRefresh();
+      } finally {
+        commandInFlightRef.current = false;
+        setSubmittingIdentity(null);
+      }
+    },
+    [onCommandAccepted, onCommandStateInvalidated, requestRefresh],
+  );
+
   const eligibleActions =
-    snapshot?.recommendations.filter((item) => {
-      const expiry = Date.parse(item.expiresAtUtc);
-      return Number.isFinite(expiry) && expiry > nowMs;
-    }) ?? [];
+    snapshot?.recommendations.filter((item) => isUnexpired(item.expiresAtUtc, nowMs)) ?? [];
 
   return (
     <section
@@ -166,7 +307,7 @@ export default function SuggestedActions({ refreshToken }: SuggestedActionsProps
           <button
             type="button"
             className="realtime-action"
-            disabled={loading}
+            disabled={loading || submittingIdentity !== null}
             onClick={requestRefresh}
           >
             {loading ? 'Checking...' : 'Refresh suggestions'}
@@ -192,6 +333,19 @@ export default function SuggestedActions({ refreshToken }: SuggestedActionsProps
         </div>
       )}
 
+      {feedback && (
+        <div
+          className={`suggested-actions-result suggested-actions-result--${feedback.kind}`}
+          data-testid="suggested-action-result"
+          role={feedback.kind === 'error' ? 'alert' : 'status'}
+        >
+          <p>{feedback.message}</p>
+          {feedback.kind === 'success' && (
+            <a href="#realtime-command-title">Go to actuator controls and Undo</a>
+          )}
+        </div>
+      )}
+
       {snapshot && eligibleActions.length === 0 && (
         <div className="suggested-actions-empty" data-testid="suggested-actions-empty">
           <strong>No eligible actions yet</strong>
@@ -201,46 +355,99 @@ export default function SuggestedActions({ refreshToken }: SuggestedActionsProps
 
       {eligibleActions.length > 0 && (
         <ol className="suggested-actions-list" aria-label="Ranked predictive recommendations">
-          {eligibleActions.map((action) => (
-            <li
-              key={`${action.sourceAlertEpisodeId}:${action.targetActuatorId}:${action.commandType}`}
-              className="suggested-actions-item"
-              data-testid="suggested-action"
-            >
-              <div className="suggested-actions-item-top">
-                <span className="suggested-actions-rank">RECOMMENDED / {action.commandType}</span>
-                <span className="suggested-actions-confidence">
-                  {action.confidenceBand} confidence / {action.score} of 100
-                </span>
-              </div>
-              <h4>
-                {actionLabel(action.commandType)}: {action.targetActuatorName}
-              </h4>
-              <p className="suggested-actions-context">
-                Trigger: {action.severity} {action.conditionType} on {action.sourceDeviceName}
-                {action.movement !== 'NotApplicable' && ` / ${action.movement.toLowerCase()}`}
-              </p>
-              <p className="suggested-actions-explanation">{action.explanation}</p>
-              <dl className="suggested-actions-facts">
-                <div>
-                  <dt>Verified evidence</dt>
-                  <dd>{action.supportingEpisodes} distinct episodes</dd>
+          {eligibleActions.map((action) => {
+            const identity = recommendationIdentity(action);
+            const reviewing = reviewingIdentity === identity;
+            const submitting = submittingIdentity === identity;
+
+            return (
+              <li key={identity} className="suggested-actions-item" data-testid="suggested-action">
+                <div className="suggested-actions-item-top">
+                  <span className="suggested-actions-rank">RECOMMENDED / {action.commandType}</span>
+                  <span className="suggested-actions-confidence">
+                    {action.confidenceBand} confidence / {action.score} of 100
+                  </span>
                 </div>
-                <div>
-                  <dt>Last learned</dt>
-                  <dd>{displayUtc(action.lastLearnedAtUtc)}</dd>
-                </div>
-                <div>
-                  <dt>Re-evaluate by</dt>
-                  <dd>{displayUtc(action.expiresAtUtc)}</dd>
-                </div>
-              </dl>
-              <p className="suggested-actions-disclaimer">
-                Heuristic support score, not a probability. Operator approval is required before any
-                command.
-              </p>
-            </li>
-          ))}
+                <h4>
+                  {actionLabel(action.commandType)}: {action.targetActuatorName}
+                </h4>
+                <p className="suggested-actions-context">
+                  Trigger: {action.severity} {action.conditionType} on {action.sourceDeviceName}
+                  {action.movement !== 'NotApplicable' && ` / ${action.movement.toLowerCase()}`}
+                </p>
+                <p className="suggested-actions-explanation">{action.explanation}</p>
+                <dl className="suggested-actions-facts">
+                  <div>
+                    <dt>Verified evidence</dt>
+                    <dd>{action.supportingEpisodes} distinct episodes</dd>
+                  </div>
+                  <div>
+                    <dt>Last learned</dt>
+                    <dd>{displayUtc(action.lastLearnedAtUtc)}</dd>
+                  </div>
+                  <div>
+                    <dt>Re-evaluate by</dt>
+                    <dd>{displayUtc(action.expiresAtUtc)}</dd>
+                  </div>
+                </dl>
+                <p className="suggested-actions-disclaimer">
+                  Heuristic support score, not a probability. Operator approval is required before
+                  any command.
+                </p>
+
+                {!reviewing && (
+                  <button
+                    type="button"
+                    className="realtime-action suggested-actions-review-button"
+                    disabled={loading || submittingIdentity !== null}
+                    aria-expanded={false}
+                    onClick={() => {
+                      setReviewingIdentity(identity);
+                      setFeedback(null);
+                    }}
+                  >
+                    Review {actionLabel(action.commandType)}
+                  </button>
+                )}
+
+                {reviewing && (
+                  <div
+                    className="suggested-actions-approval"
+                    role="group"
+                    aria-label="Confirm recommended relay command"
+                  >
+                    <p className="suggested-actions-approval-label">OPERATOR CONFIRMATION</p>
+                    <p>
+                      Send <strong>{action.commandType}</strong> to{' '}
+                      <strong>{action.targetActuatorName}</strong>? Smart-X will check the
+                      recommendation again and execute through the standard command API. The server
+                      makes the final eligibility and state decision.
+                    </p>
+                    <div className="suggested-actions-approval-controls">
+                      <button
+                        type="button"
+                        className="realtime-action realtime-action--primary"
+                        disabled={loading || submittingIdentity !== null}
+                        onClick={() => void confirmRecommendation(action)}
+                      >
+                        {submitting
+                          ? 'Verifying and sending...'
+                          : `Confirm ${actionLabel(action.commandType)}`}
+                      </button>
+                      <button
+                        type="button"
+                        className="realtime-action"
+                        disabled={submittingIdentity !== null}
+                        onClick={() => setReviewingIdentity(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ol>
       )}
 

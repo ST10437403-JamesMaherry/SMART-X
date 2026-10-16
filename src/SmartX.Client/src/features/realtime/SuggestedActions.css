@@ -195,3 +195,94 @@
     padding: 1.1rem;
   }
 }
+
+/*
+ * P2-10 / OPERATOR APPROVAL
+ *
+ * Deliberately separate the prediction itself from a mutating command.
+ * No modal overlay is required, and keyboard order stays within the row.
+ */
+.suggested-actions-review-button {
+  margin-top: 1.15rem;
+}
+
+.suggested-actions-approval {
+  margin-top: 1.15rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.suggested-actions-approval-label {
+  margin: 0 0 0.6rem;
+  color: var(--accent);
+  font-family: var(--font-interface);
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.suggested-actions-approval > p:not(.suggested-actions-approval-label) {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+
+.suggested-actions-approval strong {
+  color: var(--heading);
+  overflow-wrap: anywhere;
+}
+
+.suggested-actions-approval-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+/* Retained after a recommendation disappears, so confirmed command/Undo
+ * guidance is never erased by a successful SignalR refresh. */
+.suggested-actions-result {
+  margin-bottom: 1.35rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border-strong);
+  border-left: 2px solid var(--success);
+  font-size: 0.75rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.suggested-actions-result--warning {
+  border-left-color: var(--warning);
+}
+
+.suggested-actions-result--error {
+  border-left-color: var(--danger);
+}
+
+.suggested-actions-result p {
+  margin: 0;
+}
+
+.suggested-actions-result a {
+  display: inline-block;
+  margin-top: 0.55rem;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+@media (max-width: 480px) {
+  .suggested-actions-approval {
+    padding: 0.95rem;
+  }
+
+  .suggested-actions-approval-controls {
+    flex-direction: column;
+  }
+
+  .suggested-actions-approval-controls .realtime-action {
+    width: 100%;
+  }
+}

@@ -332,10 +332,18 @@ function RealtimeWorkspace() {
             </p>
           )}
 
-          {/* Read-only guidance: real learning and eligibility are evaluated by P2-09.
-              Commit 2 adds an explicit operator-selected command through the
-              existing actuator endpoint. No suggestion is auto-executed. */}
-          <SuggestedActions refreshToken={refreshToken} />
+          {/* The prediction GET remains read-only. Only an explicitly confirmed
+              suggestion calls the same command API as manual relay controls.
+              After acceptance, select its true target (without recording a
+              synthetic DeviceViewed interaction), then reload real Undo/audit. */}
+          <SuggestedActions
+            refreshToken={refreshToken}
+            onCommandAccepted={(targetActuatorId) => {
+              setSelectedSensorId(targetActuatorId);
+              void refreshSnapshot();
+            }}
+            onCommandStateInvalidated={() => void refreshSnapshot()}
+          />
 
           <div className="realtime-columns">
             <section className="realtime-section" aria-labelledby="realtime-device-title">

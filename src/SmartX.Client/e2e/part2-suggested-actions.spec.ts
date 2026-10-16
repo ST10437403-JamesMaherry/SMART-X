@@ -119,7 +119,11 @@ test.describe('P2-10 Suggested Actions read-only presentation', () => {
     await expect(action).toContainText('Critical TelemetrySpike on E2E Source B / decrease');
     await expect(action).toContainText(fixture.recommendations[0].explanation);
     await expect(panel.getByTestId('suggested-actions-count')).toHaveText('1 eligible');
-    await expect(action.getByRole('button')).toHaveCount(0);
+    // Commit 2 adds an explicit review control, NOT automatic execution.
+    await expect(action.getByRole('button', { name: 'Review Relay On' })).toBeVisible();
+    await action.getByRole('button', { name: 'Review Relay On' }).click();
+    await expect(action.getByRole('button', { name: 'Confirm Relay On' })).toBeVisible();
+    await action.getByRole('button', { name: 'Cancel' }).click();
     expect(executedCommands).toEqual([]);
   });
 
