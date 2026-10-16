@@ -112,7 +112,8 @@ export default function SuggestedActions({
     const timer = window.setTimeout(() => {
       async function load(): Promise<void> {
         setLoading(true);
-        setError(null);
+        // Do not remove an existing retry control merely because a passive
+        // refresh has started. Keep the error until a real GET succeeds.
 
         try {
           const next = await getPredictedRecommendations(controller.signal);
@@ -120,6 +121,7 @@ export default function SuggestedActions({
 
           const now = Date.now();
           setSnapshot(next);
+          setError(null);
           setNowMs(now);
           // A new server snapshot cannot leave an obsolete approval prompt open.
           setReviewingIdentity((previous) =>

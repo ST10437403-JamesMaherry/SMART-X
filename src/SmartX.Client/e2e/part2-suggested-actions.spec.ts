@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Route } from '@playwright/test';
 
 import type { PredictedRecommendationsResponse } from '../src/api/recommendationsApi';
 
@@ -72,15 +72,36 @@ test.describe('P2-10 Suggested Actions read-only presentation', () => {
   });
 
   test('HTTP failure provides a retry and never fabricates recommendations', async ({ page }) => {
-    await page.route(recommendationsPath, (route) => route.abort('failed'));
+    let blockedRecommendationReads = 0;
+    const failRecommendationRead = async (route: Route): Promise<void> => {
+      blockedRecommendationReads += 1;
+      await route.abort('failed');
+    };
+    await page.route(recommendationsPath, failRecommendationRead);
     await page.goto('/realtime');
 
     const panel = page.getByTestId('suggested-actions');
+    const retrySuggestions = panel.getByRole('button', { name: 'Retry suggestions' });
     await expect(panel.getByRole('alert')).toBeVisible();
     await expect(panel.getByTestId('suggested-action')).toHaveCount(0);
 
-    await page.unroute(recommendationsPath);
-    await panel.getByRole('button', { name: 'Retry suggestions' }).click();
+    // Verify that the Retry control really issues a new GET while the outage
+    // persists. Keep the route blocked until the click is completed: otherwise
+    // a SignalR refresh can recover and detach this transient button mid-click.
+    const failuresBeforeRetry = blockedRecommendationReads;
+    await retrySuggestions.click();
+    await expect
+      .poll(() => blockedRecommendationReads, {
+        message: 'Manual Retry must request a fresh recommendation evaluation',
+      })
+      .toBeGreaterThan(failuresBeforeRetry);
+    await expect(panel.getByRole('alert')).toBeVisible();
+    await expect(retrySuggestions).toBeVisible();
+
+    // Restore real HTTP and request another evaluation through the permanent
+    // refresh control. Never mock a successful prediction response here.
+    await page.unroute(recommendationsPath, failRecommendationRead);
+    await panel.getByRole('button', { name: 'Refresh suggestions' }).click();
     await expect(panel.getByTestId('suggested-actions-empty')).toBeVisible();
     await expect(panel.getByRole('alert')).toHaveCount(0);
     await expect(page.getByText('HTTP snapshot ready')).toBeVisible();

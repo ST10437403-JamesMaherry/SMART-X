@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page, type Route } from '@playwright/test';
 
 /**
  * P2-07 Commit 4: failure recovery, isolated device state and finite-run safety.
@@ -250,18 +250,39 @@ test.describe('P2-07 real-time reliability and finite-operation safety', () => {
     await changeStatus(request, actuator.id, 'Online');
 
     const auditRoute = `**/api/realtime/devices/${actuator.id}/commands`;
-    await page.route(auditRoute, (route) => route.abort('failed'));
+    let blockedAuditReads = 0;
+    const failAuditRead = async (route: Route): Promise<void> => {
+      blockedAuditReads += 1;
+      await route.abort('failed');
+    };
+    await page.route(auditRoute, failAuditRead);
     await openConsole(page);
     await selectDevice(page, actuator.id);
 
-    await expect(page.getByRole('button', { name: 'Retry command audit' })).toBeVisible();
+    const retryAudit = page.getByRole('button', { name: 'Retry command audit' });
+    await expect(retryAudit).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Dispatch lanes' })).toBeVisible();
 
-    await page.unroute(auditRoute);
-    await page.getByRole('button', { name: 'Retry command audit' }).click();
+    // Click while failures are still enforced. Removing the failure route
+    // first allows an automatic SignalR refresh to hide the retry button
+    // mid-click, which made this test intermittent on GitHub Actions.
+    const failuresBeforeRetry = blockedAuditReads;
+    await retryAudit.click();
+    await expect
+      .poll(() => blockedAuditReads, {
+        message: 'Manual Retry must issue another real command-audit GET',
+      })
+      .toBeGreaterThan(failuresBeforeRetry);
+    await expect(retryAudit).toBeVisible();
+
+    // Recover over the ordinary, permanently available manual refresh path.
+    // If a background refresh also completes, it is legitimate recovery and
+    // must not make this test depend on a disappearing error button.
+    await page.unroute(auditRoute, failAuditRead);
+    await page.getByRole('button', { name: 'Refresh snapshot' }).click();
     await expect(page.getByTestId('realtime-commanded-state')).toHaveText('Off');
     await expect(page.getByText('Accepted command audit').locator('..')).toContainText('0');
-    await expect(page.getByRole('button', { name: 'Retry command audit' })).toHaveCount(0);
+    await expect(retryAudit).toHaveCount(0);
   });
 
   test('invalid and fractional finite-load limits block submission until corrected', async ({
