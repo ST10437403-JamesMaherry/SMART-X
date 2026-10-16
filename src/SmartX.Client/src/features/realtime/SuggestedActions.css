@@ -1,0 +1,288 @@
+/*
+ * P2-10 / SUGGESTED ACTIONS
+ *
+ * Reuses Smart-X's existing near-black palette, serif headings and mono
+ * labels. No new design system, decorative cards, glow or fake confidence AI.
+ */
+
+.suggested-actions {
+  margin-top: 3.2rem;
+}
+
+.suggested-actions-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.75rem;
+}
+
+.suggested-actions-heading > div:first-child {
+  max-width: 46rem;
+}
+
+.suggested-actions-heading .realtime-section-detail {
+  max-width: 44rem;
+  margin-bottom: 0;
+}
+
+.suggested-actions-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 0.8rem;
+}
+
+.suggested-actions-count,
+.suggested-actions-rank,
+.suggested-actions-confidence {
+  font-family: var(--font-interface);
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+}
+
+.suggested-actions-count {
+  color: var(--text-muted);
+}
+
+.suggested-actions-empty {
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border-strong);
+  padding: 1.4rem 1.5rem;
+}
+
+.suggested-actions-empty strong {
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+
+.suggested-actions-empty p {
+  max-width: 57rem;
+  margin: 0.65rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.85;
+}
+
+.suggested-actions-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suggested-actions-item {
+  min-width: 0;
+  padding: 1.45rem 0 1.55rem;
+  border-top: 1px solid var(--border);
+}
+
+.suggested-actions-item:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.suggested-actions-item-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1.5rem;
+}
+
+.suggested-actions-rank {
+  color: var(--accent);
+}
+
+.suggested-actions-confidence {
+  color: var(--text-muted);
+}
+
+.suggested-actions-item h4 {
+  margin: 0.9rem 0 0;
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.7vw, 1.85rem);
+  font-weight: 400;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.suggested-actions-context {
+  margin: 0.75rem 0 0;
+  color: var(--text);
+  font-size: 0.76rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.suggested-actions-explanation {
+  max-width: 65rem;
+  margin: 0.9rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.suggested-actions-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 0;
+}
+
+.suggested-actions-facts div {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 0.65rem;
+}
+
+.suggested-actions-facts dt,
+.suggested-actions-facts dd {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.suggested-actions-facts dt {
+  color: var(--text-muted);
+}
+
+.suggested-actions-facts dd {
+  margin-top: 0.25rem;
+  color: var(--heading);
+}
+
+.suggested-actions-disclaimer,
+.suggested-actions-footer {
+  margin: 1rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.67rem;
+  line-height: 1.75;
+}
+
+.suggested-actions-footer {
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 720px) {
+  .suggested-actions-heading {
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .suggested-actions-status {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .suggested-actions-facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.6rem;
+  }
+
+  .suggested-actions-empty {
+    padding: 1.1rem;
+  }
+}
+
+/*
+ * P2-10 / OPERATOR APPROVAL
+ *
+ * Deliberately separate the prediction itself from a mutating command.
+ * No modal overlay is required, and keyboard order stays within the row.
+ */
+.suggested-actions-review-button {
+  margin-top: 1.15rem;
+}
+
+.suggested-actions-approval {
+  margin-top: 1.15rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.suggested-actions-approval-label {
+  margin: 0 0 0.6rem;
+  color: var(--accent);
+  font-family: var(--font-interface);
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.suggested-actions-approval > p:not(.suggested-actions-approval-label) {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+
+.suggested-actions-approval strong {
+  color: var(--heading);
+  overflow-wrap: anywhere;
+}
+
+.suggested-actions-approval-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+/* Retained after a recommendation disappears, so confirmed command/Undo
+ * guidance is never erased by a successful SignalR refresh. */
+.suggested-actions-result {
+  margin-bottom: 1.35rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border-strong);
+  border-left: 2px solid var(--success);
+  font-size: 0.75rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.suggested-actions-result--warning {
+  border-left-color: var(--warning);
+}
+
+.suggested-actions-result--error {
+  border-left-color: var(--danger);
+}
+
+.suggested-actions-result p {
+  margin: 0;
+}
+
+.suggested-actions-result a {
+  display: inline-block;
+  margin-top: 0.55rem;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+@media (max-width: 480px) {
+  .suggested-actions-approval {
+    padding: 0.95rem;
+  }
+
+  .suggested-actions-approval-controls {
+    flex-direction: column;
+  }
+
+  .suggested-actions-approval-controls .realtime-action {
+    width: 100%;
+  }
+}

@@ -18,6 +18,7 @@ import DeviceSearch from './DeviceSearch';
 import RealtimeCommandPanel from './RealtimeCommandPanel';
 import RealtimeHistoryPanel from './RealtimeHistoryPanel';
 import RealtimeSimulator from './RealtimeSimulator';
+import SuggestedActions from './SuggestedActions';
 import { useRealtimeStream, type RealtimeConnectionState } from './useRealtimeStream';
 import './RealtimeWorkspace.css';
 
@@ -330,6 +331,19 @@ function RealtimeWorkspace() {
               {operatorViewError}
             </p>
           )}
+
+          {/* The prediction GET remains read-only. Only an explicitly confirmed
+              suggestion calls the same command API as manual relay controls.
+              After acceptance, select its true target (without recording a
+              synthetic DeviceViewed interaction), then reload real Undo/audit. */}
+          <SuggestedActions
+            refreshToken={refreshToken}
+            onCommandAccepted={(targetActuatorId) => {
+              setSelectedSensorId(targetActuatorId);
+              void refreshSnapshot();
+            }}
+            onCommandStateInvalidated={() => void refreshSnapshot()}
+          />
 
           <div className="realtime-columns">
             <section className="realtime-section" aria-labelledby="realtime-device-title">

@@ -50,11 +50,16 @@ export default function RealtimeCommandPanel({
     const timer = window.setTimeout(() => {
       async function load(): Promise<void> {
         setLoading(true);
-        setLoadError(null);
+        // Keep the visible recovery control stable during background refreshes.
+        // An in-flight GET is not evidence that the audit has recovered.
 
         try {
           const result = await getActuatorCommandHistory(device.id, controller.signal);
-          if (!controller.signal.aborted) setHistory(result);
+          if (!controller.signal.aborted) {
+            setHistory(result);
+            // Clear the error only after the server confirms a successful GET.
+            setLoadError(null);
+          }
         } catch (error) {
           if (!controller.signal.aborted) {
             setLoadError(
