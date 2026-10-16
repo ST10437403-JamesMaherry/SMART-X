@@ -78,6 +78,7 @@ export default function DeviceSearch({
   const [retrySequence, setRetrySequence] = useState(0);
   const submitInFlight = useRef(false);
   const pagingRequestRef = useRef<AbortController | null>(null);
+  const backgroundRequestRef = useRef<AbortController | null>(null);
   const confirmedPageOffsetRef = useRef<number | null>(null);
 
   // A route change cancels any operator-requested page load; it must never
@@ -103,7 +104,12 @@ export default function DeviceSearch({
       return;
     }
 
+    // Explicit pagination has already made an authoritative read for its
+    // destination. A concurrent SignalR refresh must not interrupt it.
+    if (pagingRequestRef.current !== null) return;
+
     const controller = new AbortController();
+    backgroundRequestRef.current = controller;
     const timer = window.setTimeout(() => {
       async function read(): Promise<void> {
         setLoading(true);
@@ -125,6 +131,9 @@ export default function DeviceSearch({
             setReadError(getApiErrorMessage(reason, 'Unable to load device search results.'));
           }
         } finally {
+          if (backgroundRequestRef.current === controller) {
+            backgroundRequestRef.current = null;
+          }
           if (!controller.signal.aborted) setLoading(false);
         }
       }
@@ -134,6 +143,9 @@ export default function DeviceSearch({
     return () => {
       window.clearTimeout(timer);
       controller.abort();
+      if (backgroundRequestRef.current === controller) {
+        backgroundRequestRef.current = null;
+      }
     };
   }, [deviceSearchApplied, deviceSearchOffset, refreshToken, retrySequence]);
 
@@ -151,8 +163,17 @@ export default function DeviceSearch({
    * interaction merely because the operator paged through results.
    */
   async function navigatePage(offset: number): Promise<void> {
-    if (loading || submitting || pagingRequestRef.current !== null || !result) return;
+    // A passive refresh may start after the browser enables the page button
+    // but before the click handler runs. It must never swallow that click.
+    if (submitting || pagingRequestRef.current !== null || !result) return;
     if (offset < 0 || offset >= result.totalMatches || offset === result.offset) return;
+
+    // The explicit page request wins over any in-flight read of the old page.
+    // Abort also prevents a stale refresh from hiding the new page behind a
+    // persistent "Refreshing" status when SignalR bursts are in progress.
+    backgroundRequestRef.current?.abort();
+    backgroundRequestRef.current = null;
+    setLoading(false);
 
     const controller = new AbortController();
     pagingRequestRef.current = controller;
@@ -588,7 +609,7 @@ export default function DeviceSearch({
           <button
             className="realtime-action"
             type="button"
-            disabled={loading || submitting || paging || result.offset === 0}
+            disabled={submitting || paging || result.offset === 0}
             onClick={() => void navigatePage(Math.max(0, result.offset - deviceSearchPageSize))}
           >
             Previous page
@@ -597,7 +618,7 @@ export default function DeviceSearch({
           <button
             className="realtime-action"
             type="button"
-            disabled={loading || submitting || paging || !result.hasMore}
+            disabled={submitting || paging || !result.hasMore}
             onClick={() => void navigatePage(result.offset + deviceSearchPageSize)}
           >
             Next page

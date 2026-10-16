@@ -18,6 +18,7 @@ import DeviceSearch from './DeviceSearch';
 import RealtimeCommandPanel from './RealtimeCommandPanel';
 import RealtimeHistoryPanel from './RealtimeHistoryPanel';
 import RealtimeSimulator from './RealtimeSimulator';
+import SuggestedActions from './SuggestedActions';
 import { useRealtimeStream, type RealtimeConnectionState } from './useRealtimeStream';
 import './RealtimeWorkspace.css';
 
@@ -330,6 +331,11 @@ function RealtimeWorkspace() {
               {operatorViewError}
             </p>
           )}
+
+          {/* Read-only guidance: real learning and eligibility are evaluated by P2-09.
+              Commit 2 adds an explicit operator-selected command through the
+              existing actuator endpoint. No suggestion is auto-executed. */}
+          <SuggestedActions refreshToken={refreshToken} />
 
           <div className="realtime-columns">
             <section className="realtime-section" aria-labelledby="realtime-device-title">
