@@ -89,7 +89,56 @@ async function interactionCount(request: APIRequestContext): Promise<number> {
 }
 
 test.describe('P2-10 operator-approved Suggested Actions', () => {
-  test('review and cancel are passive; confirm uses the normal command endpoint and genuine Undo Stack', async ({
+  test('review, cancel and reopen remain passive without creating commands or training evidence', async ({
+    page,
+    request,
+  }) => {
+    const target = await registerOnlineActuator(request);
+    const fixture = presentationFixture(target);
+    const endpoint = `/api/realtime/devices/${target.id}/commands`;
+    const commandRequests: unknown[] = [];
+    const beforeInteractions = await interactionCount(request);
+
+    // The recommendation is a presentation fixture. No mutating API call is
+    // mocked: these assertions still inspect the real command and interaction stores.
+    await page.route(recommendationsPath, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fixture),
+      }),
+    );
+    page.on('request', (message) => {
+      if (message.method() === 'POST' && new URL(message.url()).pathname === endpoint) {
+        commandRequests.push(message.postDataJSON());
+      }
+    });
+
+    await page.goto('/realtime');
+    const panel = page.getByTestId('suggested-actions');
+    const action = panel.getByTestId('suggested-action');
+    await expect(action).toHaveCount(1);
+
+    // Both approval rounds are explicitly exercised, but this test does not
+    // also execute a command. That keeps cancellation independent of the
+    // asynchronous command/Undo journey in the following test.
+    for (let reviewNumber = 0; reviewNumber < 2; reviewNumber += 1) {
+      await action.getByRole('button', { name: 'Review Relay On' }).click();
+      await expect(
+        action.getByRole('group', { name: 'Confirm recommended relay command' }),
+      ).toBeVisible();
+      await expect(action.getByRole('button', { name: 'Confirm Relay On' })).toBeVisible();
+      await expect(action).toContainText(target.name);
+      await action.getByRole('button', { name: 'Cancel' }).click();
+      await expect(action.getByRole('button', { name: 'Review Relay On' })).toBeVisible();
+    }
+
+    expect(commandRequests).toHaveLength(0);
+    expect(await interactionCount(request)).toBe(beforeInteractions);
+    expect((await getCommandAudit(request, target.id)).totalAuditCount).toBe(0);
+  });
+
+  test('confirmation executes one real relay command and Undo restores the authoritative state', async ({
     page,
     request,
   }) => {
@@ -100,7 +149,7 @@ test.describe('P2-10 operator-approved Suggested Actions', () => {
     const beforeInteractions = await interactionCount(request);
 
     // ONLY prediction GETs are mocked. The command POST, audit GET and Undo
-    // POST are genuine HTTP calls to the real API process.
+    // POST always reach the running ASP.NET Core API.
     await page.route(recommendationsPath, (route) =>
       route.fulfill({
         status: 200,
@@ -126,14 +175,8 @@ test.describe('P2-10 operator-approved Suggested Actions', () => {
     await expect(
       action.getByRole('group', { name: 'Confirm recommended relay command' }),
     ).toBeVisible();
-    await expect(action).toContainText(target.name);
+    await expect(action.getByRole('button', { name: 'Confirm Relay On' })).toBeEnabled();
     expect(commandRequests).toHaveLength(0);
-    await action.getByRole('button', { name: 'Cancel' }).click();
-    expect(commandRequests).toHaveLength(0);
-    expect(await interactionCount(request)).toBe(beforeInteractions);
-    expect((await getCommandAudit(request, target.id)).totalAuditCount).toBe(0);
-
-    await action.getByRole('button', { name: 'Review Relay On' }).click();
     await action.getByRole('button', { name: 'Confirm Relay On' }).click();
 
     await expect(panel.getByTestId('suggested-action-result')).toContainText(
@@ -144,8 +187,8 @@ test.describe('P2-10 operator-approved Suggested Actions', () => {
     await expect(page.getByTestId('realtime-undo-depth')).toHaveText('1');
     expect(commandRequests).toHaveLength(1);
     expect(commandRequests[0]).toEqual({ path: endpoint, body: { commandType: 'RelayOn' } });
-    // A REAL accepted command records one CommandExecuted interaction. Review
-    // and passive GETs did not add anything; Undo will add CommandUndone.
+    // A real accepted command produces exactly one CommandExecuted interaction.
+    // Review and passive GETs do not add training evidence.
     expect(await interactionCount(request)).toBe(beforeInteractions + 1);
 
     const executed = await getCommandAudit(request, target.id);
@@ -154,8 +197,7 @@ test.describe('P2-10 operator-approved Suggested Actions', () => {
       actuator: { commandedState: 'On', undoDepth: 1 },
     });
 
-    // Undo intentionally uses the PRE-EXISTING manual command panel, which
-    // derives expectedLatestCommandId from the real backend Stack snapshot.
+    // The existing manual command panel owns Undo and its real Stack snapshot.
     const undo = page.getByRole('button', { name: 'Undo latest command' });
     await expect(undo).toBeEnabled();
     await undo.click();

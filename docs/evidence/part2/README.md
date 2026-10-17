@@ -1,338 +1,74 @@
-# Smart-X Part 2 evidence
+# Smart-X Part 2 — Assessment Evidence Index
 
-This directory contains reproducible demonstrations of the actual Smart-X
-backend data structures and their integration with the existing Part 1 system.
+This folder contains the **actual captured project evidence** for the Part 2 assessment. Screenshots show the delivered user experience and API-backed reports; linked source code and automated tests establish the underlying algorithmic behaviour. The screenshots alone are not presented as proof of time complexity, reliable queue order or secure command execution.
 
-Each demonstration has:
-- A PNG evidence report for the lecturer.
-- A matching HTML rendering.
-- Raw JSON captured from actual API responses.
-- A Python reproduction script in `scripts/`.
+[Return to project README](../../../README.md) · [Rubric matrix](../../part2/ASSESSMENT_RUBRIC_MATRIX.md)
 
-The reports are generated from validated HTTP results. They are not screenshots
-of unimplemented React features.
+## Main assessment evidence
 
----
+| Screenshot | What it demonstrates | Rubric area |
+| --- | --- | --- |
+| [01-part2-navigation.png](01-part2-navigation.png) | Both Part 1 and Part 2 pillars are active; topology is visibly reserved for the final PoE. | Navigation — 30 marks |
+| [02-live-command-stream.png](02-live-command-stream.png) | Working Operations Console with server-derived device and processing information. | Navigation / real-time stream |
+| [03-priority-alert-bypass.png](03-priority-alert-bypass.png) | Critical work bypasses ordinary FIFO when the test scenario queues both lanes. | Queue/PriorityQueue — 15 marks |
+| [04-command-history-undo.png](04-command-history-undo.png) | Commanded-state transition, accepted no-op audit, genuine Stack-backed Undo. | Stack — 15 marks |
+| [05-search-and-filter.png](05-search-and-filter.png) | Device lookup and combined server-side search filters. | Dictionary — 15 marks |
+| [06-sorted-history-timeline.png](06-sorted-history-timeline.png) | Chronological operational history, including equal-timestamp event retention. | SortedDictionary — 15 marks |
+| [07-unique-active-errors.png](07-unique-active-errors.png) | Unique active error membership with recurrence/recovery behaviour. | HashSet — 10 marks |
+| [08-suggested-actions.png](08-suggested-actions.png) | Genuine learned, explained suggested action from operator-response evidence. | Prediction — 30 marks |
+| [09-responsive-part2.png](09-responsive-part2.png) | Responsive Part 2 operations layout. | Navigation / accessibility |
 
-## 06 — Chronological operational history with SortedDictionary
+## Supporting screenshots
 
-### Evidence files
-
-- `06-sorted-history-timeline.png`
-- `06-sorted-history-timeline.html`
-- `06-sorted-history-timeline.json`
-- `scripts/capture_sorted_history.py`
-
-### Implementation
-
-The new operational history uses a real, per-device:
-
-`SortedDictionary<DateTimeOffset, List<HistoryEntry>>`
-
-The timestamp is the sorted dictionary key. The corresponding list preserves
-multiple events sharing exactly the same timestamp.
-
-Each event also receives a store-assigned sequence number to provide
-deterministic ordering when timestamps are equal.
-
-The store supports:
-- Telemetry events recorded only after successful worker processing.
-- Accepted manual commands, including audited no-ops.
-- Genuine Undo reversals linked to their original commands.
-- Native Float, Integer and Boolean telemetry payloads.
-- Backfilled readings with earlier capture timestamps.
-- Equal timestamps without event replacement.
-- Idempotent callback handling using stable event identities.
-- Device-specific chronological histories.
-- Ascending and descending history queries.
-- A default 100-event query limit and maximum 500-event query limit.
-- An independent 10,000-event retention capacity per device.
-
-Insertion into a timestamp bucket uses the SortedDictionary's balanced-tree
-lookup, with O(log n) key lookup/insertion in the number of distinct timestamp
-keys. Retrieval follows the actual ordered keys.
-
-Retention and query limits belong to this operational-history projection.
-They do not modify the Part 1 telemetry repository.
-
-### Reproduce the evidence
-
-Start a local Smart-X instance:
-
-```bash
-docker compose config --quiet
-docker compose up -d --build
-```
-
-From the repository root:
-
-```bash
-python3 scripts/capture_sorted_history.py --base-url http://localhost:8080
-```
-
-The script registers a new Integer sensor and a new Actuator/Boolean sensor.
-
-It tests three separate order guarantees using four actual Integer readings:
-
-| Reading | Value | Capture timestamp | Ingestion position |
-| --- | ---: | --- | ---: |
-| A | 10 | Base + 10 seconds | 1 |
-| B | 11 | Base + 30 seconds | 2 |
-| C | 100 | Base + 30 seconds | 3 |
-| D | 12 | Base | 4 |
-
-C is a critical observation because it arrives after B with an equal capture
-timestamp and a significant value change.
-
-D is a backfilled observation arriving last but captured earliest.
-
-The verified result is:
-
-| System | Order |
+| Screenshot | What to inspect |
 | --- | --- |
-| Part 1 original telemetry ingestion | A, B, C, D |
-| P2-03 actual worker dispatch | C, A, B, D |
-| P2-05 chronological SortedDictionary | D, A, C, B |
+| [02-active-conditions.png](02-active-conditions.png) | Live active-condition state and issue presentation. |
+| [02-finite-load.png](02-finite-load.png) | Simulator finite-load controls and/or result capture; see JSON for verified counts. |
+| [05-search-alert-association.png](05-search-alert-association.png) | A deliberate source-alert view associated with a target-device search. |
+| [05-search-command-evidence.png](05-search-command-evidence.png) | Operator search/command evidence feeding the learning pipeline. |
+| [05-search-empty-results.png](05-search-empty-results.png) | Honest zero-results state rather than fabricated matches. |
+| [05-search-mobile.png](05-search-mobile.png) | Mobile device-discovery layout. |
+| [09-responsive-part2-simulator.png](09-responsive-part2-simulator.png) | Responsive simulator controls at smaller viewport sizes. |
 
-B and C share one UTC occurrence timestamp. They are both preserved in the
-same timestamp bucket. C appears before B within that bucket because C
-completed processing first.
+## Verified finite-load report
 
-The original Part 1 ingestion order remains unchanged.
+**Artifact:** [`part2-load-summary.json`](part2-load-summary.json)
 
-The capture also verifies that the latest processed Integer observation
-remains C = 100, despite subsequent processing of older ordinary packets.
+This JSON is generated by `scripts/verify_part2_finite_load.py` after checking real HTTP responses, the worker processing delta, per-device operational history and unique active memberships. Its `submittedDevices`, `readingsPerDevice`, `submittedReadings`, `httpAcceptedReadings`, `workerProcessedDelta`, `processedHistoryReadings`, `workerPendingAtEnd`, and `observedElapsedMilliseconds` fields report the **actual observed run**. Read the values from the JSON rather than treating the simulator's configurable 100 × 100 maximum as a measured result.
 
-### Mixed command and telemetry history
-
-The script registers an Online Actuator/Boolean device and performs:
-
-1. Accept and process one Boolean telemetry reading of false.
-2. Execute RelayOn: commanded state Off to On.
-3. Execute RelayOn again: accepted no-op, with unchanged Undo depth.
-4. Execute Undo: restore the original commanded Off state.
-5. Repeat the stale Undo request: HTTP 409, without a new history entry.
-
-The four successful events appear in one chronological timeline:
-- TelemetryProcessed
-- RelayCommand
-- RelayCommand (no-op)
-- RelayUndo
-
-The Undo event retains its `reversesCommandId` reference.
-
-Reported Boolean telemetry, operational device status, and commanded relay
-state are verified as independent concepts.
-
-### Render the screenshot
-
-From `src/SmartX.Client`, use the existing Playwright package:
-
-```bash
-node --input-type=module <<'NODE'
-import { chromium } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-
-const input = path.resolve(
-  '../../docs/evidence/part2/06-sorted-history-timeline.html'
-);
-
-const output = path.resolve(
-  '../../docs/evidence/part2/06-sorted-history-timeline.png'
-);
-
-const browser = await chromium.launch();
-
-try {
-  const page = await browser.newPage({
-    viewport: { width: 1440, height: 1000 }
-  });
-
-  await page.goto(pathToFileURL(input).href);
-
-  await page.screenshot({
-    path: output,
-    fullPage: true
-  });
-} finally {
-  await browser.close();
-}
-NODE
-```
-
-### Automated test coverage
-
-The P2-05 implementation is covered by:
-
-- `tests/SmartX.Domain.Tests/Realtime/HistoryEntryTests.cs`
-- `tests/SmartX.Infrastructure.Tests/Realtime/InMemoryRealtimeHistoryStoreTests.cs`
-- `tests/SmartX.Application.Tests/Realtime/OperationalHistoryRecorderTests.cs`
-- `tests/SmartX.Api.IntegrationTests/Realtime/RealtimeHistoryEndpointTests.cs`
-- `tests/SmartX.Api.IntegrationTests/Realtime/RealtimeHistoryCompatibilityTests.cs`
-
-The API compatibility suite verifies:
-- Three 151-packet jagged batches: Float, Integer and Boolean.
-- All actual processed packets appear in the independent history.
-- The Part 1 recent telemetry endpoint retains its original ordering.
-- The P2-03 processing diagnostic window remains capped at 100.
-- Critical priority bypass and real chronological ordering.
-- Out-of-order capture timestamps.
-- Equal UTC instants expressed using different offsets.
-- Telemetry, commands, no-ops, and Undo in the same history.
-- Invalid and bounded history queries.
-- Independent retention policies.
-- Failed worker dispatches never appearing as successfully processed.
-
-Following P2-05 Commit 3, the full backend regression was reported green
-with **568 passing tests and 0 failures**.
-
-### Limitations
-
-Operational history is intentionally process-local and bounded.
-
-Restarting the application clears the operational-history projection.
-The system does not claim durable audit storage, database event sourcing, or
-replay after an application restart.
-
-The integrated React history UI is planned for P2-07.
-
----
-
-## 04 — Real actuator commands and genuine Stack Undo
-
-### Evidence files
-
-- `04-command-history-undo.png`
-- `04-command-history-undo.json`
-- `04-command-history-undo.html`
-- `scripts/capture_command_history_undo.py`
-
-`04-command-history-undo.png` is an evidence report rendered from a verified
-local HTTP run, not a screenshot of the future P2-07 React command dashboard.
-
-Its companion JSON stores the actual registration, commanded-state snapshots,
-command results, permanent audit, and rejected stale Undo.
-
-### Reproduce on your Mac
-
-Start Smart-X using the existing Docker configuration:
-
-```bash
-docker compose config --quiet
-docker compose up -d --build
-```
-
-From the repository root:
-
-```bash
-python3 scripts/capture_command_history_undo.py \
-  --base-url http://localhost:8080
-```
-
-The script creates a fresh Actuator/Boolean device, transitions it Online,
-executes RelayOn, accepts a no-op, undoes the original command, and verifies
-that a repeated stale Undo is rejected.
-
-The script validates actual state and audit results before writing evidence.
-
-### What this evidence proves
-
-| Observation | Meaning |
-| --- | --- |
-| Initial Off; Undo depth 0 | Explicit initial commanded state. |
-| RelayOn: Off to On; Undo depth 1 | A successful state change enters the real device Stack. |
-| Repeated RelayOn: no-op; depth still 1 | No-ops are audited but are not undoable. |
-| Undo: On to Off; depth 0 | Actual previous state is restored and Stack entry popped. |
-| Original, no-op, reversal retained | Undo preserves command provenance. |
-| Repeated stale Undo returns HTTP 409 | Stale Undo cannot mutate state or history. |
-| Sensor Online; reported telemetry unchanged | Commanded state is separate from sensor status and observations. |
-
-### Automated coverage and code locations
-
-- `src/SmartX.Infrastructure/Commands/InMemoryActuatorCommandStore.cs`
-- `src/SmartX.Application/Commands/ActuatorCommandService.cs`
-- `src/SmartX.Api/Controllers/RealtimeCommandsController.cs`
-- `tests/SmartX.Application.Tests/Commands/ActuatorCommandServiceTests.cs`
-- `tests/SmartX.Infrastructure.Tests/Commands/ActuatorCommandUndoIntegrationTests.cs`
-- `tests/SmartX.Api.IntegrationTests/Realtime/RealtimeCommandsEndpointTests.cs`
-
-Commands and audit are process-local. Restarting the API clears registered
-devices and command history.
-
-The interactive command dashboard is planned for P2-07.
-
----
-
-## 03 — FIFO processing and critical bypass
-
-### Evidence files
-
-- `03-priority-alert-bypass.png`
-- `03-priority-alert-bypass.json`
-- `03-priority-alert-bypass.html`
-- `scripts/capture_priority_bypass.py`
-
-`03-priority-alert-bypass.png` presents a recorded API demonstration of
-actual dispatch order. Its JSON retains the authoritative API snapshots.
-
-The report preserves server dequeue order and does not infer processing
-order from dashboard sorting.
-
-### Reproduce on your Mac
-
-Start a quiet local instance:
+To reproduce in an otherwise idle instance:
 
 ```bash
 docker compose up -d --build
+python3 scripts/verify_part2_finite_load.py \
+  --base-url http://localhost:8080 \
+  --devices 100 --readings-per-device 100 \
+  --timeout-seconds 300 \
+  --output docs/evidence/part2/part2-load-summary.json
+docker compose down
 ```
 
-From the repository root:
+A recorded `PASS` means that this run satisfied the verifier's checks; it is **not** a latency benchmark, persistence test, or guarantee for arbitrary hardware. Do not commit the output of an incomplete or failed run.
 
-```bash
-python3 scripts/capture_priority_bypass.py \
-  --base-url http://localhost:8080
-```
+## Reproduction and direct test evidence
 
-Open the generated HTML and capture it as:
-
-`docs/evidence/part2/03-priority-alert-bypass.png`
-
-The capture creates one Integer sensor and submits A = 10, B = 11, and
-C = 100.
-
-It pauses ordinary dispatch before A and B enter the FIFO queue, verifies
-that they are pending, and then accepts critical C.
-
-C completes through the priority lane while A and B remain pending.
-After ordinary dispatch resumes, the worker processes A followed by B.
-
-The script restores the previous ordinary-dispatch pause setting,
-including when evidence capture fails.
-
-### What this evidence proves
-
-| Observation | Meaning |
+| Topic | Repeatable verification |
 | --- | --- |
-| A/B pending before C | Ordinary work waits in the real FIFO queue. |
-| C dispatches first | A later critical packet bypasses pending ordinary work. |
-| Processing order C, A, B | Critical-first priority, FIFO within the ordinary lane. |
-| Three accepted and three processed | All work is accounted for. |
-| Latest observation remains C = 100 | Older queued work cannot replace newer state. |
-| Part 1 recent telemetry remains A, B, C | Existing ingestion order is preserved. |
+| Critical-first dispatch and FIFO | `src/SmartX.Client/e2e/part2-realtime-simulator.spec.ts`; `tests/SmartX.Infrastructure.Tests/Realtime/TelemetryWorkBufferTests.cs`; `scripts/capture_priority_bypass.py` |
+| Relay command and Stack Undo | `src/SmartX.Client/e2e/part2-realtime-live.spec.ts`; `tests/SmartX.Api.IntegrationTests/Realtime/RealtimeCommandsEndpointTests.cs`; `scripts/capture_command_history_undo.py` |
+| Canonical identifier/search | `src/SmartX.Client/e2e/part2-device-search.spec.ts`; `tests/SmartX.Infrastructure.Tests/Realtime/RealtimeDeviceSearchLookupTests.cs` |
+| Equal-time ordered history | `tests/SmartX.Infrastructure.Tests/Realtime/InMemoryRealtimeHistoryStoreTests.cs`; `scripts/capture_sorted_history.py` |
+| Unique active issues | `tests/SmartX.Domain.Tests/Dashboard/DashboardActiveConditionSetTests.cs`; `scripts/capture_unique_active_errors.py` |
+| Learned recommendation and Undo | `src/SmartX.Client/e2e/part2-suggested-actions-journey.spec.ts`; `tests/SmartX.Api.IntegrationTests/Recommendations/PredictiveRecommendationsEndpointTests.cs` |
+| Mixed-type, finite processing | `src/SmartX.Client/e2e/part2-final-load-regression.spec.ts`; `scripts/verify_part2_finite_load.py` |
+| Live deployment and security boundaries | `scripts/verify_part2_docker_boundaries.py`; `.github/workflows/ci.yml` |
 
-### Automated coverage and code locations
+For the rubric's five categories and exact classes, see [`ASSESSMENT_RUBRIC_MATRIX.md`](../../part2/ASSESSMENT_RUBRIC_MATRIX.md). Part 1 evidence remains separately available under [`docs/evidence/part1/`](../part1/README.md).
 
-- `tests/SmartX.Api.IntegrationTests/Realtime/TelemetryPriorityCompatibilityTests.cs`
-- `tests/SmartX.Api.IntegrationTests/Realtime/TelemetryProcessingScenarioFactory.cs`
-- `src/SmartX.Infrastructure/Realtime/InMemoryTelemetryWorkBuffer.cs`
-- `src/SmartX.Domain/Realtime/TelemetryWorkPriority.cs`
-- `src/SmartX.Api/Realtime/TelemetryProcessingWorker.cs`
-- `src/SmartX.Infrastructure/Realtime/InMemoryTelemetryProcessingStore.cs`
+### Data provenance and limitations
 
-The 151-packet tests inspect the actual independent completion log,
-not just the bounded public diagnostic window.
-
-Processing storage is process-local. These tests verify retained and
-accounted work while the application is running, not durable replay
-after process exit.
+- The IoT traffic is **simulated**, but goes through real application endpoints and collections.
+- The genuine prediction journey uses actual API-backed interactions and learned patterns; isolated UI presentation tests elsewhere may use expressly named response fixtures.
+- Process-local stores are cleared by API restart. Encrypted attachment payloads have a separate filesystem lifecycle.
+- Screenshots are supporting evidence. For queue dispatch order, exact lookups, equal timestamps, duplicate prevention, command safety and predictor support, use the tests/code linked above.
+- No screenshot of a Part 2 video, CI run or Undo-after-prediction is claimed unless such a file is actually committed.
