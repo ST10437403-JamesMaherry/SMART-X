@@ -397,11 +397,13 @@ export default function SuggestedActions({
                   any command.
                 </p>
 
+                {/* A passive HTTP refresh must not swallow an operator Review click.
+                    Confirm performs its own authoritative eligibility check. */}
                 {!reviewing && (
                   <button
                     type="button"
                     className="realtime-action suggested-actions-review-button"
-                    disabled={loading || submittingIdentity !== null}
+                    disabled={submittingIdentity !== null}
                     aria-expanded={false}
                     onClick={() => {
                       setReviewingIdentity(identity);
@@ -426,10 +428,13 @@ export default function SuggestedActions({
                       makes the final eligibility and state decision.
                     </p>
                     <div className="suggested-actions-approval-controls">
+                      {/* Read-only refreshes cannot disable confirmation. Only a
+                          real in-flight command may do so. The click still GETs
+                          fresh eligibility and the server revalidates the POST. */}
                       <button
                         type="button"
                         className="realtime-action realtime-action--primary"
-                        disabled={loading || submittingIdentity !== null}
+                        disabled={submittingIdentity !== null}
                         onClick={() => void confirmRecommendation(action)}
                       >
                         {submitting

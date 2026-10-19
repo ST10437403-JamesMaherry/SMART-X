@@ -235,7 +235,26 @@ async function manualRelayOnAndUndo(
 
   const undo = page.getByRole('button', { name: 'Undo latest command' });
   await expect(undo).toBeEnabled();
+
+  // Listen before clicking so a swallowed control event cannot appear to
+  // pass. Undo remains a SINGLE real request: never retry a mutation silently.
+  const undoResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      new URL(response.url()).pathname === `/api/realtime/devices/${targetId}/commands/undo`,
+  );
   await undo.click();
+  const undoResponse = await undoResponsePromise;
+  expect(
+    undoResponse.status(),
+    `The real Undo endpoint must accept the current Stack command: ${await undoResponse.text()}`,
+  ).toBe(200);
+
+  // A server-confirmed reversal must be reflected both in the append-only
+  // command audit and in the eventually refreshed operator UI.
+  await expect
+    .poll(async () => (await audit(request, targetId)).actuator.commandedState)
+    .toBe('Off');
   await expect(page.getByTestId('realtime-commanded-state')).toHaveText('Off');
   await expect(page.getByTestId('realtime-undo-depth')).toHaveText('0');
 
@@ -471,7 +490,20 @@ test.describe('P2-10 genuine learn / suggest / execute / Undo journey', () => {
     // The same manual Undo control uses the server Stack's expected latest ID.
     const undo = page.getByRole('button', { name: 'Undo latest command' });
     await expect(undo).toBeEnabled();
+    const undoResponsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname === `/api/realtime/devices/${target.id}/commands/undo`,
+    );
     await undo.click();
+    const undoResponse = await undoResponsePromise;
+    expect(
+      undoResponse.status(),
+      `The accepted recommendation must be reversible: ${await undoResponse.text()}`,
+    ).toBe(200);
+    await expect
+      .poll(async () => (await audit(request, target.id)).actuator.commandedState)
+      .toBe('Off');
     await expect(page.getByTestId('realtime-commanded-state')).toHaveText('Off');
     await expect(page.getByTestId('realtime-undo-depth')).toHaveText('0');
     expect((await audit(request, target.id)).totalAuditCount).toBe(8);

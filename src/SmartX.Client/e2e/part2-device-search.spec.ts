@@ -148,8 +148,15 @@ test.describe('P2-08 canonical discovery and deliberate operator history', () =>
 
     await expect(page.getByTestId('device-search-count')).toHaveText('0 matching devices');
     await expect(page.getByTestId('device-search-empty')).toBeVisible();
+
+    // The filter GET renders the empty state before its explicit interaction
+    // POST is necessarily complete. Wait for the server's 201-backed receipt,
+    // then verify the authoritative ledger rather than racing the response.
+    await expect(page.getByTestId('search-recorded-receipt')).toContainText('FiltersChanged');
+    await expect
+      .poll(async () => (await readInteractions(request)).totalRecorded)
+      .toBe(initialCount + 1);
     const accepted = await readInteractions(request);
-    expect(accepted.totalRecorded).toBe(initialCount + 1);
     expect(accepted.events[0]).toMatchObject({ kind: 'FiltersChanged', resultCount: 0 });
     await expect(page.getByRole('button', { name: 'Apply filters' })).toBeDisabled();
 
@@ -157,7 +164,11 @@ test.describe('P2-08 canonical discovery and deliberate operator history', () =>
     await page.getByRole('combobox', { name: 'Operational status' }).selectOption('Offline');
     await page.getByRole('button', { name: 'Apply filters' }).click();
     await expect(page.getByTestId('device-search-count')).toHaveText('1 matching devices');
-    expect((await readInteractions(request)).totalRecorded).toBe(initialCount + 2);
+    await expect
+      .poll(async () => (await readInteractions(request)).totalRecorded)
+      .toBe(initialCount + 2);
+    const second = await readInteractions(request);
+    expect(second.events[0]).toMatchObject({ kind: 'FiltersChanged', resultCount: 1 });
   });
 
   test('submitted criteria, draft fields and selected device survive route navigation', async ({
