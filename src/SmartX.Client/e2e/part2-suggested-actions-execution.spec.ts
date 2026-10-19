@@ -11,7 +11,7 @@ const recommendationsPath = '**/api/realtime/recommendations';
 /**
  * The transport fixture supplies a suggested-action PRESENTATION only.
  * Successful relay commands and Stack-backed Undo go to the REAL .NET API.
- * Commit 3 will replace the recommendation fixture with genuine learning.
+ * The separate full-journey suite proves genuine learning against the real API.
  */
 function presentationFixture(target: SensorResponse): PredictedRecommendationsResponse {
   const expiresAtUtc = new Date(Date.now() + 300_000).toISOString();
@@ -101,13 +101,30 @@ test.describe('P2-10 operator-approved Suggested Actions', () => {
 
     // The recommendation is a presentation fixture. No mutating API call is
     // mocked: these assertions still inspect the real command and interaction stores.
-    await page.route(recommendationsPath, (route) =>
-      route.fulfill({
+    // Hold one deliberately requested PASSIVE GET so we can prove that an
+    // in-progress refresh cannot swallow the Review or Confirm controls.
+    let holdNextRead = false;
+    let releaseHeldRead: (() => void) | undefined;
+    let signalReadStarted: (() => void) | undefined;
+    const heldReadStarted = new Promise<void>((resolve) => {
+      signalReadStarted = resolve;
+    });
+
+    await page.route(recommendationsPath, async (route) => {
+      if (holdNextRead) {
+        holdNextRead = false;
+        await new Promise<void>((resolve) => {
+          releaseHeldRead = resolve;
+          signalReadStarted?.();
+        });
+      }
+
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(fixture),
-      }),
-    );
+      });
+    });
     page.on('request', (message) => {
       if (message.method() === 'POST' && new URL(message.url()).pathname === endpoint) {
         commandRequests.push(message.postDataJSON());
@@ -119,19 +136,47 @@ test.describe('P2-10 operator-approved Suggested Actions', () => {
     const action = panel.getByTestId('suggested-action');
     await expect(action).toHaveCount(1);
 
-    // Both approval rounds are explicitly exercised, but this test does not
-    // also execute a command. That keeps cancellation independent of the
-    // asynchronous command/Undo journey in the following test.
-    for (let reviewNumber = 0; reviewNumber < 2; reviewNumber += 1) {
-      await action.getByRole('button', { name: 'Review Relay On' }).click();
-      await expect(
-        action.getByRole('group', { name: 'Confirm recommended relay command' }),
-      ).toBeVisible();
-      await expect(action.getByRole('button', { name: 'Confirm Relay On' })).toBeVisible();
+    const review = action.getByRole('button', { name: 'Review Relay On' });
+    const confirmation = action.getByRole('group', {
+      name: 'Confirm recommended relay command',
+    });
+    const confirm = action.getByRole('button', { name: 'Confirm Relay On' });
+    const refresh = panel.getByRole('button', { name: 'Refresh suggestions' });
+
+    // Wait for the first authoritative snapshot before starting an intentional
+    // background refresh. A pending GET should never disable deliberate Review.
+    await expect(page.getByText('HTTP snapshot ready')).toBeVisible();
+    await expect(refresh).toBeEnabled();
+    holdNextRead = true;
+    await refresh.click();
+
+    try {
+      await heldReadStarted;
+      await expect(panel.getByRole('button', { name: 'Checking...' })).toBeVisible();
+      await expect(review).toBeEnabled();
+      await review.click();
+      await expect(confirmation).toBeVisible();
+      await expect(confirm).toBeEnabled();
       await expect(action).toContainText(target.name);
-      await action.getByRole('button', { name: 'Cancel' }).click();
-      await expect(action.getByRole('button', { name: 'Review Relay On' })).toBeVisible();
+    } finally {
+      // Never leave an intercepted GET hanging when an assertion fails.
+      releaseHeldRead?.();
     }
+
+    // Completing the passive refresh must retain the open confirmation
+    // because the server supplied the same recommendation identity.
+    await expect(refresh).toBeEnabled();
+    await expect(confirmation).toBeVisible();
+    await action.getByRole('button', { name: 'Cancel' }).click();
+    await expect(review).toBeVisible();
+
+    // A second independent review/cancel cycle is still passive.
+    await expect(review).toBeEnabled();
+    await review.click();
+    await expect(confirmation).toBeVisible();
+    await expect(confirm).toBeEnabled();
+    await action.getByRole('button', { name: 'Cancel' }).click();
+    await expect(review).toBeVisible();
 
     expect(commandRequests).toHaveLength(0);
     expect(await interactionCount(request)).toBe(beforeInteractions);
@@ -216,17 +261,52 @@ test.describe('P2-10 operator-approved Suggested Actions', () => {
   }) => {
     const target = await registerOnlineActuator(request);
     const fixture = presentationFixture(target);
-    let stillEligible = true;
     let commandPosts = 0;
+    const beforeInteractions = await interactionCount(request);
 
+    // Passive recommendation refreshes always pass an AbortSignal; the explicit
+    // operator-confirmation GET does not. Simulate an alert recovering EXACTLY
+    // when that confirmation GET occurs, not earlier while Playwright is
+    // locating the button. This prevents a background SignalR refresh from
+    // legitimately removing the button before the attempted operator action.
+    //
+    // The response stays withdrawn for all subsequent GETs, including passive
+    // refreshes. No production API or command pathway is replaced.
+    await page.addInitScript(
+      (withdrawnSnapshot) => {
+        const nativeFetch = window.fetch.bind(window);
+        let withdrawn = false;
+
+        window.fetch = (input, init) => {
+          const requestUrl = input instanceof Request ? input.url : String(input);
+          const path = new URL(requestUrl, window.location.href).pathname;
+
+          if (path === '/api/realtime/recommendations') {
+            if (!init?.signal) withdrawn = true;
+
+            if (withdrawn) {
+              return Promise.resolve(
+                new Response(JSON.stringify(withdrawnSnapshot), {
+                  status: 200,
+                  headers: { 'Content-Type': 'application/json' },
+                }),
+              );
+            }
+          }
+
+          return nativeFetch(input, init);
+        };
+      },
+      { ...fixture, recommendations: [] },
+    );
+
+    // Before explicit confirmation, passive GETs still show the same stable
+    // recommendation. After confirmation, the revalidation GET withdraws it.
     await page.route(recommendationsPath, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          ...fixture,
-          recommendations: stillEligible ? fixture.recommendations : [],
-        }),
+        body: JSON.stringify(fixture),
       }),
     );
     page.on('request', (message) => {
@@ -237,14 +317,23 @@ test.describe('P2-10 operator-approved Suggested Actions', () => {
 
     await page.goto('/realtime');
     const panel = page.getByTestId('suggested-actions');
+    await expect(panel.getByTestId('suggested-action')).toHaveCount(1);
     await panel.getByRole('button', { name: 'Review Relay On' }).click();
-    stillEligible = false;
+    await expect(
+      panel.getByRole('group', { name: 'Confirm recommended relay command' }),
+    ).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Confirm Relay On' })).toBeEnabled();
 
     await panel.getByRole('button', { name: 'Confirm Relay On' }).click();
     await expect(panel.getByTestId('suggested-action-result')).toContainText('no longer eligible');
     await expect(panel.getByTestId('suggested-actions-empty')).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Confirm Relay On' })).toHaveCount(0);
+
+    // A withdrawn suggestion must never cause a relay POST, command audit
+    // entry, or synthetic pattern-learning evidence.
     expect(commandPosts).toBe(0);
     expect((await getCommandAudit(request, target.id)).totalAuditCount).toBe(0);
+    expect(await interactionCount(request)).toBe(beforeInteractions);
   });
 
   test('server revalidation rejects an Offline target and preserves the command audit', async ({
