@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 
 import { ApiError, getApiErrorMessage } from '../../api/apiTypes';
+import { useDraftField } from '../../state/useWorkspaceDrafts';
+import { useWorkspaceState } from '../../state/workspaceState';
 import {
   identifierKinds,
   registerSensor,
@@ -23,15 +25,6 @@ import {
 interface SensorRegistrationFormProps {
   readonly onRegistered: (sensor: SensorResponse) => void;
 }
-
-/**
- * Tracks feedback for the most recent registration attempt.
- */
-type SubmissionState =
-  | { kind: 'idle' }
-  | { kind: 'submitting' }
-  | { kind: 'success'; message: string }
-  | { kind: 'error'; title: string; message: string };
 
 /**
  * Field order is also used when moving keyboard focus to the first invalid
@@ -129,15 +122,17 @@ function FieldError({ id, message }: { readonly id: string; readonly message?: s
  * requests to the existing Smart-X API.
  */
 function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
-  const [values, setValues] = useState<SensorRegistrationFormValues>(
-    createInitialSensorRegistrationValues,
+  const { registrationDraft, setRegistrationDraft } = useWorkspaceState();
+
+  const [values, setValues] = useDraftField(registrationDraft, setRegistrationDraft, 'values');
+
+  const [touched, setTouched] = useDraftField(registrationDraft, setRegistrationDraft, 'touched');
+
+  const [submissionState, setSubmissionState] = useDraftField(
+    registrationDraft,
+    setRegistrationDraft,
+    'submissionState',
   );
-
-  const [touched, setTouched] = useState<Partial<Record<SensorRegistrationField, boolean>>>({});
-
-  const [submissionState, setSubmissionState] = useState<SubmissionState>({
-    kind: 'idle',
-  });
 
   /*
    * Validation is derived directly from current form values rather than being
@@ -212,6 +207,10 @@ function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
+    if (submissionState.kind === 'submitting') {
+      return;
+    }
+
     const allTouched = Object.fromEntries(
       registrationFields.map((field) => [field, true]),
     ) as Record<SensorRegistrationField, boolean>;
@@ -282,6 +281,7 @@ function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
             <input
               id="sensor-name"
               name="name"
+              disabled={submissionState.kind === 'submitting'}
               type="text"
               value={values.name}
               maxLength={100}
@@ -306,6 +306,7 @@ function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
             <select
               id="sensor-identifier-kind"
               name="identifierKind"
+              disabled={submissionState.kind === 'submitting'}
               value={values.identifierKind}
               required
               onBlur={() => {
@@ -331,6 +332,7 @@ function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
             <input
               id="sensor-device-identifier"
               name="deviceIdentifier"
+              disabled={submissionState.kind === 'submitting'}
               type="text"
               value={values.deviceIdentifier}
               maxLength={values.identifierKind === 'MacAddress' ? 17 : 64}
@@ -361,6 +363,7 @@ function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
             <input
               id="sensor-facility"
               name="facility"
+              disabled={submissionState.kind === 'submitting'}
               type="text"
               value={values.facility}
               maxLength={80}
@@ -385,6 +388,7 @@ function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
             <input
               id="sensor-zone"
               name="zone"
+              disabled={submissionState.kind === 'submitting'}
               type="text"
               value={values.zone}
               maxLength={80}
@@ -409,6 +413,7 @@ function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
             <input
               id="sensor-node-id"
               name="nodeId"
+              disabled={submissionState.kind === 'submitting'}
               type="text"
               value={values.nodeId}
               maxLength={80}
@@ -434,6 +439,7 @@ function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
             <select
               id="sensor-category"
               name="category"
+              disabled={submissionState.kind === 'submitting'}
               value={values.category}
               required
               onChange={(event) => {
@@ -454,6 +460,7 @@ function SensorRegistrationForm({ onRegistered }: SensorRegistrationFormProps) {
             <select
               id="sensor-telemetry-data-type"
               name="telemetryDataType"
+              disabled={submissionState.kind === 'submitting'}
               value={values.telemetryDataType}
               required
               onChange={(event) => {

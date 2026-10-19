@@ -1,35 +1,27 @@
-using System.Collections.Concurrent;
-
 using SmartX.Application.Sensors;
 using SmartX.Domain.Sensors;
 
 namespace SmartX.Infrastructure.Sensors;
 
 /// <summary>
-/// Provides thread-safe, process-local persistence for registered Smart-X
-/// sensors.
-///
-/// Part 1 does not require an external database, so an in-memory repository
-/// keeps the backend lightweight while still preserving the repository
-/// abstraction required by the Application layer.
-///
-/// A second concurrent dictionary indexes normalised device identifiers.
-/// This allows duplicate physical devices to be rejected atomically without
-/// repeatedly scanning every registered sensor.
+/// Provides process-local sensor persistence using the standard Dictionary
+/// collection required by Part 2. Both indexes reference the same registered
+/// profile; no separate live-device registry owns duplicate sensor state.
 /// </summary>
 public sealed class InMemorySensorRepository : ISensorRepository
 {
-    private readonly ConcurrentDictionary<Guid, SensorProfile> _sensors =
-        new();
+    // Protect dictionary membership and paired-index operations with one
+    // short lock. No asynchronous work or I/O runs inside this boundary.
+    private readonly object _syncRoot = new();
 
-    private readonly ConcurrentDictionary<string, Guid> _identifierIndex =
+    private readonly Dictionary<Guid, SensorProfile> _sensors = new();
+
+    private readonly Dictionary<string, SensorProfile> _identifierIndex =
         new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Attempts to register a sensor atomically.
-    ///
-    /// The identifier index is written first so concurrent requests using
-    /// the same normalised identifier cannot both succeed.
+    /// Publishes both identities atomically, rejecting duplicate GUIDs or
+    /// canonical physical identifiers without leaving a partial registration.
     /// </summary>
     public Task<bool> TryAddAsync(
         SensorProfile sensor,
@@ -39,57 +31,57 @@ public sealed class InMemorySensorRepository : ISensorRepository
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var identifierKey =
-            CreateIdentifierKey(
-                sensor.DeviceIdentifier);
+        string identifierKey =
+            CreateIdentifierKey(sensor.DeviceIdentifier);
 
-        // Only one concurrent registration may claim a physical identifier.
-        if (!_identifierIndex.TryAdd(
-                identifierKey,
-                sensor.Id))
+        lock (_syncRoot)
         {
-            return Task.FromResult(false);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (_sensors.ContainsKey(sensor.Id) ||
+                _identifierIndex.ContainsKey(identifierKey))
+            {
+                return Task.FromResult(false);
+            }
+
+            _sensors.Add(sensor.Id, sensor);
+            _identifierIndex.Add(identifierKey, sensor);
+
+            return Task.FromResult(true);
         }
-
-        // Guid collisions are exceptionally unlikely, but the repository
-        // still handles the condition safely rather than assuming success.
-        if (!_sensors.TryAdd(
-                sensor.Id,
-                sensor))
-        {
-            _identifierIndex.TryRemove(
-                identifierKey,
-                out _);
-
-            return Task.FromResult(false);
-        }
-
-        return Task.FromResult(true);
     }
 
     /// <summary>
-    /// Returns a stable snapshot of all registered sensors.
-    ///
-    /// Results are ordered by creation time and then ID so API responses are
-    /// deterministic even though ConcurrentDictionary itself is unordered.
+    /// Copies registry membership under the lock, then preserves Part 1's
+    /// creation-time/GUID ordering outside the critical section.
+    /// Domain profiles retain the existing application mutation workflow;
+    /// this array is a membership snapshot rather than a deep entity copy.
     /// </summary>
     public Task<IReadOnlyList<SensorProfile>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        IReadOnlyList<SensorProfile> sensors =
-            _sensors
-                .Values
+        SensorProfile[] registered;
+
+        lock (_syncRoot)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            registered = _sensors.Values.ToArray();
+        }
+
+        IReadOnlyList<SensorProfile> ordered =
+            registered
                 .OrderBy(sensor => sensor.CreatedAtUtc)
                 .ThenBy(sensor => sensor.Id)
                 .ToArray();
 
-        return Task.FromResult(sensors);
+        return Task.FromResult(ordered);
     }
 
     /// <summary>
-    /// Retrieves one sensor by its internal Smart-X ID.
+    /// Retrieves the registered profile by its internal Smart-X GUID.
     /// </summary>
     public Task<SensorProfile?> GetByIdAsync(
         Guid sensorProfileId,
@@ -97,19 +89,44 @@ public sealed class InMemorySensorRepository : ISensorRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        _sensors.TryGetValue(
-            sensorProfileId,
-            out var sensor);
+        lock (_syncRoot)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
 
-        return Task.FromResult(sensor);
+            _sensors.TryGetValue(sensorProfileId, out var sensor);
+
+            return Task.FromResult(sensor);
+        }
     }
 
     /// <summary>
-    /// Persists changes to an existing sensor profile.
-    ///
-    /// Device identity is immutable in SensorProfile, so the repository only
-    /// replaces an entry when the stored and supplied physical identifiers
-    /// still match.
+    /// Performs expected O(1) exact lookup using a validated, canonical
+    /// physical identifier. It does not scan profiles or perform text search.
+    /// </summary>
+    public Task<SensorProfile?> GetByDeviceIdentifierAsync(
+        DeviceIdentifier deviceIdentifier,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(deviceIdentifier);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string identifierKey =
+            CreateIdentifierKey(deviceIdentifier);
+
+        lock (_syncRoot)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _identifierIndex.TryGetValue(identifierKey, out var sensor);
+
+            return Task.FromResult(sensor);
+        }
+    }
+
+    /// <summary>
+    /// Retains the registered identity and updates both indexes together.
+    /// This also supports a future detached profile with the same identities.
     /// </summary>
     public Task<bool> UpdateAsync(
         SensorProfile sensor,
@@ -119,33 +136,30 @@ public sealed class InMemorySensorRepository : ISensorRepository
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!_sensors.TryGetValue(
-                sensor.Id,
-                out var existing))
+        string identifierKey =
+            CreateIdentifierKey(sensor.DeviceIdentifier);
+
+        lock (_syncRoot)
         {
-            return Task.FromResult(false);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!_sensors.TryGetValue(sensor.Id, out var existing) ||
+                existing.DeviceIdentifier != sensor.DeviceIdentifier)
+            {
+                return Task.FromResult(false);
+            }
+
+            _sensors[sensor.Id] = sensor;
+            _identifierIndex[identifierKey] = sensor;
+
+            return Task.FromResult(true);
         }
-
-        if (existing.DeviceIdentifier !=
-            sensor.DeviceIdentifier)
-        {
-            return Task.FromResult(false);
-        }
-
-        _sensors[sensor.Id] =
-            sensor;
-
-        return Task.FromResult(true);
     }
 
-    private static string CreateIdentifierKey(
-        DeviceIdentifier deviceIdentifier)
+    private static string CreateIdentifierKey(DeviceIdentifier deviceIdentifier)
     {
-        ArgumentNullException.ThrowIfNull(deviceIdentifier);
-
-        // Including the identifier kind prevents conceptually different
-        // identifier types from sharing one index namespace.
-        return
-            $"{deviceIdentifier.Kind}:{deviceIdentifier.Value}";
+        // Domain factories normalise MAC formats. Ordinal comparison keeps
+        // custom-ID case significant, and the kind qualifies each namespace.
+        return $"{deviceIdentifier.Kind}:{deviceIdentifier.Value}";
     }
 }

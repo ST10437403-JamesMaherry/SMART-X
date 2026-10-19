@@ -11,7 +11,7 @@ import PillarNavigation from '../components/PillarNavigation';
 type HealthState = 'checking' | 'connected' | 'unavailable';
 
 /**
- * Displays the Smart-X Part 1 gateway landing page.
+ * Displays the Smart-X gateway landing page.
  *
  * The page presents the permanent architectural navigation alongside a
  * lightweight API availability indicator. Only information required for
@@ -80,7 +80,7 @@ function GatewayHomePage() {
   return (
     <ApplicationShell>
       <section className="page-intro" aria-labelledby="page-title">
-        <p className="eyebrow">PROG7312 / PART 1</p>
+        <p className="eyebrow">PROG7312 / PART 2</p>
 
         <h1 className="page-title" id="page-title">
           IoT Mesh

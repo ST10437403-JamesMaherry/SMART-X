@@ -38,6 +38,7 @@ public sealed class AdaptiveAnomalyAnalysisService
     private readonly DashboardIssueCollection _issues;
     private readonly TimeProvider _timeProvider;
     private readonly AdaptiveAnomalyPolicy _policy;
+    private readonly TelemetryAnomalyClassifier _classifier;
 
     /*
      * Tracks consecutive non-anomalous telemetry observations for sensors
@@ -94,6 +95,8 @@ public sealed class AdaptiveAnomalyAnalysisService
             policy ??
             throw new ArgumentNullException(
                 nameof(policy));
+
+        _classifier = new TelemetryAnomalyClassifier(_policy);
     }
 
     /// <summary>
@@ -446,200 +449,83 @@ public sealed class AdaptiveAnomalyAnalysisService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        /*
-         * A delta needs both a previous baseline and a current observation.
-         */
         if (packets.Count < RecentTelemetryComparisonCount)
         {
             return;
         }
 
-        TelemetryPacket<T> previousPacket =
-            packets[^2];
-
-        TelemetryPacket<T> currentPacket =
-            packets[^1];
-
-        /*
-         * Recent repository order is ingestion order. A caller may still send
-         * a back-filled timestamp through the single-reading endpoint, so do
-         * not attempt a chronological subtraction when the newest ingestion
-         * claims to have been captured before its predecessor.
-         */
-        if (currentPacket.CapturedAtUtc <
-            previousPacket.CapturedAtUtc)
-        {
-            return;
-        }
-
-        var previous =
-            new NumericTelemetryPacket<T>(
-                previousPacket.SourceDeviceIdentifier,
-                previousPacket.Payload,
-                previousPacket.CapturedAtUtc);
-
-        var current =
-            new NumericTelemetryPacket<T>(
-                currentPacket.SourceDeviceIdentifier,
-                currentPacket.Payload,
-                currentPacket.CapturedAtUtc);
-
-        /*
-         * This invokes the custom operator implemented as part of the
-         * advanced-OOP telemetry domain.
-         */
-        TelemetryDelta<T> delta =
-            current - previous;
-
-        double relativeChange =
-            CalculateSymmetricRelativeChange(
-                delta);
-
-        bool occurredQuickly =
-            delta.Elapsed <=
-            _policy.MaximumSpikeInterval;
-
-        bool isAnomaly =
-            occurredQuickly &&
-            relativeChange >=
-            _policy.WarningRelativeChange;
-
-        DateTimeOffset now =
-            _timeProvider
-                .GetUtcNow()
-                .ToUniversalTime();
-
-        if (!isAnomaly)
-        {
-            RecordStableTelemetry(
-                sensor.Id,
-                now);
-
-            return;
-        }
-
-        _stableTelemetryObservations.TryRemove(
-            sensor.Id,
-            out _);
-
-        DashboardIssueSeverity severity =
-            relativeChange >=
-            _policy.CriticalRelativeChange
-                ? DashboardIssueSeverity.Critical
-                : DashboardIssueSeverity.Warning;
-
-        string movement =
-            delta.IsIncrease
-                ? "increase"
-                : delta.IsDecrease
-                    ? "decrease"
-                    : "change";
-
-        string detail =
-            $"Telemetry changed from {delta.PreviousValue} to " +
-            $"{delta.CurrentValue}, a " +
-            $"{relativeChange:P0} relative {movement}, over " +
-            $"{delta.Elapsed.TotalSeconds:0.##} seconds.";
-
-        DashboardIssue spikeIssue =
-            _issues.AddOrUpdate(
-                sensor.Id,
-                sensor.Name,
-                DashboardIssueType.TelemetrySpike,
-                severity,
-                DashboardIssueTarget.Telemetry,
-                severity == DashboardIssueSeverity.Critical
-                    ? "Critical telemetry spike"
-                    : "Telemetry spike detected",
-                detail,
-                now);
-
-        if (spikeIssue.OccurrenceCount >=
-            _policy.RepeatedFailureThreshold)
-        {
-            DashboardIssueSeverity repeatedSeverity =
-                severity == DashboardIssueSeverity.Critical ||
-                spikeIssue.OccurrenceCount >=
-                _policy.RepeatedFailureThreshold + 2
-                    ? DashboardIssueSeverity.Critical
-                    : DashboardIssueSeverity.Warning;
-
-            RecordRepeatedFailure(
-                sensor,
-                spikeIssue.OccurrenceCount,
-                repeatedSeverity,
-                now,
-                "Repeated telemetry instability");
-        }
+        ApplyTelemetryObservation(sensor, _classifier.Classify(packets[^2], packets[^1]));
     }
 
-    /// <summary>
-    /// Boolean values such as valve or relay state are meaningful telemetry,
-    /// but arithmetic spike detection would be invalid.
-    ///
-    /// A valid Boolean packet can still contribute toward confirming recovery
-    /// from a separate repeated-failure condition.
-    /// </summary>
     private async Task AnalyzeBooleanTelemetryAsync(
         SensorProfile sensor,
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<TelemetryPacket<bool>> packets =
-            await _telemetryRepository.GetRecentAsync<bool>(
-                sensor.Id,
-                1,
-                cancellationToken);
-
+        var packets = await _telemetryRepository.GetRecentAsync<bool>(sensor.Id, 1, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+        if (packets.Count > 0)
+        {
+            ApplyTelemetryObservation(sensor, _classifier.Classify<bool>(null, packets[^1]));
+        }
+    }
 
-        if (packets.Count == 0)
+    /// <summary>
+    /// Applies an already captured classification exactly once. The ingestion
+    /// path uses this method so another request cannot substitute a newer pair.
+    /// </summary>
+    public async Task AnalyzeAcceptedTelemetryAsync(
+        Guid sensorProfileId,
+        TelemetryAnomalyObservation observation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(observation);
+        var sensor = await GetRequiredSensorAsync(sensorProfileId, cancellationToken);
+        if (sensor.Status == SensorStatus.Decommissioned)
+        {
+            ResolveTelemetryIssues(sensor.Id, _timeProvider.GetUtcNow());
+            return;
+        }
+
+        ApplyTelemetryObservation(sensor, observation);
+    }
+
+    private void ApplyTelemetryObservation(SensorProfile sensor, TelemetryAnomalyObservation observation)
+    {
+        if (!observation.HasEvidence)
         {
             return;
         }
 
-        RecordStableTelemetry(
-            sensor.Id,
-            _timeProvider.GetUtcNow());
-    }
-
-    /// <summary>
-    /// Calculates a scale-independent change ratio.
-    ///
-    /// magnitude / max(|previous|, |current|)
-    ///
-    /// This remains meaningful for positive, negative and zero-crossing
-    /// telemetry and avoids inventing unit-specific absolute thresholds.
-    /// </summary>
-    private static double CalculateSymmetricRelativeChange<T>(
-        TelemetryDelta<T> delta)
-        where T : struct, INumber<T>
-    {
-        double previousMagnitude =
-            Math.Abs(
-                double.CreateChecked(
-                    delta.PreviousValue));
-
-        double currentMagnitude =
-            Math.Abs(
-                double.CreateChecked(
-                    delta.CurrentValue));
-
-        double changeMagnitude =
-            Math.Abs(
-                double.CreateChecked(
-                    delta.Magnitude));
-
-        double scale =
-            Math.Max(
-                previousMagnitude,
-                currentMagnitude);
-
-        if (scale == 0)
+        var now = _timeProvider.GetUtcNow().ToUniversalTime();
+        if (!observation.IsAnomaly)
         {
-            return 0;
+            RecordStableTelemetry(sensor.Id, now);
+            return;
         }
 
-        return changeMagnitude / scale;
+        _stableTelemetryObservations.TryRemove(sensor.Id, out _);
+        var severity = observation.Severity;
+        var spikeIssue = _issues.AddOrUpdate(
+            sensor.Id,
+            sensor.Name,
+            DashboardIssueType.TelemetrySpike,
+            severity,
+            DashboardIssueTarget.Telemetry,
+            severity == DashboardIssueSeverity.Critical
+                ? "Critical telemetry spike"
+                : "Telemetry spike detected",
+            observation.Detail!,
+            now);
+
+        if (spikeIssue.OccurrenceCount >= _policy.RepeatedFailureThreshold)
+        {
+            var repeatedSeverity = severity == DashboardIssueSeverity.Critical ||
+                spikeIssue.OccurrenceCount >= _policy.RepeatedFailureThreshold + 2
+                    ? DashboardIssueSeverity.Critical
+                    : DashboardIssueSeverity.Warning;
+            RecordRepeatedFailure(sensor, spikeIssue.OccurrenceCount, repeatedSeverity,
+                now, "Repeated telemetry instability");
+        }
     }
 
     /// <summary>

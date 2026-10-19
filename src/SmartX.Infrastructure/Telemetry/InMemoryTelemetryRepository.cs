@@ -211,16 +211,19 @@ public sealed class InMemoryTelemetryRepository
         {
             ArgumentNullException.ThrowIfNull(packets);
 
+            // Materialize and validate before changing the series. Cancellation
+            // halfway through an input enumeration must not leave a partial batch.
+            cancellationToken.ThrowIfCancellationRequested();
+            var acceptedPackets = packets.ToArray();
+            foreach (var packet in acceptedPackets)
+            {
+                ArgumentNullException.ThrowIfNull(packet);
+            }
+
             lock (_syncRoot)
             {
-                foreach (var packet in packets)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    ArgumentNullException.ThrowIfNull(packet);
-
-                    _packets.Add(packet);
-                }
+                cancellationToken.ThrowIfCancellationRequested();
+                _packets.AddRange(acceptedPackets);
             }
         }
 

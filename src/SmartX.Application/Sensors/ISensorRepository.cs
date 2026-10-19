@@ -38,6 +38,17 @@ public interface ISensorRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns a profile by its validated physical-device identifier.
+    ///
+    /// Equivalent MAC formats share one canonical lookup. Identifier kind
+    /// remains significant and custom identifiers retain ordinal case rules.
+    /// Returns null when the device has not been registered.
+    /// </summary>
+    Task<SensorProfile?> GetByDeviceIdentifierAsync(
+        DeviceIdentifier deviceIdentifier,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Persists changes to an existing sensor profile.
     ///
     /// Returns false when the sensor no longer exists.

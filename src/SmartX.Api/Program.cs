@@ -2,12 +2,21 @@ using Microsoft.AspNetCore.Mvc;
 
 using SmartX.Api.Dashboard;
 using SmartX.Api.ExceptionHandling;
+using SmartX.Api.Realtime;
 using SmartX.Application.Attachments;
+using SmartX.Application.Commands;
 using SmartX.Application.Dashboard;
+using SmartX.Application.Interactions;
+using SmartX.Application.Realtime;
+using SmartX.Application.Recommendations;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
 using SmartX.Domain.Dashboard;
 using SmartX.Infrastructure.Attachments;
+using SmartX.Infrastructure.Commands;
+using SmartX.Infrastructure.Interactions;
+using SmartX.Infrastructure.Realtime;
+using SmartX.Infrastructure.Recommendations;
 using SmartX.Infrastructure.Sensors;
 using SmartX.Infrastructure.Telemetry;
 
@@ -16,14 +25,10 @@ const string clientCorsPolicyName = "SmartXClient";
 var builder = WebApplication.CreateBuilder(args);
 
 /*
- * Local development normally terminates HTTPS directly in ASP.NET Core.
+ * HTTPS is enabled for ordinary application execution.
  *
- * Container deployments may instead terminate external traffic at a reverse
- * proxy. In that case the internal proxy-to-API connection can remain HTTP
- * without causing an unnecessary redirect loop.
- *
- * HTTPS redirection remains enabled by default and must be explicitly
- * disabled by the deployment configuration.
+ * Trusted Docker deployments can terminate external HTTPS at the
+ * reverse proxy while using the existing private API connection.
  */
 var httpsRedirectionEnabled =
     builder.Configuration.GetValue(
@@ -36,33 +41,25 @@ var allowedClientOrigins = builder.Configuration
     ?? [];
 
 var configuredAttachmentStoragePath =
-    builder.Configuration[
-        "Attachments:StoragePath"]
+    builder.Configuration["Attachments:StoragePath"]
     ?? "App_Data/attachments";
 
 var attachmentStoragePath =
     Path.IsPathRooted(configuredAttachmentStoragePath)
-        ? Path.GetFullPath(
-            configuredAttachmentStoragePath)
+        ? Path.GetFullPath(configuredAttachmentStoragePath)
         : Path.GetFullPath(
             Path.Combine(
                 builder.Environment.ContentRootPath,
                 configuredAttachmentStoragePath));
 
 // -------------------------------------------------------------------------
-// MVC and automatic validation responses
+// MVC and automatic request validation
 // -------------------------------------------------------------------------
 
 builder.Services
     .AddControllers()
     .ConfigureApiBehaviorOptions(options =>
     {
-        // [ApiController] automatically short-circuits requests when model
-        // binding fails. This includes malformed JSON, invalid JSON types,
-        // and other request-body conversion failures.
-        //
-        // Configure that automatic path explicitly so it follows the same
-        // RFC-style ProblemDetails contract as the rest of the Smart-X API.
         options.InvalidModelStateResponseFactory =
             context =>
             {
@@ -84,9 +81,6 @@ builder.Services
                             context.HttpContext.Request.Path
                     };
 
-                // A trace identifier allows validation responses to be
-                // correlated with server-side diagnostics without exposing
-                // internal implementation details.
                 problemDetails.Extensions["traceId"] =
                     context.HttpContext.TraceIdentifier;
 
@@ -94,8 +88,6 @@ builder.Services
                     new BadRequestObjectResult(
                         problemDetails);
 
-                // Validation failures use the standard ProblemDetails media
-                // type rather than being returned as ordinary JSON.
                 result.ContentTypes.Add(
                     "application/problem+json");
 
@@ -105,12 +97,12 @@ builder.Services
 
 builder.Services.AddOpenApi();
 
-// SignalR provides lightweight server-push notifications for the Adaptive
-// Anomaly Spotlight. HTTP remains the authoritative state-transfer channel.
+// Both existing hubs remain available. Their notifications invalidate
+// client snapshots; HTTP continues to own authoritative state.
 builder.Services.AddSignalR();
 
 // -------------------------------------------------------------------------
-// API error handling
+// Exception handling and deterministic time
 // -------------------------------------------------------------------------
 
 builder.Services.AddProblemDetails();
@@ -121,25 +113,118 @@ builder.Services.AddSingleton<TimeProvider>(
     TimeProvider.System);
 
 // -------------------------------------------------------------------------
-// Sensor persistence and Application services
+// Authoritative registered-device persistence
 // -------------------------------------------------------------------------
 
-// Sensor state must survive between individual HTTP requests during the
-// lifetime of the Part 1 backend process.
-builder.Services.AddSingleton<ISensorRepository, InMemorySensorRepository>();
+// The P2-02 canonical Dictionary repository remains the only owner of
+// registered-device metadata, identity, category, and operational status.
+builder.Services.AddSingleton<
+    ISensorRepository,
+    InMemorySensorRepository>();
 
 builder.Services.AddScoped<SensorRegistrationService>();
 
 builder.Services.AddScoped<SensorManagementService>();
 
 // -------------------------------------------------------------------------
-// Telemetry persistence and Application services
+// P2-05 chronological operational history
 // -------------------------------------------------------------------------
 
-// Telemetry remains process-local during Part 1. The repository abstraction
-// allows a database or distributed store to replace this implementation in a
-// later Smart-X phase without changing controllers or Application services.
-builder.Services.AddSingleton<ITelemetryRepository, InMemoryTelemetryRepository>();
+// This singleton owns one real per-device
+// SortedDictionary<DateTimeOffset, List<HistoryEntry>>.
+//
+// Its retention and query limits are independent of Part 1 recent
+// telemetry storage and P2-03 processing diagnostic history.
+builder.Services.AddSingleton<
+    IRealtimeHistoryStore,
+    InMemoryRealtimeHistoryStore>();
+
+// The recorder receives successful outcomes from the existing worker
+// processor and command service. It never replays those operations.
+builder.Services.AddSingleton<OperationalHistoryRecorder>();
+
+// Registration checks, validated limits, chronological ordering,
+// and transport mapping are implemented in the scoped read service.
+builder.Services.AddScoped<RealtimeHistoryService>();
+
+// -------------------------------------------------------------------------
+// P2-04 manual actuator commands and genuine Stack-backed Undo
+// -------------------------------------------------------------------------
+
+// One process-wide store owns simulated commanded state, per-device
+// Stack<CommandRecord> history, and permanent command audit.
+//
+// It does not duplicate the registered sensor repository.
+builder.Services.AddSingleton<
+    IActuatorCommandStore,
+    InMemoryActuatorCommandStore>();
+
+// Commands and Undo are validated through the same application service.
+// DI now also provides the shared operational history recorder.
+// One bounded process-local interaction stream; no personal operator profiles.
+builder.Services.AddSingleton<IOperatorInteractionStore, InMemoryOperatorInteractionStore>();
+builder.Services.AddScoped<OperatorInteractionService>();
+
+// P2-09: one bounded Dictionary-backed pattern projection, learned only
+// after the existing command transaction and P2-08 interaction succeed.
+// TimeProvider and policy are shared across recording and read paths.
+builder.Services.AddSingleton(new PatternLearningPolicy());
+builder.Services.AddSingleton<IInteractionPatternStore, InMemoryInteractionPatternStore>();
+builder.Services.AddScoped<PredictivePatternLearningService>();
+
+// P2-09: evaluated per request from the same pattern, active-condition,
+// registry and command-state authorities. Reading never trains or executes.
+builder.Services.AddScoped<PredictiveActionService>();
+
+builder.Services.AddScoped<ActuatorCommandService>();
+
+// -------------------------------------------------------------------------
+// Part 2 real-time snapshots and telemetry processing
+// -------------------------------------------------------------------------
+
+// Preserves P2-02/P2-03 snapshots and P2-04 commanded-state projection.
+builder.Services.AddScoped<RealtimeSnapshotService>();
+// Read-only P2-08 discovery reuses the Dictionary-backed registry and
+// the original HashSet-backed dashboard issues; it owns no separate index.
+builder.Services.AddScoped<RealtimeDeviceSearchService>();
+
+builder.Services.AddSingleton<
+    ITelemetryRepository,
+    InMemoryTelemetryRepository>();
+
+// Process-wide FIFO and critical-priority buffers, worker diagnostics,
+// and actual processed-device observations remain unchanged.
+builder.Services.AddSingleton<
+    ITelemetryWorkBuffer,
+    InMemoryTelemetryWorkBuffer>();
+
+builder.Services.AddSingleton<
+    ITelemetryProcessingStore,
+    InMemoryTelemetryProcessingStore>();
+
+// The existing scoped processor now records a chronological event only
+// after its normal state.Complete() call succeeds.
+builder.Services.AddScoped<
+    ITelemetryProcessor,
+    TelemetryProcessingService>();
+
+builder.Services.AddSingleton<
+    IRealtimeNotifier,
+    RealtimeNotifier>();
+
+// The worker still consumes through a fresh operation scope for each
+// dispatch; no request cancellation token is used for accepted work.
+builder.Services.AddHostedService<TelemetryProcessingWorker>();
+
+builder.Services.AddSingleton<TelemetryIngestionGate>();
+
+builder.Services.AddSingleton<TelemetryAnomalyClassifier>();
+
+builder.Services.AddScoped<
+    ITelemetryAcceptanceObserver,
+    DashboardTelemetryAcceptanceObserver>();
+
+builder.Services.AddScoped<TelemetryAcceptanceService>();
 
 builder.Services.AddScoped<SensorTelemetryService>();
 
@@ -147,19 +232,12 @@ builder.Services.AddScoped<SensorTelemetryService>();
 // Secure attachment infrastructure
 // -------------------------------------------------------------------------
 
-// Cryptographic infrastructure is resolved only when attachment
-// functionality is used. Unrelated endpoints remain independent while
-// attachment operations still require a valid encryption key.
+// Preserve the existing encryption boundary. The attachment cipher and
+// encrypted filesystem storage are resolved only when needed.
 builder.Services.AddSingleton<IAttachmentCipher>(
     _ => new ChunkedAesGcmAttachmentCipher(
         builder.Configuration["Attachments:EncryptionKeyBase64"]));
 
-/*
- * The anomaly analyzer also needs attachment metadata when evaluating sensor
- * configuration health. Defer concrete store/cipher construction so ordinary
- * health, sensor and telemetry requests do not unexpectedly require the
- * attachment encryption key.
- */
 builder.Services.AddSingleton<ISensorAttachmentStore>(
     serviceProvider =>
         new DeferredSensorAttachmentStore(
@@ -170,43 +248,28 @@ builder.Services.AddSingleton<ISensorAttachmentStore>(
 
 builder.Services.AddScoped<SensorAttachmentService>();
 
-// Adds the cross-aggregate rule that attachment operations may target only
-// sensor profiles registered through ISensorRepository.
 builder.Services.AddScoped<RegisteredSensorAttachmentService>();
 
 // -------------------------------------------------------------------------
-// Adaptive Anomaly Spotlight
+// Part 1 Adaptive Anomaly Spotlight
 // -------------------------------------------------------------------------
 
-/*
- * The dashboard collection represents process-wide operational state and must
- * therefore be shared across HTTP requests and SignalR connections.
- */
+// Existing process-wide issue state, anomaly policy and recovery
+// behaviour remain authoritative and are not replayed by the worker.
 builder.Services.AddSingleton<DashboardIssueCollection>();
 
-/*
- * Policy values are immutable for the lifetime of the Part 1 application.
- */
 builder.Services.AddSingleton<AdaptiveAnomalyPolicy>();
 
-/*
- * Analysis owns thread-safe process-level recovery counters and coordinates
- * singleton repository abstractions, so one shared analyzer instance is used.
- */
 builder.Services.AddSingleton<AdaptiveAnomalyAnalysisService>();
 
 builder.Services.AddSingleton<DashboardIssueService>();
 
 builder.Services.AddSingleton<DashboardRealtimeNotifier>();
 
-/*
- * The coordinator depends on scoped application services used by individual
- * requests while delegating persistent issue state to singleton components.
- */
 builder.Services.AddScoped<DashboardEventCoordinator>();
 
 // -------------------------------------------------------------------------
-// Browser client access
+// CORS and browser-client access
 // -------------------------------------------------------------------------
 
 builder.Services.AddCors(options =>
@@ -215,8 +278,6 @@ builder.Services.AddCors(options =>
         clientCorsPolicyName,
         policy =>
         {
-            // Production remains closed to browser origins unless explicitly
-            // configured.
             if (allowedClientOrigins.Length > 0)
             {
                 policy
@@ -229,8 +290,10 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Expected Application and Domain failures are translated centrally into
-// RFC-style ProblemDetails responses.
+// -------------------------------------------------------------------------
+// Request pipeline
+// -------------------------------------------------------------------------
+
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
@@ -238,11 +301,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-/*
- * Preserve HTTPS redirection for normal Smart-X execution while allowing a
- * trusted deployment boundary, such as the Docker Nginx reverse proxy, to
- * perform transport termination instead.
- */
 if (httpsRedirectionEnabled)
 {
     app.UseHttpsRedirection();
@@ -254,15 +312,15 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-/*
- * Connected React clients subscribe here for lightweight dashboard
- * invalidation events and retrieve authoritative issue state over HTTP.
- */
+// Existing SignalR hubs remain intact. Commands and telemetry continue
+// to notify clients through their established HTTP-backed workflows.
 app.MapHub<DashboardHub>("/hubs/dashboard");
+
+app.MapHub<RealtimeHub>("/hubs/realtime");
 
 app.Run();
 
-// Expose the generated entry point to the integration-test project.
+// Exposes the host entry point to ASP.NET Core integration tests.
 public partial class Program
 {
 }

@@ -1,3 +1,4 @@
+using SmartX.Application.Realtime;
 using SmartX.Application.Sensors;
 using SmartX.Contracts.Telemetry;
 using SmartX.Domain.Sensors;
@@ -20,10 +21,12 @@ public sealed class SensorTelemetryService
 
     private readonly ISensorRepository _sensorRepository;
     private readonly ITelemetryRepository _telemetryRepository;
+    private readonly TelemetryAcceptanceService _acceptanceService;
 
     public SensorTelemetryService(
         ISensorRepository sensorRepository,
-        ITelemetryRepository telemetryRepository)
+        ITelemetryRepository telemetryRepository,
+        TelemetryAcceptanceService acceptanceService)
     {
         _sensorRepository =
             sensorRepository ??
@@ -34,6 +37,9 @@ public sealed class SensorTelemetryService
             telemetryRepository ??
             throw new ArgumentNullException(
                 nameof(telemetryRepository));
+
+        _acceptanceService = acceptanceService ??
+            throw new ArgumentNullException(nameof(acceptanceService));
     }
 
     /// <summary>
@@ -211,8 +217,8 @@ public sealed class SensorTelemetryService
                 GetFloatPayload(request),
                 GetCaptureTimestamp(request));
 
-        await _telemetryRepository.AddAsync(
-            sensor.Id,
+        await _acceptanceService.AcceptAsync(
+            sensor,
             packet,
             cancellationToken);
 
@@ -232,8 +238,8 @@ public sealed class SensorTelemetryService
                 GetIntegerPayload(request),
                 GetCaptureTimestamp(request));
 
-        await _telemetryRepository.AddAsync(
-            sensor.Id,
+        await _acceptanceService.AcceptAsync(
+            sensor,
             packet,
             cancellationToken);
 
@@ -253,8 +259,8 @@ public sealed class SensorTelemetryService
                 GetBooleanPayload(request),
                 GetCaptureTimestamp(request));
 
-        await _telemetryRepository.AddAsync(
-            sensor.Id,
+        await _acceptanceService.AcceptAsync(
+            sensor,
             packet,
             cancellationToken);
 
@@ -282,8 +288,8 @@ public sealed class SensorTelemetryService
             HistoricalTelemetryBuffer<double>
                 .FromJaggedBatches(rawBatches);
 
-        await _telemetryRepository.AddBatchAsync(
-            sensor.Id,
+        await _acceptanceService.AcceptBatchAsync(
+            sensor,
             history,
             cancellationToken);
 
@@ -312,8 +318,8 @@ public sealed class SensorTelemetryService
             HistoricalTelemetryBuffer<int>
                 .FromJaggedBatches(rawBatches);
 
-        await _telemetryRepository.AddBatchAsync(
-            sensor.Id,
+        await _acceptanceService.AcceptBatchAsync(
+            sensor,
             history,
             cancellationToken);
 
@@ -342,8 +348,8 @@ public sealed class SensorTelemetryService
             HistoricalTelemetryBuffer<bool>
                 .FromJaggedBatches(rawBatches);
 
-        await _telemetryRepository.AddBatchAsync(
-            sensor.Id,
+        await _acceptanceService.AcceptBatchAsync(
+            sensor,
             history,
             cancellationToken);
 

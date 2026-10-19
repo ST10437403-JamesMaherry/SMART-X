@@ -1,31 +1,21 @@
-import { useState, type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 
 import { getApiErrorMessage } from '../../api/apiTypes';
 import type { SensorResponse } from '../../api/sensorsApi';
-import { ingestTelemetryBatch, type TelemetryBatchIngestionResponse } from '../../api/telemetryApi';
+import { ingestTelemetryBatch } from '../../api/telemetryApi';
+import { useDraftField, useTelemetryBatchDraft } from '../../state/useWorkspaceDrafts';
 import {
-  createInitialTelemetryBatchRows,
   createSampleTelemetryBatchRows,
   createTelemetryBatchRow,
   hasTelemetryBatchErrors,
   parseTelemetryBatchRows,
   toTelemetryBatchRequest,
-  type TelemetryBatchRow,
 } from './telemetryBatch';
 
 interface TelemetryBatchSimulatorProps {
   readonly sensor: SensorResponse;
   readonly onBatchAccepted: () => void;
 }
-
-type BatchSubmissionState =
-  | { kind: 'idle' }
-  | { kind: 'submitting' }
-  | {
-      kind: 'success';
-      response: TelemetryBatchIngestionResponse;
-    }
-  | { kind: 'error'; message: string };
 
 /**
  * Returns a concise example suited to the selected strongly typed sensor.
@@ -51,13 +41,13 @@ function getBatchPlaceholder(telemetryType: SensorResponse['telemetryDataType'])
  * makes the jagged-array behaviour directly observable from the frontend.
  */
 function TelemetryBatchSimulator({ sensor, onBatchAccepted }: TelemetryBatchSimulatorProps) {
-  const [rows, setRows] = useState<readonly TelemetryBatchRow[]>(createInitialTelemetryBatchRows);
+  const [draft, setDraft] = useTelemetryBatchDraft(sensor);
 
-  const [touchedRows, setTouchedRows] = useState<Readonly<Record<string, boolean>>>({});
+  const [rows, setRows] = useDraftField(draft, setDraft, 'rows');
 
-  const [submissionState, setSubmissionState] = useState<BatchSubmissionState>({
-    kind: 'idle',
-  });
+  const [touchedRows, setTouchedRows] = useDraftField(draft, setDraft, 'touchedRows');
+
+  const [submissionState, setSubmissionState] = useDraftField(draft, setDraft, 'submissionState');
 
   const parseResult = parseTelemetryBatchRows(rows, sensor.telemetryDataType);
 
@@ -171,6 +161,10 @@ function TelemetryBatchSimulator({ sensor, onBatchAccepted }: TelemetryBatchSimu
    */
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+
+    if (submissionState.kind === 'submitting') {
+      return;
+    }
 
     setTouchedRows(Object.fromEntries(rows.map((row) => [row.id, true])));
 

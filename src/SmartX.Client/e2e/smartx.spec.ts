@@ -134,16 +134,18 @@ test.describe('Smart-X Part 1 regression', () => {
   test('completes the core sensor, attachment, telemetry and anomaly journey', async ({
     page,
   }, testInfo) => {
-    await registerFloatSensor(page, testInfo);
+    const sensorName = await registerFloatSensor(page, testInfo);
 
     /*
      * A newly registered sensor has no configuration evidence. The real
      * dashboard backend should therefore surface a configuration issue
      * through the live Spotlight.
      */
-    const configurationIssue = page.locator('article.spotlight-issue').filter({
-      hasText: 'Configuration evidence missing',
-    });
+    // Other browser journeys also create sensors in the shared test API.
+    const configurationIssue = page
+      .locator('article.spotlight-issue')
+      .filter({ hasText: 'Configuration evidence missing' })
+      .filter({ hasText: sensorName });
 
     await expect(configurationIssue).toBeVisible();
 
@@ -236,9 +238,17 @@ test.describe('Smart-X Part 1 regression', () => {
       })
       .click();
 
-    const criticalSpike = page.locator('article.spotlight-issue').filter({
-      hasText: 'Critical telemetry spike',
-    });
+    /*
+     * All Playwright scenarios share one process-local API instance.
+     * Earlier P2-07 tests may leave other sensors' critical spike episodes
+     * visible in the Spotlight, including acknowledged but unresolved ones.
+     * Scope this locator to the exact sensor registered by this test.
+     * Never use .first(): doing so could acknowledge another sensor's issue.
+     */
+    const criticalSpike = page
+      .locator('article.spotlight-issue')
+      .filter({ hasText: 'Critical telemetry spike' })
+      .filter({ hasText: sensorName });
 
     await expect(criticalSpike).toBeVisible({
       timeout: 15_000,
@@ -301,11 +311,11 @@ test.describe('Smart-X Part 1 regression', () => {
     await page.goto('/');
 
     /*
-     * Part 1 must expose all three architectural pillars while leaving the two
-     * future modules visibly and accessibly disabled.
+     * Both implemented pillars are links; topology stays visibly and
+     * accessibly unavailable until the final PoE.
      */
-    const commandStreamControl = page.locator('button:disabled, [aria-disabled="true"]').filter({
-      hasText: 'Real-Time Command Stream and History',
+    const commandStreamControl = page.getByRole('link', {
+      name: /Real-Time Command Stream and History/,
     });
 
     const meshRoutingControl = page.locator('button:disabled, [aria-disabled="true"]').filter({
@@ -313,6 +323,8 @@ test.describe('Smart-X Part 1 regression', () => {
     });
 
     await expect(commandStreamControl).toHaveCount(1);
+
+    await expect(commandStreamControl).toHaveAttribute('href', '/realtime');
 
     await expect(meshRoutingControl).toHaveCount(1);
 

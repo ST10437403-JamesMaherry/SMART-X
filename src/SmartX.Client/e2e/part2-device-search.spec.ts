@@ -1,0 +1,350 @@
+import { randomBytes, randomUUID } from 'node:crypto';
+
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+
+import type { DeviceSearchResponse } from '../src/api/deviceSearchApi';
+import type { OperatorInteractionHistoryResponse } from '../src/api/operatorInteractionsApi';
+import type { SensorResponse } from '../src/api/sensorsApi';
+
+const apiBaseUrl = 'http://127.0.0.1:5095';
+
+/** Unique physical identifiers prevent cross-test collisions in the shared API. */
+function uniqueMacAddress(): string {
+  return `02:${randomBytes(5).toString('hex').match(/../g)!.join(':')}`.toUpperCase();
+}
+
+async function registerDevice(
+  request: APIRequestContext,
+  name: string,
+  category: 'Environmental' | 'Actuator' = 'Environmental',
+  identifierKind: 'MacAddress' | 'UniqueIdentifier' = 'UniqueIdentifier',
+): Promise<SensorResponse> {
+  const response = await request.post(`${apiBaseUrl}/api/sensors`, {
+    data: {
+      name,
+      deviceIdentifier:
+        identifierKind === 'MacAddress' ? uniqueMacAddress() : `p208-${randomUUID()}`,
+      identifierKind,
+      deploymentLocation: {
+        facility: 'P2-08 E2E Lab',
+        zone: 'Search Tests',
+        nodeId: `Node-${randomUUID()}`,
+      },
+      category,
+      telemetryDataType: category === 'Actuator' ? 'Boolean' : 'Float',
+    },
+  });
+  expect(response.status()).toBe(201);
+  return (await response.json()) as SensorResponse;
+}
+
+async function changeStatus(
+  request: APIRequestContext,
+  deviceId: string,
+  status: 'Online' | 'Offline',
+): Promise<void> {
+  const response = await request.patch(`${apiBaseUrl}/api/sensors/${deviceId}/status`, {
+    data: { status },
+  });
+  expect(response.status()).toBe(200);
+}
+
+/** This read-only endpoint must itself never increment TotalRecorded. */
+async function readInteractions(
+  request: APIRequestContext,
+): Promise<OperatorInteractionHistoryResponse> {
+  const response = await request.get(`${apiBaseUrl}/api/realtime/interactions?limit=200`);
+  expect(response.ok()).toBeTruthy();
+  return (await response.json()) as OperatorInteractionHistoryResponse;
+}
+
+async function openSearch(page: Page): Promise<void> {
+  await page.goto('/realtime');
+  await expect(page.getByText('HTTP snapshot ready')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find devices' })).toBeVisible();
+  await expect(page.getByTestId('device-search-count')).toContainText('matching devices');
+}
+
+/** Uses the real input. Typing is not the same as submitting the query. */
+async function enterText(page: Page, text: string): Promise<void> {
+  await page.getByRole('searchbox', { name: 'Name / deployment text' }).fill(text);
+}
+
+test.describe('P2-08 canonical discovery and deliberate operator history', () => {
+  test('mount, typing, automatic HTTP refresh and passive result GETs record no actions', async ({
+    page,
+    request,
+  }) => {
+    const before = await readInteractions(request);
+    await openSearch(page);
+    await enterText(page, `unsubmitted-${randomUUID()}`);
+    await page.getByRole('button', { name: 'Refresh snapshot' }).click();
+    await expect(page.getByText('HTTP snapshot ready')).toBeVisible();
+
+    const after = await readInteractions(request);
+    expect(after.totalRecorded).toBe(before.totalRecorded);
+  });
+
+  test('canonical MAC plus category/status uses one server search and explicit device view', async ({
+    page,
+    request,
+  }) => {
+    const name = `P208 MAC ${randomUUID()}`;
+    const sensor = await registerDevice(request, name, 'Environmental', 'MacAddress');
+    await changeStatus(request, sensor.id, 'Online');
+    await openSearch(page);
+
+    // Deliberately submit an equivalent physical MAC spelling, not an ID scan.
+    await page
+      .getByRole('textbox', { name: 'Exact physical identifier' })
+      .fill(sensor.deviceIdentifier.toLowerCase().replaceAll(':', '-'));
+    await page.getByRole('combobox', { name: 'Category' }).selectOption('Environmental');
+    await page.getByRole('combobox', { name: 'Operational status' }).selectOption('Online');
+    await page.getByRole('button', { name: 'Search devices' }).click();
+
+    await expect(page.getByTestId('device-search-count')).toHaveText('1 matching devices');
+    await expect(page.getByTestId('device-search-result')).toContainText(name);
+    await expect(page.getByTestId('search-recorded-receipt')).toContainText('SearchSubmitted');
+
+    let history = await readInteractions(request);
+    expect(history.events[0]).toMatchObject({
+      kind: 'SearchSubmitted',
+      canonicalIdentifier: sensor.deviceIdentifier,
+      category: 'Environmental',
+      status: 'Online',
+      resultCount: 1,
+    });
+
+    await page.getByRole('button', { name: 'Inspect device' }).click();
+    await expect(page.getByRole('combobox', { name: 'Selected device' })).toHaveValue(sensor.id);
+    await expect
+      .poll(async () => (await readInteractions(request)).events[0]?.kind)
+      .toBe('DeviceViewed');
+
+    history = await readInteractions(request);
+    expect(history.events[0].deviceId).toBe(sensor.id);
+    expect(history.events[0].occurredAtUtc).toBeTruthy();
+    const countAfterView = history.totalRecorded;
+
+    // SignalR and HTTP refreshes are not claims of a second operator view.
+    await page.getByRole('button', { name: 'Refresh snapshot' }).click();
+    await expect(page.getByTestId('device-search-count')).toHaveText('1 matching devices');
+    expect((await readInteractions(request)).totalRecorded).toBe(countAfterView);
+  });
+
+  test('explicit combined filter changes are logged; a zero-result page is valid', async ({
+    page,
+    request,
+  }) => {
+    const name = `P208 Empty ${randomUUID()}`;
+    await registerDevice(request, name, 'Actuator');
+    await openSearch(page);
+    const initialCount = (await readInteractions(request)).totalRecorded;
+
+    await enterText(page, name);
+    await page.getByRole('combobox', { name: 'Category' }).selectOption('Actuator');
+    await page.getByRole('combobox', { name: 'Operational status' }).selectOption('Online');
+    await page.getByRole('button', { name: 'Apply filters' }).click();
+
+    await expect(page.getByTestId('device-search-count')).toHaveText('0 matching devices');
+    await expect(page.getByTestId('device-search-empty')).toBeVisible();
+
+    // The filter GET renders the empty state before its explicit interaction
+    // POST is necessarily complete. Wait for the server's 201-backed receipt,
+    // then verify the authoritative ledger rather than racing the response.
+    await expect(page.getByTestId('search-recorded-receipt')).toContainText('FiltersChanged');
+    await expect
+      .poll(async () => (await readInteractions(request)).totalRecorded)
+      .toBe(initialCount + 1);
+    const accepted = await readInteractions(request);
+    expect(accepted.events[0]).toMatchObject({ kind: 'FiltersChanged', resultCount: 0 });
+    await expect(page.getByRole('button', { name: 'Apply filters' })).toBeDisabled();
+
+    // Another filter change is a second deliberate act; a passive GET is not.
+    await page.getByRole('combobox', { name: 'Operational status' }).selectOption('Offline');
+    await page.getByRole('button', { name: 'Apply filters' }).click();
+    await expect(page.getByTestId('device-search-count')).toHaveText('1 matching devices');
+    await expect
+      .poll(async () => (await readInteractions(request)).totalRecorded)
+      .toBe(initialCount + 2);
+    const second = await readInteractions(request);
+    expect(second.events[0]).toMatchObject({ kind: 'FiltersChanged', resultCount: 1 });
+  });
+
+  test('submitted criteria, draft fields and selected device survive route navigation', async ({
+    page,
+    request,
+  }) => {
+    const name = `P208 Retain ${randomUUID()}`;
+    const device = await registerDevice(request, name);
+    await openSearch(page);
+    await enterText(page, name);
+    await page.getByRole('combobox', { name: 'Category' }).selectOption('Environmental');
+    await page.getByRole('button', { name: 'Search devices' }).click();
+    await expect(page.getByTestId('device-search-count')).toHaveText('1 matching devices');
+    await page.getByRole('button', { name: 'Inspect device' }).click();
+    await expect(page.getByRole('combobox', { name: 'Selected device' })).toHaveValue(device.id);
+    const count = (await readInteractions(request)).totalRecorded;
+
+    await page.getByRole('link', { name: /Sensor Data Ingestion and Telemetry/ }).click();
+    await page.getByRole('link', { name: /Real-Time Command Stream and History/ }).click();
+
+    await expect(page.getByRole('searchbox', { name: 'Name / deployment text' })).toHaveValue(name);
+    await expect(page.getByRole('combobox', { name: 'Category' })).toHaveValue('Environmental');
+    await expect(page.getByTestId('device-search-count')).toHaveText('1 matching devices');
+    await expect(page.getByRole('combobox', { name: 'Selected device' })).toHaveValue(device.id);
+    expect((await readInteractions(request)).totalRecorded).toBe(count);
+  });
+
+  test('malformed exact MAC returns ProblemDetails without changing results or recording evidence', async ({
+    page,
+    request,
+  }) => {
+    await openSearch(page);
+    const before = await readInteractions(request);
+    await page.getByRole('textbox', { name: 'Exact physical identifier' }).fill('invalid-mac');
+    await page.getByRole('button', { name: 'Search devices' }).click();
+
+    await expect(page.getByRole('alert')).toContainText('Search rejected or unavailable');
+    await expect(page.getByTestId('device-search-count')).toBeVisible();
+    expect((await readInteractions(request)).totalRecorded).toBe(before.totalRecorded);
+  });
+
+  test('an explicit source alert view can be associated with a searched actuator', async ({
+    page,
+    request,
+  }) => {
+    const source = await registerDevice(request, `P208 Alert Source ${randomUUID()}`);
+    await changeStatus(request, source.id, 'Online');
+    await changeStatus(request, source.id, 'Offline');
+    const target = await registerDevice(request, `P208 Alert Target ${randomUUID()}`, 'Actuator');
+
+    await openSearch(page);
+    await enterText(page, source.name);
+    await page.getByRole('button', { name: 'Search devices' }).click();
+    await expect(page.getByTestId('device-search-count')).toHaveText('1 matching devices');
+    await expect(page.getByRole('button', { name: 'View active alert' })).toBeVisible();
+    await page.getByRole('button', { name: 'View active alert' }).click();
+    await expect(page.getByText('Source alert selected')).toBeVisible();
+
+    const alertView = (await readInteractions(request)).events[0];
+    expect(alertView.kind).toBe('AlertViewed');
+    expect(alertView.deviceId).toBe(source.id);
+    expect(alertView.alertEpisodeId).toBeTruthy();
+
+    await enterText(page, target.name);
+    await page.getByRole('combobox', { name: 'Category' }).selectOption('Actuator');
+    await page.getByRole('button', { name: 'Search devices' }).click();
+    await expect(page.getByTestId('device-search-count')).toHaveText('1 matching devices');
+    await page.getByRole('button', { name: 'Associate with source alert' }).click();
+    await expect(page.getByTestId('search-recorded-receipt')).toContainText('source alert episode');
+    await expect(page.getByRole('combobox', { name: 'Selected device' })).toHaveValue(target.id);
+
+    const association = (await readInteractions(request)).events[0];
+    expect(association.kind).toBe('SearchSubmitted');
+    expect(association.deviceId).toBe(target.id);
+    expect(association.alertEpisodeId).toBe(alertView.alertEpisodeId);
+    // No relay command was attempted or falsely claimed by the client.
+    expect(association.commandId).toBeNull();
+  });
+
+  test('real active-condition filters update after server recovery without another POST', async ({
+    page,
+    request,
+  }) => {
+    const device = await registerDevice(request, `P208 Condition ${randomUUID()}`);
+    await changeStatus(request, device.id, 'Online');
+    await changeStatus(request, device.id, 'Offline');
+    await openSearch(page);
+
+    await enterText(page, device.name);
+    await page.getByRole('combobox', { name: 'Operational status' }).selectOption('Offline');
+    await page.getByRole('combobox', { name: 'Active conditions' }).selectOption('true');
+    await page.getByRole('combobox', { name: 'Condition type' }).selectOption('SensorDisconnected');
+    await page.getByRole('button', { name: 'Search devices' }).click();
+    await expect(page.getByTestId('device-search-count')).toHaveText('1 matching devices');
+    const count = (await readInteractions(request)).totalRecorded;
+
+    // Subscribe before recovery: otherwise an already completed status PATCH
+    // could race the hub handshake and make this test flaky.
+    await expect(page.getByText('SignalR connected')).toBeVisible();
+    await changeStatus(request, device.id, 'Online');
+    await expect(page.getByTestId('device-search-count')).toHaveText('0 matching devices', {
+      timeout: 15_000,
+    });
+    expect((await readInteractions(request)).totalRecorded).toBe(count);
+  });
+
+  test('paging large result sets reads new pages without creating further interactions', async ({
+    page,
+    request,
+  }) => {
+    const prefix = `P208 Page ${randomUUID()}`;
+    // A bounded 27-device scenario spans two real default-size (25) pages.
+    for (let index = 0; index < 27; index += 1) {
+      await registerDevice(request, `${prefix} ${index}`);
+    }
+    await openSearch(page);
+    await enterText(page, prefix);
+    await page.getByRole('button', { name: 'Search devices' }).click();
+    await expect(page.getByTestId('device-search-count')).toHaveText('27 matching devices');
+    await expect(page.getByTestId('device-search-result')).toHaveCount(25);
+    await expect(page.getByTestId('search-recorded-receipt')).toContainText('SearchSubmitted');
+    const count = (await readInteractions(request)).totalRecorded;
+
+    // Independently ask the real API for both pages before navigating. This
+    // validates paging contract and exact server membership without relying
+    // on a one-shot browser response listener that may miss aborted refreshes.
+    // These are passive GETs: they must not create operator training evidence.
+    async function readServerPage(offset: number): Promise<DeviceSearchResponse> {
+      const params = new URLSearchParams({
+        text: prefix,
+        limit: '25',
+        offset: String(offset),
+      });
+      const response = await request.get(
+        `${apiBaseUrl}/api/realtime/devices/search?${params.toString()}`,
+      );
+      expect(response.status()).toBe(200);
+      return (await response.json()) as DeviceSearchResponse;
+    }
+
+    const firstPage = await readServerPage(0);
+    const secondPage = await readServerPage(25);
+    expect(firstPage).toMatchObject({ totalMatches: 27, limit: 25, offset: 0, hasMore: true });
+    expect(secondPage).toMatchObject({ totalMatches: 27, limit: 25, offset: 25, hasMore: false });
+    expect(firstPage.devices).toHaveLength(25);
+    expect(secondPage.devices).toHaveLength(2);
+
+    // Assert the user-visible rows are EXACTLY the ordered server page, not a
+    // local slice, stale set of 25 records, or another query's results.
+    const displayedDeviceNames = page
+      .getByTestId('device-search-result')
+      .locator('.realtime-search-device-info strong');
+    await expect(displayedDeviceNames).toHaveText(
+      firstPage.devices.map((item) => item.device.name),
+    );
+
+    await page.getByRole('button', { name: 'Next page' }).click();
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Device search pagination' })
+        .getByText('Page 2', { exact: true }),
+    ).toBeVisible();
+    await expect(displayedDeviceNames).toHaveText(
+      secondPage.devices.map((item) => item.device.name),
+    );
+    await expect(page.getByText('Showing 26-27')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Previous page' }).click();
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Device search pagination' })
+        .getByText('Page 1', { exact: true }),
+    ).toBeVisible();
+    await expect(displayedDeviceNames).toHaveText(
+      firstPage.devices.map((item) => item.device.name),
+    );
+    expect((await readInteractions(request)).totalRecorded).toBe(count);
+  });
+});

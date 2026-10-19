@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 
-using SmartX.Api.Dashboard;
 using SmartX.Application.Telemetry;
 using SmartX.Contracts.Telemetry;
 
@@ -22,21 +21,15 @@ public sealed class TelemetryController
     : ControllerBase
 {
     private readonly SensorTelemetryService _telemetryService;
-    private readonly DashboardEventCoordinator _dashboardEvents;
 
     public TelemetryController(
-        SensorTelemetryService telemetryService,
-        DashboardEventCoordinator dashboardEvents)
+        SensorTelemetryService telemetryService)
     {
         _telemetryService =
             telemetryService ??
             throw new ArgumentNullException(
                 nameof(telemetryService));
 
-        _dashboardEvents =
-            dashboardEvents ??
-            throw new ArgumentNullException(
-                nameof(dashboardEvents));
     }
 
     /// <summary>
@@ -64,15 +57,8 @@ public sealed class TelemetryController
                 request,
                 cancellationToken);
 
-        /*
-         * Analysis runs only after the strongly typed packet has been
-         * validated and persisted successfully.
-         */
-        await _dashboardEvents
-            .AnalyzeTelemetryAsync(
-                sensorProfileId,
-                cancellationToken);
-
+        // The acceptance service has already queued the exact packet and
+        // completed the synchronous Part 1 operational effects.
         return StatusCode(
             StatusCodes.Status201Created,
             result);
@@ -104,19 +90,7 @@ public sealed class TelemetryController
                 request,
                 cancellationToken);
 
-        /*
-         * An entirely empty historical batch contains no connectivity or
-         * anomaly evidence. At least one accepted packet is required before
-         * operational-state and anomaly analysis is triggered.
-         */
-        if (result.AcceptedPacketCount > 0)
-        {
-            await _dashboardEvents
-                .AnalyzeTelemetryAsync(
-                    sensorProfileId,
-                    cancellationToken);
-        }
-
+        // Empty batches retain their response shape and create no work.
         return StatusCode(
             StatusCodes.Status201Created,
             result);

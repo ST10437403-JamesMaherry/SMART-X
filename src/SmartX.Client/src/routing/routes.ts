@@ -7,4 +7,5 @@
 export const routes = {
   home: '/',
   ingestion: '/ingestion',
+  realtime: '/realtime',
 } as const;

@@ -127,7 +127,11 @@ public static class SensorContractMapper
             request.NodeId);
     }
 
-    private static DeviceIdentifier MapDeviceIdentifier(
+    /// <summary>
+    /// Reuses the same physical-identifier parsing for registration and exact
+    /// lookup. MAC normalisation and custom-ID case rules belong to Domain.
+    /// </summary>
+    public static DeviceIdentifier MapDeviceIdentifier(
         string? value,
         string? identifierKind)
     {

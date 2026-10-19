@@ -365,6 +365,19 @@ public sealed class SensorRegistrationServiceTests
             return Task.FromResult<SensorProfile?>(null);
         }
 
+        public Task<SensorProfile?> GetByDeviceIdentifierAsync(
+            DeviceIdentifier deviceIdentifier,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(deviceIdentifier);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // This recording stub captures registration calls without
+            // maintaining a persisted sensor collection.
+            return Task.FromResult<SensorProfile?>(null);
+        }
+
         public Task<bool> UpdateAsync(
             SensorProfile sensor,
             CancellationToken cancellationToken = default)
