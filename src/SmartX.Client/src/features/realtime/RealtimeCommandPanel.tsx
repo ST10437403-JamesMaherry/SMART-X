@@ -144,7 +144,13 @@ export default function RealtimeCommandPanel({
   }
 
   const authoritativeState = history?.actuator ?? device.commandedActuator;
-  const enabled = supported && device.status === 'Online' && busy === null && !loading;
+
+  // A passive audit refresh must not briefly disable an otherwise valid
+  // operator click. Wait for the *first* audit before enabling controls, but
+  // retain interactivity once a server-confirmed audit exists. The mutation
+  // lock, Online check and backend's Stack ID validation remain authoritative.
+  const awaitingInitialAudit = loading && history === null;
+  const enabled = supported && device.status === 'Online' && busy === null && !awaitingInitialAudit;
   const canUndo = enabled && !!authoritativeState?.latestUndoableCommandId;
 
   return (
