@@ -1,0 +1,742 @@
+{
+  "acceptedBatchCount": 400,
+  "baseUrl": "http://localhost:8080",
+  "check": "P2-11 actual HTTP finite load verification",
+  "completedAtUtc": "2026-10-17T12:40:22.275Z",
+  "deviceDetails": [
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "6a78dece-74e4-4058-ad5e-394568cee17c",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "eb9ecfee-a0fb-42c4-ba19-ecc01e938454",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "4a177ad4-9ce6-4ecd-9398-74dfb3eda75a",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "4253a1f5-34a5-44a0-8b1c-e011fcdc547f",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "60ac7655-b62c-4e65-ac9c-912114ae9d23",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "cdba7fab-751d-4be1-a169-a830b53da5d0",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "59c9428b-c360-440a-aa14-e2886a88c790",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "ea9a794f-5ae3-4152-8a8f-2c41e96a4765",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "4d6d4381-f78a-4c36-a991-7d67a550d550",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "453324c4-2eb8-4866-a0ab-d358e3642ba4",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "3011b548-dc07-452a-9e74-afbb24ab9356",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "4f2a18bf-5719-4f22-b93c-5ae621ad9258",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "5b70d860-b373-4636-b09a-1ee7e6b3759d",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "55c541a1-ea42-4ed8-af79-19d56c6ba299",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "4c272fb1-ae98-4f5c-9fd1-fa9ec1d9badd",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "90ffa728-fda8-44b4-8686-af7c1be2b5da",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "b9dafb86-65c6-47ac-86dc-4c5590dec0b8",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "5521569f-8860-4e52-a820-81e8ee4f02eb",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "d5556b4d-9270-4429-9c35-f7f16e1e8a98",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "1064996b-bd2e-444a-8107-005f73408b12",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "0e941d45-604a-4be1-b489-abad12891547",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "06e19408-3fa7-40cf-a2da-4ca3767450f7",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "2429a618-4e9e-408f-b87b-ebd4352da45b",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "2a4fbfd2-22b2-4096-a7e2-3378d0930aff",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "6338a9e7-5402-4c0e-aa72-5868c82bd635",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "fb3879c6-12b1-4762-ad79-2ad5da0c80c5",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "ec9b58d5-8183-4841-9ac7-ead8b4dc2b6e",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "07de8638-a4b6-49fd-be92-5d0a6aba9630",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "724d5c1d-dff1-4bda-9cd1-ab8d495d8115",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "9face8d0-efe7-4b8f-8e65-594d2b27b380",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "16226051-dcc8-407e-b4ce-4ad7efa5d8a4",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "e518cc2f-97bc-43cb-a499-f2bf220611cb",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "3ef0f8e2-739e-4789-ac31-b74b60232eed",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "25eae0c8-dfcd-46a5-97e2-ae9f095d41e7",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "3dcc222c-c0c8-4c22-ab1b-596130e8137b",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "36651e59-def3-4eb7-8e9f-e5b0e4ab0270",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "5ae66f08-3488-41aa-ae25-d7f25c935962",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "1fe64c5e-59cf-4e03-b191-a843b1af250c",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "293b089e-1b21-47fb-ab1c-71aac7b5f8f1",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "e792d93e-291b-4d31-ae7a-159ab04bf727",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "1dc3c5a5-77a0-470d-90b2-39ffeacaa4de",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "3fc041a0-82c3-41e9-92ff-9985acc99cf2",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "a8cfd5dc-06b4-4ca3-bb04-b1a055e94781",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "9183eb41-528e-4831-9ddb-e74d95b000a4",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "e9690c2d-f2ca-473b-9da8-e96e473210b3",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "ccade140-e6e2-4901-8635-fc8e361de800",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "ce3a64f3-02b3-4967-ab94-60538974e548",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "00e98167-0cb6-40bb-8d65-ed4ad5eb8242",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "8bb32a24-6f6a-4618-8a16-3d3d1b9597bd",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "e51ff73d-f405-479f-92ec-cc5d3e58ff9b",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "0e863d45-75d0-4fc5-8598-079b89455a87",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "68cb460d-eaeb-459a-840a-f065c27a4502",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "8314ad62-9b9f-43b3-8c96-c9ca0ceeebef",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "9685c513-088d-47c5-86ef-6be9ae09f9ef",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "fc91da79-163f-4004-aebb-ec4369a76451",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "dad8e8ed-f847-4d42-920a-82da37e4f428",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "29e71101-37cf-493c-a390-08b0f9e94019",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "919b7c6e-a7bc-4901-ac62-51d5e1253538",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "a2eb35be-50ac-4674-b3b0-9a1d7017749c",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "24832d2a-0bbb-4f26-b293-65710594576b",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "f1b0676b-7799-4d04-adfb-805c032d55cd",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "f543e348-90db-455d-aaae-4ca6e63f9f7f",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "d16644be-1ed6-4714-a7d6-6b71c49dbc40",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "263b1dc6-362f-46e1-9296-75bd2209294f",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "20468680-50e7-4a48-8c51-d2c7bf9dcf04",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "326f390d-93fc-4e49-9935-6228a32dbbb2",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "1017f82f-7063-4628-b521-e7a33703a79e",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "5955c445-375f-4584-9a35-78b8f1011466",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "8de5f660-eade-4681-9b24-010775640325",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "e1c81c73-9cdd-4815-830a-a248b56f39cb",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "e7bfbd9d-2b5d-4808-bbb7-cf4f2d4e1ff8",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "1a4c0d94-669a-468e-8d45-e9bbf896e3d7",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "4ca41a57-b54a-408a-8a1a-4f1158e40428",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "6ac0a9db-a0d6-4d53-be72-06143f6fd5e2",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "acfa6bde-7dc5-4ba1-a05d-9b1f939aba74",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "896f9072-27d8-4a93-967b-8ec841fd2e31",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "995aca00-2ebe-46fa-b835-010d43f1a205",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "350f1a28-c711-44a9-b580-ab447e4e1ef2",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "6af1c07c-13b6-4721-8bba-0d51b9212a5f",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "5b968e06-8557-45bb-9ece-4dd8520ce921",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "0f5986f1-15cc-4ea9-a1ac-86c488384795",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "6e453dd1-47b4-40b5-b6c8-06fd44e59de6",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "9943f33a-cc4d-4b0a-8d1a-5f7841160a68",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "ee04feb7-b522-4efc-850a-76f4b8171499",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "4763f8b0-a32d-47e1-94cd-2c100c1a0532",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "66f9d857-e325-4c66-b159-0ae7b708b0c9",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "659534b2-f9a4-4f24-8994-4e51699743e2",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "32d831e3-677a-4551-b320-9705d0dd0a0a",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "6a6f4f6f-c3ed-41c6-8b0f-164d104f7e02",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "c253e6fb-388d-4256-9f99-708d86a044e4",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "d0bcb0fd-b701-4a19-ac6f-f7609050a21c",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "bc47e8f9-e4b1-46f6-91a3-8beffc4a3d51",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "dadcb32f-2360-4313-991e-7f16c85f6588",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "74592c20-f598-4153-a761-4f28fd511342",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "4c04a29a-5eaf-4fa6-87ce-82bebdeb9649",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "b2caf2c1-6533-4c82-95c7-e93fdbe9df7b",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "e0b342c1-3cf5-42ae-b99a-7f1b2433a63e",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "f10a4ed4-1560-427b-9dba-2b87bd212834",
+      "submittedReadings": 100,
+      "telemetryType": "Integer"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "c337555d-d77d-4889-aa1f-ebeac3d38fa1",
+      "submittedReadings": 100,
+      "telemetryType": "Boolean"
+    },
+    {
+      "processedHistoryEvents": 100,
+      "retainedEqualTimestampEvents": true,
+      "sensorId": "33693395-343f-4a9a-9d4b-cf07446522dd",
+      "submittedReadings": 100,
+      "telemetryType": "Float"
+    }
+  ],
+  "environment": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "pythonVersion": "3.14.6"
+  },
+  "httpAcceptedReadings": 10000,
+  "notes": [
+    "Every device and telemetry batch used the real Smart-X HTTP API.",
+    "Process-wide deltas are valid only for the isolated, initially idle run.",
+    "Historical processing and Part 1 telemetry were checked per device.",
+    "A same-timestamp pair was retained in each device's history.",
+    "This is an observed finite-load demonstration, not a latency benchmark.",
+    "Devices, worker counters and history are intentionally process-local."
+  ],
+  "observedElapsedMilliseconds": 1084,
+  "perTypeReadings": {
+    "Boolean": 3300,
+    "Float": 3400,
+    "Integer": 3300
+  },
+  "processedHistoryReadings": 10000,
+  "readingsPerDevice": 100,
+  "registeredDevices": 100,
+  "result": "PASS",
+  "runId": "0fdd910ee3e5",
+  "startedAtUtc": "2026-10-17T12:40:21.191Z",
+  "submittedDevices": 100,
+  "submittedReadings": 10000,
+  "verifiedActiveMembershipCount": 100,
+  "verifiedDistinctActiveMembershipCount": 100,
+  "workerAcceptedDelta": 10000,
+  "workerFailure": null,
+  "workerOutstandingAtEnd": 0,
+  "workerPendingAtEnd": 0,
+  "workerProcessedDelta": 10000
+}
