@@ -8,7 +8,7 @@ All sensors and actuator operations are **simulated through the real HTTP API**;
 
 **Project:** James Maherry · ST10437403 · PROG7312
 
-**Part 2 demonstration video:** _Link to be added after recording._
+**Part 2 demonstration video:** (https://youtu.be/wcMg61C-804)
 
 [Part 2 evidence gallery](docs/evidence/part2/README.md) · [Rubric-to-code guide](docs/part2/ASSESSMENT_RUBRIC_MATRIX.md) · [Part 1 evidence](docs/evidence/part1/README.md)
 
