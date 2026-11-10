@@ -84,7 +84,13 @@ format is introduced.
 
 ## Verification
 
-Commit 2 adds AVL cursor and repository paging tests. Commit 3 will provide
-full HTTP integration coverage, including all three native telemetry types,
-large jagged batches, duplicate timestamps across page boundaries, invalid
-requests, and compatibility with the prior recent-history endpoint.
+Commit 2 adds AVL cursor and repository paging tests. Commit 3 adds
+`TelemetryRangeEndpointTests` to exercise the actual HTTP registration,
+ingestion and indexed history pipeline: all three native telemetry types,
+3,072 accepted packets, jagged batches, a narrow historical window,
+duplicate timestamps across pages, invalid requests, concurrent writes,
+sensor isolation and Part 1 ingestion-order compatibility.
+
+See [`P3-03_HTTP_VERIFICATION.md`](P3-03_HTTP_VERIFICATION.md) for exact
+scenarios, run commands, evidence guidelines and the process-local storage
+limitations. Test pass status must be confirmed from actual CI/local output.
