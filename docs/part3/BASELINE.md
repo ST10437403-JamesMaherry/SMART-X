@@ -61,6 +61,74 @@ If a gate fails or cannot be run, it remains visible as **FAIL** or **SKIPPED**.
 
 ## 5. Current local baseline results
 
-**PENDING - NOT YET VERIFIED.** Run the command above to capture fresh results on the current checkout. Do not commit this template with a claim that tests have passed.
+> **Local verification recorded:** 2026-11-10 07:39:47 (UTC). Results refer only to this checkout; they are not GitHub Actions results.
+
+| Git property | Observed value |
+| --- | --- |
+| Active branch | `feature/part3-navigation` |
+| Checked-out HEAD before P3-01 code changes | `095d13254ea90381d310816f800b6f734e851070` |
+| Part 2 release ancestry | Verified: Part 2 release is an ancestor of this checkout |
+| Local dev | `0e847b8` |
+| Local main | `adb4228` |
+
+### Tool versions
+
+| Tool | Observed version |
+| --- | --- |
+| Git | `git version 2.54.0 (Apple Git-157)` |
+| .NET | `10.0.301` |
+| Node.js | `v24.18.0` |
+| npm | `11.16.0` |
+| Docker CLI | `Docker version 29.8.2, build 7fc2dff` |
+| Docker Compose | `Docker Compose version v5.6.0` |
+
+### Quality-gate results
+
+| Local check | Result |
+| --- | --- |
+| NuGet restore and dependency audit | **PASS** |
+| .NET formatting | **PASS** |
+| Backend Release build | **PASS** |
+| Backend xUnit regression | **PASS** |
+| Reproducible npm install | **PASS** |
+| npm high-severity audit | **PASS** |
+| npm production dependency audit | **PASS** |
+| Frontend ESLint | **PASS** |
+| Frontend Prettier | **PASS** |
+| Frontend production build | **PASS** |
+| Playwright Chromium installation | **PASS** |
+| Playwright real-API E2E suite | **PASS** |
+| Docker Compose configuration | **PASS** |
+| Production Docker image builds | **PASS** |
+
+### Test-run summaries
+
+**xUnit output summaries (as printed by the test runner):**
+
+```text
+Total tests: 130
+     Passed: 130
+Total tests: 203
+     Passed: 203
+Total tests: 158
+     Passed: 158
+Total tests: 237
+     Passed: 237
+
+```
+
+**Playwright output summary:**
+
+```text
+Running 56 tests using 1 worker
+  56 passed (48.8s)
+
+```
+
+### Interpretation and follow-up
+
+**All checks executed by this script passed.** Final CI execution and production runtime verification are still required at the appropriate later issues.
+
+No application source files were intentionally changed by this baseline script. Install/build tools may create ignored local artifacts such as `node_modules`, `bin`, `obj`, or `dist`. Docker image builds do not start containers or change the attachment volume.
 
 <!-- P3_BASELINE_RESULTS_END -->

@@ -139,6 +139,10 @@ if command -v npm >/dev/null 2>&1; then
     # An audit failure does not prevent the remaining static checks from being
     # recorded; all are independent evidence of their own gate outcome.
     run_check "npm high-severity audit" "npm-audit.log" npm audit --audit-level=high
+    # Production-only auditing makes the boundary explicit: build tooling may
+    # have different exposure from packages shipped to the browser.
+    run_check "npm production dependency audit" "npm-prod-audit.log" \
+      npm audit --omit=dev --audit-level=high
     run_check "Frontend ESLint" "npm-lint.log" npm run lint
     run_check "Frontend Prettier" "npm-format.log" npm run format:check
     run_check "Frontend production build" "npm-build.log" npm run build
@@ -161,6 +165,7 @@ if command -v npm >/dev/null 2>&1; then
     fi
   else
     skip_check "npm high-severity audit" "npm ci failed"
+    skip_check "npm production dependency audit" "npm ci failed"
     skip_check "Frontend ESLint" "npm ci failed"
     skip_check "Frontend Prettier" "npm ci failed"
     skip_check "Frontend production build" "npm ci failed"
@@ -170,6 +175,7 @@ if command -v npm >/dev/null 2>&1; then
 else
   skip_check "Reproducible npm install" "npm not installed"
   skip_check "npm high-severity audit" "npm not installed"
+  skip_check "npm production dependency audit" "npm not installed"
   skip_check "Frontend ESLint" "npm not installed"
   skip_check "Frontend Prettier" "npm not installed"
   skip_check "Frontend production build" "npm not installed"
@@ -178,32 +184,38 @@ else
 fi
 
 # ------------------------ Docker Compose gates ------------------------------
+# Compose configuration requires the CLI/plugin, not a running Docker daemon.
+# Validate it independently so an inactive Docker Desktop cannot disguise a
+# malformed Compose file. Only actual image building requires a live daemon.
 cd "$REPO_ROOT" || exit 2
-if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-  if command -v openssl >/dev/null 2>&1; then
-    # Disposable 32-byte key is scoped to these two commands and is never
-    # echoed, written to markdown, or committed. --quiet prevents Compose from
-    # displaying the expanded configuration (which contains the key).
-    disposable_key="$(openssl rand -base64 32)"
-    run_check "Docker Compose configuration" "docker-config.log" \
-      env "SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64=$disposable_key" \
-      docker compose config --quiet
-    compose_result="$LAST_RESULT"
-    if [[ "$compose_result" == "PASS" ]]; then
-      run_check "Production Docker image builds" "docker-build.log" \
-        env "SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64=$disposable_key" \
-        docker compose build
-    else
-      skip_check "Production Docker image builds" "Compose configuration invalid"
-    fi
-    unset disposable_key
-  else
-    skip_check "Docker Compose configuration" "openssl unavailable for disposable key"
-    skip_check "Production Docker image builds" "openssl unavailable for disposable key"
-  fi
+if ! command -v docker >/dev/null 2>&1; then
+  skip_check "Docker Compose configuration" "Docker CLI unavailable"
+  skip_check "Production Docker image builds" "Docker CLI unavailable"
+elif ! docker compose version >/dev/null 2>&1; then
+  skip_check "Docker Compose configuration" "Docker Compose plugin unavailable"
+  skip_check "Production Docker image builds" "Docker Compose plugin unavailable"
+elif ! command -v openssl >/dev/null 2>&1; then
+  skip_check "Docker Compose configuration" "openssl unavailable for disposable key"
+  skip_check "Production Docker image builds" "openssl unavailable for disposable key"
 else
-  skip_check "Docker Compose configuration" "Docker CLI or daemon unavailable"
-  skip_check "Production Docker image builds" "Docker CLI or daemon unavailable"
+  # A disposable key is scoped to these commands only and is never echoed,
+  # stored in the report, or committed. --quiet suppresses config expansion.
+  disposable_key="$(openssl rand -base64 32)"
+  run_check "Docker Compose configuration" "docker-config.log" \
+    env "SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64=$disposable_key" \
+    docker compose config --quiet
+  compose_result="$LAST_RESULT"
+
+  if [[ "$compose_result" != "PASS" ]]; then
+    skip_check "Production Docker image builds" "Compose configuration invalid"
+  elif ! docker info >/dev/null 2>&1; then
+    skip_check "Production Docker image builds" "Docker daemon unavailable (Compose config passed)"
+  else
+    run_check "Production Docker image builds" "docker-build.log" \
+      env "SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64=$disposable_key" \
+      docker compose build
+  fi
+  unset disposable_key
 fi
 
 # --------------------- Render verified Markdown -----------------------------
