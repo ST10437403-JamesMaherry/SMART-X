@@ -4,8 +4,8 @@ namespace SmartX.Domain.Telemetry;
 /// A balanced, in-memory timestamp index for one sensor's strongly typed readings.
 ///
 /// A separate index should be created for each sensor and payload type. This class
-/// does not replace Smart-X's existing append-order telemetry repository: P3-03
-/// will wire the same accepted TelemetryPacket instances into both structures.
+/// does not replace Smart-X's existing append-order telemetry repository:
+/// the infrastructure layer indexes the same accepted TelemetryPacket objects.
 ///
 /// Inserts preserve equal-timestamp readings in stable arrival order; bounded
 /// range queries traverse only relevant AVL branches and return read-only copies.
@@ -140,6 +140,162 @@ public sealed class AvlTelemetryIndex<T>
             var results = new List<TelemetryPacket<T>>(Math.Min(limit, _count));
             CollectRange(_root, fromUtc, toUtc, limit, results);
             return results.AsReadOnly();
+        }
+    }
+
+    /// <summary>
+    /// Returns one keyset page, ordered by UTC capture time and insertion
+    /// position within each equal-timestamp bucket. Unlike a timestamp-only
+    /// cursor, this cannot silently discard duplicates at page boundaries.
+    /// </summary>
+    /// <remarks>
+    /// A balanced AVL search prunes keys below the cursor and outside the
+    /// requested interval: O(log n + k) for k copied entries, including the
+    /// single lookahead entry used to determine HasMore. Each call is a
+    /// snapshot; independent requests observe the current live index.
+    /// </remarks>
+    public AvlRangePage<T> QueryRangePage(
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toInclusive,
+        int limit = DefaultRangeLimit,
+        DateTimeOffset? afterTimestampUtc = null,
+        int? afterTimestampSequence = null)
+    {
+        if (limit < 1 || limit > MaxRangeLimit)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(limit), limit,
+                $"Page limit must be between 1 and {MaxRangeLimit}.");
+        }
+
+        DateTimeOffset fromUtc = fromInclusive.ToUniversalTime();
+        DateTimeOffset toUtc = toInclusive.ToUniversalTime();
+        if (fromUtc > toUtc)
+        {
+            throw new ArgumentException(
+                "Range start must not be later than range end.",
+                nameof(fromInclusive));
+        }
+
+        if (afterTimestampUtc.HasValue != afterTimestampSequence.HasValue)
+        {
+            throw new ArgumentException(
+                "A continuation requires both the timestamp and sequence.",
+                nameof(afterTimestampUtc));
+        }
+
+        DateTimeOffset? cursorUtc = afterTimestampUtc?.ToUniversalTime();
+        if (cursorUtc.HasValue &&
+            (cursorUtc.Value < fromUtc || cursorUtc.Value > toUtc ||
+             afterTimestampSequence!.Value < 0))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(afterTimestampUtc),
+                "Continuation must identify an entry inside the range.");
+        }
+
+        lock (_sync)
+        {
+            if (cursorUtc.HasValue)
+            {
+                // Reject invalid, stale or fabricated sequence positions.
+                // No iteration through preceding timestamp buckets is needed.
+                Node? cursorNode = FindNode(_root, cursorUtc.Value);
+                if (cursorNode is null ||
+                    afterTimestampSequence!.Value >= cursorNode.Packets.Count)
+                {
+                    throw new ArgumentException(
+                        "Continuation does not identify an indexed reading.",
+                        nameof(afterTimestampUtc));
+                }
+            }
+
+            var entries = new List<AvlRangeEntry<T>>(
+                Math.Min(_count, limit + 1));
+            CollectPage(
+                _root, fromUtc, toUtc, cursorUtc, afterTimestampSequence,
+                limit + 1, entries);
+
+            bool hasMore = entries.Count > limit;
+            if (hasMore)
+            {
+                entries.RemoveAt(entries.Count - 1);
+            }
+
+            return new AvlRangePage<T>(entries.AsReadOnly(), hasMore);
+        }
+    }
+
+    /// <summary>Finds a single timestamp key without scanning the tree.</summary>
+    private static Node? FindNode(Node? node, DateTimeOffset timestampUtc)
+    {
+        while (node is not null)
+        {
+            int comparison = timestampUtc.CompareTo(node.TimestampUtc);
+            if (comparison == 0)
+            {
+                return node;
+            }
+
+            node = comparison < 0 ? node.Left : node.Right;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Pruned in-order traversal with a composite continuation position.
+    /// Only the final timestamp's bucket is resumed at a nonzero index.
+    /// </summary>
+    private static void CollectPage(
+        Node? node,
+        DateTimeOffset fromUtc,
+        DateTimeOffset toUtc,
+        DateTimeOffset? cursorUtc,
+        int? cursorSequence,
+        int maximumEntries,
+        List<AvlRangeEntry<T>> destination)
+    {
+        if (node is null || destination.Count >= maximumEntries)
+        {
+            return;
+        }
+
+        DateTimeOffset lowerBound = cursorUtc.HasValue && cursorUtc.Value > fromUtc
+            ? cursorUtc.Value
+            : fromUtc;
+
+        if (node.TimestampUtc > lowerBound)
+        {
+            CollectPage(node.Left, fromUtc, toUtc, cursorUtc,
+                cursorSequence, maximumEntries, destination);
+        }
+
+        if (destination.Count >= maximumEntries)
+        {
+            return;
+        }
+
+        if (node.TimestampUtc >= lowerBound && node.TimestampUtc <= toUtc)
+        {
+            int firstSequence = cursorUtc.HasValue &&
+                node.TimestampUtc == cursorUtc.Value
+                    ? cursorSequence!.Value + 1
+                    : 0;
+
+            for (int sequence = firstSequence;
+                 sequence < node.Packets.Count && destination.Count < maximumEntries;
+                 sequence++)
+            {
+                destination.Add(new AvlRangeEntry<T>(
+                    node.Packets[sequence], sequence));
+            }
+        }
+
+        if (node.TimestampUtc < toUtc && destination.Count < maximumEntries)
+        {
+            CollectPage(node.Right, fromUtc, toUtc, cursorUtc,
+                cursorSequence, maximumEntries, destination);
         }
     }
 

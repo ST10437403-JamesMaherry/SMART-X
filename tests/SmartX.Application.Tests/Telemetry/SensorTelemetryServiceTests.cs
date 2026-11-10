@@ -922,6 +922,71 @@ public sealed class SensorTelemetryServiceTests
                 .ToArray();
         }
 
+        /// <summary>
+        /// Test-double implementation of the range contract. These unit
+        /// tests verify service orchestration, not AVL complexity; the
+        /// production InMemoryTelemetryRepository uses a real AVL index.
+        /// </summary>
+        public Task<IReadOnlyList<TelemetryPacket<T>>> GetRangeAsync<T>(
+            Guid sensorProfileId,
+            DateTimeOffset fromInclusiveUtc,
+            DateTimeOffset toInclusiveUtc,
+            int limit,
+            CancellationToken cancellationToken = default)
+            where T : struct
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (limit < 1 || limit > AvlTelemetryIndex<T>.MaxRangeLimit)
+            {
+                throw new ArgumentOutOfRangeException(nameof(limit));
+            }
+
+            if (fromInclusiveUtc > toInclusiveUtc)
+            {
+                throw new ArgumentException(
+                    "Range start must not exceed range end.",
+                    nameof(fromInclusiveUtc));
+            }
+
+            // LINQ is appropriate in this small, deterministic test double;
+            // equal timestamps retain their initial ingestion order.
+            IReadOnlyList<TelemetryPacket<T>> results =
+                GetOrCreateStore<T>(sensorProfileId)
+                    .Where(packet => packet.CapturedAtUtc >= fromInclusiveUtc &&
+                                     packet.CapturedAtUtc <= toInclusiveUtc)
+                    .OrderBy(packet => packet.CapturedAtUtc)
+                    .Take(limit)
+                    .ToArray();
+
+            return Task.FromResult(results);
+        }
+
+        /// <summary>
+        /// Implements the new continuation contract for the test double.
+        /// Production queries are served by the repository's persistent AVL.
+        /// </summary>
+        public Task<AvlRangePage<T>> GetRangePageAsync<T>(
+            Guid sensorProfileId,
+            DateTimeOffset fromInclusiveUtc,
+            DateTimeOffset toInclusiveUtc,
+            int limit,
+            DateTimeOffset? afterTimestampUtc = null,
+            int? afterTimestampSequence = null,
+            CancellationToken cancellationToken = default)
+            where T : struct
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var index = new AvlTelemetryIndex<T>();
+            foreach (TelemetryPacket<T> packet in GetOrCreateStore<T>(sensorProfileId))
+            {
+                index.Insert(packet);
+            }
+
+            return Task.FromResult(index.QueryRangePage(
+                fromInclusiveUtc, toInclusiveUtc, limit,
+                afterTimestampUtc, afterTimestampSequence));
+        }
+
         private List<TelemetryPacket<T>> GetOrCreateStore<T>(
             Guid sensorProfileId)
             where T : struct
