@@ -8,4 +8,5 @@ export const routes = {
   home: '/',
   ingestion: '/ingestion',
   realtime: '/realtime',
+  topology: '/topology',
 } as const;

@@ -209,5 +209,34 @@ public sealed class TelemetryAcceptanceTests
             RecentLimits.Add(limit);
             return Inner.GetRecentAsync<T>(sensorProfileId, limit, cancellationToken);
         }
+
+        /// <summary>Forward paginated AVL range reads without changing storage.</summary>
+        public Task<AvlRangePage<T>> GetRangePageAsync<T>(
+            Guid sensorProfileId,
+            DateTimeOffset fromInclusiveUtc,
+            DateTimeOffset toInclusiveUtc,
+            int limit,
+            DateTimeOffset? afterTimestampUtc = null,
+            int? afterTimestampSequence = null,
+            CancellationToken cancellationToken = default)
+            where T : struct
+        {
+            return Inner.GetRangePageAsync<T>(
+                sensorProfileId, fromInclusiveUtc, toInclusiveUtc, limit,
+                afterTimestampUtc, afterTimestampSequence, cancellationToken);
+        }
+
+        /// <summary>Forward range reads to the real AVL-backed test store.</summary>
+        public Task<IReadOnlyList<TelemetryPacket<T>>> GetRangeAsync<T>(
+            Guid sensorProfileId,
+            DateTimeOffset fromInclusiveUtc,
+            DateTimeOffset toInclusiveUtc,
+            int limit,
+            CancellationToken cancellationToken = default) where T : struct
+        {
+            return Inner.GetRangeAsync<T>(
+                sensorProfileId, fromInclusiveUtc, toInclusiveUtc, limit,
+                cancellationToken);
+        }
     }
 }
