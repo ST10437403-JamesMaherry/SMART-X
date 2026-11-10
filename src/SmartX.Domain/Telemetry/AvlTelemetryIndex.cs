@@ -7,13 +7,22 @@ namespace SmartX.Domain.Telemetry;
 /// does not replace Smart-X's existing append-order telemetry repository: P3-03
 /// will wire the same accepted TelemetryPacket instances into both structures.
 ///
-/// P3-02 Commit 1 implements insertion and the four AVL rotation shapes. Range
-/// queries and bounded, immutable snapshots are deliberately added in Commit 2.
+/// Inserts preserve equal-timestamp readings in stable arrival order; bounded
+/// range queries traverse only relevant AVL branches and return read-only copies.
 /// </summary>
 /// <typeparam name="T">The native telemetry value type (double, int or bool).</typeparam>
 public sealed class AvlTelemetryIndex<T>
     where T : struct
 {
+    /// <summary>Default number of packets returned by a historical range query.</summary>
+    public const int DefaultRangeLimit = 100;
+
+    /// <summary>
+    /// Upper bound for one query, preventing a client from copying an unbounded
+    /// historical series into memory in a single request.
+    /// </summary>
+    public const int MaxRangeLimit = 10_000;
+
     private readonly object _sync = new();
     private Node? _root;
     private int _count;
@@ -87,6 +96,54 @@ public sealed class AvlTelemetryIndex<T>
     }
 
     /// <summary>
+    /// Returns an inclusive, timestamp-ordered snapshot of telemetry captured
+    /// between the two supplied instants. Offsets are canonicalised to UTC,
+    /// while packets sharing a timestamp retain their original insertion order.
+    /// </summary>
+    /// <remarks>
+    /// AVL branch pruning avoids scanning all historical readings. For n unique
+    /// timestamps and k returned packets, a balanced lookup takes
+    /// O(log n + k) time, excluding the cost of copying the returned packets.
+    /// The result is bounded, read-only and independent of future insertions.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// The start instant is later than the end instant.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The requested result limit is outside the supported range.
+    /// </exception>
+    public IReadOnlyList<TelemetryPacket<T>> QueryRange(
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toInclusive,
+        int limit = DefaultRangeLimit)
+    {
+        if (limit < 1 || limit > MaxRangeLimit)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(limit), limit,
+                $"Range limit must be between 1 and {MaxRangeLimit}.");
+        }
+
+        DateTimeOffset fromUtc = fromInclusive.ToUniversalTime();
+        DateTimeOffset toUtc = toInclusive.ToUniversalTime();
+        if (fromUtc > toUtc)
+        {
+            throw new ArgumentException(
+                "Range start must not be later than range end.",
+                nameof(fromInclusive));
+        }
+
+        // Lock only while reading the in-memory tree and copying up to `limit`
+        // packet references. The caller never receives a tree node or bucket.
+        lock (_sync)
+        {
+            var results = new List<TelemetryPacket<T>>(Math.Min(limit, _count));
+            CollectRange(_root, fromUtc, toUtc, limit, results);
+            return results.AsReadOnly();
+        }
+    }
+
+    /// <summary>
     /// Checks height, ordering, balance, and bucket invariants without exposing
     /// internal nodes. Intended for deterministic tests and diagnostics rather
     /// than the hot ingestion path.
@@ -156,6 +213,55 @@ public sealed class AvlTelemetryIndex<T>
         }
 
         return node;
+    }
+
+    /// <summary>
+    /// Performs an in-order range walk. Entire subtrees are skipped when their
+    /// keys cannot lie inside the inclusive interval. A full result stops the
+    /// traversal immediately instead of visiting more historical readings.
+    /// </summary>
+    private static void CollectRange(
+        Node? node,
+        DateTimeOffset fromUtc,
+        DateTimeOffset toUtc,
+        int limit,
+        List<TelemetryPacket<T>> destination)
+    {
+        if (node is null || destination.Count >= limit)
+        {
+            return;
+        }
+
+        // All keys in the left subtree are strictly smaller than this key.
+        if (node.TimestampUtc > fromUtc)
+        {
+            CollectRange(node.Left, fromUtc, toUtc, limit, destination);
+        }
+
+        if (destination.Count >= limit)
+        {
+            return;
+        }
+
+        if (node.TimestampUtc >= fromUtc && node.TimestampUtc <= toUtc)
+        {
+            // Equal timestamps stay in the bucket's original append order.
+            foreach (TelemetryPacket<T> packet in node.Packets)
+            {
+                if (destination.Count >= limit)
+                {
+                    break;
+                }
+
+                destination.Add(packet);
+            }
+        }
+
+        // All keys in the right subtree are strictly larger than this key.
+        if (node.TimestampUtc < toUtc && destination.Count < limit)
+        {
+            CollectRange(node.Right, fromUtc, toUtc, limit, destination);
+        }
     }
 
     private static Node RotateLeft(Node root)
