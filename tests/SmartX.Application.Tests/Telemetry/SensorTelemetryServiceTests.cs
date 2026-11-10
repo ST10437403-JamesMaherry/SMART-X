@@ -961,6 +961,32 @@ public sealed class SensorTelemetryServiceTests
             return Task.FromResult(results);
         }
 
+        /// <summary>
+        /// Implements the new continuation contract for the test double.
+        /// Production queries are served by the repository's persistent AVL.
+        /// </summary>
+        public Task<AvlRangePage<T>> GetRangePageAsync<T>(
+            Guid sensorProfileId,
+            DateTimeOffset fromInclusiveUtc,
+            DateTimeOffset toInclusiveUtc,
+            int limit,
+            DateTimeOffset? afterTimestampUtc = null,
+            int? afterTimestampSequence = null,
+            CancellationToken cancellationToken = default)
+            where T : struct
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var index = new AvlTelemetryIndex<T>();
+            foreach (TelemetryPacket<T> packet in GetOrCreateStore<T>(sensorProfileId))
+            {
+                index.Insert(packet);
+            }
+
+            return Task.FromResult(index.QueryRangePage(
+                fromInclusiveUtc, toInclusiveUtc, limit,
+                afterTimestampUtc, afterTimestampSequence));
+        }
+
         private List<TelemetryPacket<T>> GetOrCreateStore<T>(
             Guid sensorProfileId)
             where T : struct

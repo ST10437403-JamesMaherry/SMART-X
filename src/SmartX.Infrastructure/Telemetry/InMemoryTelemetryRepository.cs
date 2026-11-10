@@ -156,6 +156,53 @@ public sealed class InMemoryTelemetryRepository
         return Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Returns a keyset page from the existing per-sensor/type AVL index.
+    /// No new authoritative storage is allocated for the API.
+    /// </summary>
+    public Task<AvlRangePage<T>> GetRangePageAsync<T>(
+        Guid sensorProfileId,
+        DateTimeOffset fromInclusiveUtc,
+        DateTimeOffset toInclusiveUtc,
+        int limit,
+        DateTimeOffset? afterTimestampUtc = null,
+        int? afterTimestampSequence = null,
+        CancellationToken cancellationToken = default)
+        where T : struct
+    {
+        ValidateSensorProfileId(sensorProfileId);
+        ValidateRange<T>(fromInclusiveUtc, toInclusiveUtc, limit);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (afterTimestampUtc.HasValue != afterTimestampSequence.HasValue ||
+            afterTimestampSequence < 0)
+        {
+            throw new ArgumentException(
+                "A continuation requires a timestamp and nonnegative sequence.",
+                nameof(afterTimestampUtc));
+        }
+
+        var key = CreateStoreKey<T>(sensorProfileId);
+        if (!_stores.TryGetValue(key, out object? stored))
+        {
+            if (afterTimestampUtc.HasValue)
+            {
+                throw new ArgumentException(
+                    "Cannot resume a telemetry series with no readings.",
+                    nameof(afterTimestampUtc));
+            }
+
+            return Task.FromResult(new AvlRangePage<T>(
+                Array.Empty<AvlRangeEntry<T>>(), false));
+        }
+
+        var result = GetTypedStore<T>(stored).GetRangePage(
+            fromInclusiveUtc, toInclusiveUtc, limit,
+            afterTimestampUtc, afterTimestampSequence,
+            cancellationToken);
+        return Task.FromResult(result);
+    }
+
     private TelemetryStore<T> GetOrCreateStore<T>(
         Guid sensorProfileId)
         where T : struct
@@ -326,6 +373,25 @@ public sealed class InMemoryTelemetryRepository
                         startIndex,
                         count)
                     .ToArray();
+            }
+        }
+
+        public AvlRangePage<T> GetRangePage(
+            DateTimeOffset fromInclusiveUtc,
+            DateTimeOffset toInclusiveUtc,
+            int limit,
+            DateTimeOffset? afterTimestampUtc,
+            int? afterTimestampSequence,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (_syncRoot)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return _timestampIndex.QueryRangePage(
+                    fromInclusiveUtc, toInclusiveUtc, limit,
+                    afterTimestampUtc, afterTimestampSequence);
             }
         }
 

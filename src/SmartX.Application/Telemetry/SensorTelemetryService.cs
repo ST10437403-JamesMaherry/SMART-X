@@ -8,7 +8,7 @@ namespace SmartX.Application.Telemetry;
 
 /// <summary>
 /// Coordinates strongly typed telemetry ingestion, historical batch
-/// processing and recent telemetry retrieval for registered Smart-X sensors.
+/// processing, recent reads, and AVL-backed historical queries for registered sensors.
 ///
 /// The service resolves the sensor first and uses its configured
 /// TelemetryDataType to select the correct closed generic telemetry type.
@@ -18,6 +18,10 @@ public sealed class SensorTelemetryService
     public const int DefaultRecentTelemetryLimit = 50;
 
     public const int MaxRecentTelemetryLimit = 100;
+
+    public const int DefaultRangeTelemetryLimit = 100;
+
+    public const int MaxRangeTelemetryLimit = 1_000;
 
     private readonly ISensorRepository _sensorRepository;
     private readonly ITelemetryRepository _telemetryRepository;
@@ -204,6 +208,117 @@ public sealed class SensorTelemetryService
                     $"Sensor '{sensor.Id}' has an unsupported telemetry " +
                     $"data type '{sensor.DataType}'.")
         };
+    }
+
+    /// <summary>
+    /// Queries the real AVL index for one registered sensor, retaining the
+    /// configured native payload type and a deterministic continuation key.
+    /// This does not modify the original ingestion-order history endpoint.
+    /// </summary>
+    public async Task<TelemetryRangePageResponse> GetRangePageAsync(
+        Guid sensorProfileId,
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toInclusive,
+        int limit = DefaultRangeTelemetryLimit,
+        DateTimeOffset? afterTimestampUtc = null,
+        int? afterTimestampSequence = null,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateSensorProfileId(sensorProfileId);
+
+        DateTimeOffset fromUtc = fromInclusive.ToUniversalTime();
+        DateTimeOffset toUtc = toInclusive.ToUniversalTime();
+        if (fromUtc > toUtc)
+        {
+            throw new InvalidTelemetryRequestException(
+                "fromUtc must not be later than toUtc.");
+        }
+
+        if (limit < 1 || limit > MaxRangeTelemetryLimit)
+        {
+            throw new InvalidTelemetryRequestException(
+                $"Range limit must be between 1 and {MaxRangeTelemetryLimit}.");
+        }
+
+        if (afterTimestampUtc.HasValue != afterTimestampSequence.HasValue ||
+            afterTimestampSequence < 0)
+        {
+            throw new InvalidTelemetryRequestException(
+                "Continuation requires both afterUtc and a nonnegative afterSequence.");
+        }
+
+        DateTimeOffset? cursorUtc = afterTimestampUtc?.ToUniversalTime();
+        if (cursorUtc.HasValue &&
+            (cursorUtc.Value < fromUtc || cursorUtc.Value > toUtc))
+        {
+            throw new InvalidTelemetryRequestException(
+                "Continuation must fall inside the requested timestamp range.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var sensor = await GetSensorAsync(sensorProfileId, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return sensor.DataType switch
+        {
+            TelemetryDataType.Float =>
+                await MapRangePageAsync<double>(sensor, fromUtc, toUtc,
+                    limit, cursorUtc, afterTimestampSequence,
+                    TelemetryContractMapper.ToResponse, cancellationToken),
+
+            TelemetryDataType.Integer =>
+                await MapRangePageAsync<int>(sensor, fromUtc, toUtc,
+                    limit, cursorUtc, afterTimestampSequence,
+                    TelemetryContractMapper.ToResponse, cancellationToken),
+
+            TelemetryDataType.Boolean =>
+                await MapRangePageAsync<bool>(sensor, fromUtc, toUtc,
+                    limit, cursorUtc, afterTimestampSequence,
+                    TelemetryContractMapper.ToResponse, cancellationToken),
+
+            _ => throw new InvalidTelemetryRequestException(
+                $"Sensor '{sensor.Id}' has an unsupported telemetry data type.")
+        };
+    }
+
+    private async Task<TelemetryRangePageResponse> MapRangePageAsync<T>(
+        SensorProfile sensor,
+        DateTimeOffset fromUtc,
+        DateTimeOffset toUtc,
+        int limit,
+        DateTimeOffset? cursorUtc,
+        int? cursorSequence,
+        Func<Guid, TelemetryPacket<T>, TelemetryReadingResponse> mapPacket,
+        CancellationToken cancellationToken)
+        where T : struct
+    {
+        AvlRangePage<T> page;
+        try
+        {
+            page = await _telemetryRepository.GetRangePageAsync<T>(
+                sensor.Id, fromUtc, toUtc, limit, cursorUtc, cursorSequence,
+                cancellationToken);
+        }
+        catch (ArgumentException exception)
+        {
+            // Invalid cursor positions are client errors, never HTTP 500.
+            throw new InvalidTelemetryRequestException(
+                "The historical telemetry continuation is invalid.", exception);
+        }
+
+        TelemetryReadingResponse[] readings = page.Entries
+            .Select(entry => mapPacket(sensor.Id, entry.Packet))
+            .ToArray();
+
+        AvlRangeEntry<T>? lastEntry = page.Entries.LastOrDefault();
+        TelemetryRangeCursor? nextCursor = page.HasMore && lastEntry is not null
+            ? new TelemetryRangeCursor(
+                lastEntry.Packet.CapturedAtUtc, lastEntry.TimestampSequence)
+            : null;
+
+        return new TelemetryRangePageResponse(
+            sensor.Id, sensor.DataType.ToString(), fromUtc, toUtc, limit,
+            Array.AsReadOnly(readings), page.HasMore, nextCursor);
     }
 
     private async Task<TelemetryReadingResponse> IngestFloatAsync(
