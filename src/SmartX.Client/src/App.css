@@ -179,8 +179,8 @@
 }
 
 /*
- * Links and disabled controls share the same dimensions so the three
- * architectural pillars remain visually consistent.
+ * Each pillar is a native link. Consistent dimensions preserve a clear
+ * visual hierarchy regardless of which architecture route is active.
  */
 .pillar-control {
   display: grid;
@@ -203,7 +203,7 @@
 }
 
 /*
- * Only the implemented Part 1 route is interactive.
+ * All three modules are navigable in the final PoE.
  */
 a.pillar-control {
   cursor: pointer;
@@ -239,8 +239,7 @@ a.pillar-control:hover {
 }
 
 /*
- * React Router applies this state only while the user is inside the
- * implemented Part 1 ingestion route.
+ * React Router applies this state to the currently selected pillar.
  *
  * The left rule and spacing provide an obvious active-page state without
  * requiring icons, filled backgrounds or large colour blocks.
@@ -255,28 +254,6 @@ a.pillar-control:hover {
 
 .pillar-control--active .pillar-state {
   color: var(--accent);
-}
-
-/*
- * Future modules remain focusable so keyboard and assistive-technology users
- * can discover when each module becomes available.
- *
- * aria-disabled communicates that these controls must not currently perform
- * an action.
- */
-.pillar-control--disabled {
-  color: #8a8a8a;
-
-  cursor: not-allowed;
-}
-
-.pillar-control--disabled .pillar-state {
-  color: #707070;
-}
-
-.pillar-control--disabled:hover {
-  color: #8a8a8a;
-  background: transparent;
 }
 
 /*

@@ -311,15 +311,15 @@ test.describe('Smart-X Part 1 regression', () => {
     await page.goto('/');
 
     /*
-     * Both implemented pillars are links; topology stays visibly and
-     * accessibly unavailable until the final PoE.
+     * All three architectural pillars now expose accessible links. The
+     * topology page explicitly labels its pending backend data.
      */
     const commandStreamControl = page.getByRole('link', {
       name: /Real-Time Command Stream and History/,
     });
 
-    const meshRoutingControl = page.locator('button:disabled, [aria-disabled="true"]').filter({
-      hasText: 'Network Topology and Mesh Routing',
+    const meshRoutingControl = page.getByRole('link', {
+      name: /Network Topology and Mesh Routing/,
     });
 
     await expect(commandStreamControl).toHaveCount(1);
@@ -327,6 +327,7 @@ test.describe('Smart-X Part 1 regression', () => {
     await expect(commandStreamControl).toHaveAttribute('href', '/realtime');
 
     await expect(meshRoutingControl).toHaveCount(1);
+    await expect(meshRoutingControl).toHaveAttribute('href', '/topology');
 
     await page.goto('/ingestion');
 
