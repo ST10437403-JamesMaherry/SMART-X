@@ -49,7 +49,7 @@ test.describe('Part 2 navigation foundation', () => {
     secondSensor = await createSensor(request, 'B');
   });
 
-  test('opens both pillars without reloading and marks the active link', async ({ page }) => {
+  test('opens all three pillars without reloading and marks the active link', async ({ page }) => {
     await page.goto('/ingestion');
 
     const ingestionLink = page.getByRole('link', {
@@ -74,13 +74,15 @@ test.describe('Part 2 navigation foundation', () => {
     await expect(ingestionLink).not.toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('main')).toHaveCount(1);
 
-    const topology = page.getByRole('button', { name: /Network Topology and Mesh Routing/ });
+    // The final pillar is a native link; it must support keyboard navigation.
+    const topology = page.getByRole('link', { name: /Network Topology and Mesh Routing/ });
 
-    await expect(topology).toHaveAttribute('aria-disabled', 'true');
+    await expect(topology).toHaveAttribute('href', '/topology');
     await topology.focus();
     await expect(topology).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/realtime$/);
+    await expect(page).toHaveURL(/\/topology$/);
+    await expect(topology).toHaveAttribute('aria-current', 'page');
 
     await ingestionLink.click();
 
@@ -147,8 +149,8 @@ test.describe('Part 2 navigation foundation', () => {
       await expect(page.getByRole('main')).toHaveCount(1);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(
-        page.getByRole('button', { name: /Network Topology and Mesh Routing/ }),
-      ).toHaveAttribute('aria-disabled', 'true');
+        page.getByRole('link', { name: /Network Topology and Mesh Routing/ }),
+      ).toHaveAttribute('href', '/topology');
 
       const activePillar = page.locator('.pillar-control[aria-current="page"]');
 
