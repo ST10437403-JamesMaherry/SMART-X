@@ -24,7 +24,8 @@ public sealed class InMemoryTelemetryRepository
         object> _stores = new();
 
     /// <summary>
-    /// Stores one strongly typed telemetry packet.
+    /// Stores one accepted packet in both the authoritative ingestion List
+    /// and its AVL secondary index in a single per-series write boundary.
     /// </summary>
     public Task AddAsync<T>(
         Guid sensorProfileId,
@@ -42,7 +43,7 @@ public sealed class InMemoryTelemetryRepository
             GetOrCreateStore<T>(
                 sensorProfileId);
 
-        store.Add(packet);
+        store.Add(packet, cancellationToken);
 
         return Task.CompletedTask;
     }
@@ -127,6 +128,34 @@ public sealed class InMemoryTelemetryRepository
         return Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Returns a timestamp-ordered, bounded snapshot from the AVL index.
+    /// Invalid ranges and limits are rejected even for an empty series.
+    /// </summary>
+    public Task<IReadOnlyList<TelemetryPacket<T>>> GetRangeAsync<T>(
+        Guid sensorProfileId,
+        DateTimeOffset fromInclusiveUtc,
+        DateTimeOffset toInclusiveUtc,
+        int limit,
+        CancellationToken cancellationToken = default)
+        where T : struct
+    {
+        ValidateSensorProfileId(sensorProfileId);
+        ValidateRange<T>(fromInclusiveUtc, toInclusiveUtc, limit);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var key = CreateStoreKey<T>(sensorProfileId);
+        if (!_stores.TryGetValue(key, out var stored))
+        {
+            return Task.FromResult<IReadOnlyList<TelemetryPacket<T>>>(
+                Array.Empty<TelemetryPacket<T>>());
+        }
+
+        var result = GetTypedStore<T>(stored).GetRange(
+            fromInclusiveUtc, toInclusiveUtc, limit, cancellationToken);
+        return Task.FromResult(result);
+    }
+
     private TelemetryStore<T> GetOrCreateStore<T>(
         Guid sensorProfileId)
         where T : struct
@@ -181,11 +210,34 @@ public sealed class InMemoryTelemetryRepository
         }
     }
 
+    private static void ValidateRange<T>(
+        DateTimeOffset fromInclusiveUtc,
+        DateTimeOffset toInclusiveUtc,
+        int limit)
+        where T : struct
+    {
+        if (limit < 1 || limit > AvlTelemetryIndex<T>.MaxRangeLimit)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(limit), limit,
+                $"Range limit must be between 1 and {AvlTelemetryIndex<T>.MaxRangeLimit}.");
+        }
+
+        if (fromInclusiveUtc > toInclusiveUtc)
+        {
+            throw new ArgumentException(
+                "Range start must not be later than range end.",
+                nameof(fromInclusiveUtc));
+        }
+    }
+
     /// <summary>
     /// Synchronised strongly typed collection used for one sensor/type pair.
     ///
-    /// List&lt;T&gt; gives efficient append and sequential-read behaviour while
-    /// an explicit lock protects compound operations from concurrent access.
+    /// List&lt;T&gt; remains the ingestion-order source of truth, while the
+    /// private AVL index references the EXACT same accepted packet objects.
+    /// A per-series lock makes both data structures visible as one write.
+    /// Lock order is always series lock then AVL lock.
     /// </summary>
     private sealed class TelemetryStore<T>
         where T : struct
@@ -196,11 +248,20 @@ public sealed class InMemoryTelemetryRepository
         private readonly List<TelemetryPacket<T>> _packets =
             [];
 
+        private readonly AvlTelemetryIndex<T> _timestampIndex =
+            new();
+
         public void Add(
-            TelemetryPacket<T> packet)
+            TelemetryPacket<T> packet,
+            CancellationToken cancellationToken)
         {
             lock (_syncRoot)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Reserve the append slot before mutating the secondary AVL.
+                _packets.EnsureCapacity(checked(_packets.Count + 1));
+                _timestampIndex.Insert(packet);
                 _packets.Add(packet);
             }
         }
@@ -223,7 +284,17 @@ public sealed class InMemoryTelemetryRepository
             lock (_syncRoot)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                _packets.AddRange(acceptedPackets);
+
+                // One writer lock covers the complete batch and both views.
+                // No reader can observe only a prefix of accepted packets.
+                _packets.EnsureCapacity(
+                    checked(_packets.Count + acceptedPackets.Length));
+
+                foreach (var packet in acceptedPackets)
+                {
+                    _timestampIndex.Insert(packet);
+                    _packets.Add(packet);
+                }
             }
         }
 
@@ -255,6 +326,25 @@ public sealed class InMemoryTelemetryRepository
                         startIndex,
                         count)
                     .ToArray();
+            }
+        }
+
+        public IReadOnlyList<TelemetryPacket<T>> GetRange(
+            DateTimeOffset fromInclusiveUtc,
+            DateTimeOffset toInclusiveUtc,
+            int limit,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (_syncRoot)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // The AVL prunes irrelevant timestamp subtrees. This returns
+                // an immutable list snapshot, never a mutable tree node.
+                return _timestampIndex.QueryRange(
+                    fromInclusiveUtc, toInclusiveUtc, limit);
             }
         }
     }

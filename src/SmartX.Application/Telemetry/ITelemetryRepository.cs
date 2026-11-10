@@ -45,4 +45,22 @@ public interface ITelemetryRepository
         int limit,
         CancellationToken cancellationToken = default)
         where T : struct;
+
+    /// <summary>
+    /// Retrieves accepted packets in ascending capture-time order from the
+    /// AVL secondary index, retaining ingestion order within a UTC timestamp.
+    /// This does not change GetRecentAsync's append-order contract.
+    /// </summary>
+    /// <remarks>
+    /// Both history views contain the same immutable packet instances.
+    /// Returns a bounded read-only snapshot; a cursor-capable HTTP facade
+    /// will be added in the following P3-03 commit.
+    /// </remarks>
+    Task<IReadOnlyList<TelemetryPacket<T>>> GetRangeAsync<T>(
+        Guid sensorProfileId,
+        DateTimeOffset fromInclusiveUtc,
+        DateTimeOffset toInclusiveUtc,
+        int limit,
+        CancellationToken cancellationToken = default)
+        where T : struct;
 }
