@@ -139,6 +139,10 @@ builder.Services.AddSingleton<
     IMeshTopologyStore,
     InMemoryMeshTopologyStore>();
 
+// P3-05 BFS is a stateless read service. Each call requests a fresh immutable
+// graph revision; it does not cache routes across status or link changes.
+builder.Services.AddScoped<MeshTraversalService>();
+
 // -------------------------------------------------------------------------
 // P2-05 chronological operational history
 // -------------------------------------------------------------------------
