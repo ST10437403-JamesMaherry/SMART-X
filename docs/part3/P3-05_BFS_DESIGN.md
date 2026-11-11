@@ -62,7 +62,13 @@ Commit 1 added focused domain and application tests for the immutable gateway ho
 - `tests/SmartX.Domain.Tests/Topology/MeshRoutingContractTests.cs` — immutable route and disconnected-component validation, status semantics, rejection of malformed predecessor maps and defensive-copy checks.
 - `tests/SmartX.Application.Tests/Topology/MeshGatewayRoutingServiceTests.cs` — one-hop and multihop paths; disconnected islands, isolated vertices and health-blocked bridges; equal-hop tie ordering; weights ignored by BFS; unknown IDs; immutable snapshot refresh and cancellation.
 
-**Commit 3:** add deeper adversarial traversal tests, including cyclic meshes, competing equal-hop alternatives, bridge failures, duplicate-neighbour resistance and no stale routes after state transitions. No topology HTTP endpoint or dashboard implementation is introduced until P3-07/P3-08.
+## Commit 3 — Adversarial BFS and live topology verification
+
+- `tests/SmartX.Application.Tests/Topology/MeshBfsAdversarialRegressionTests.cs` adds small adversarial graphs, fixed-seed cross-checks against a separate edge-relaxation shortest-hop oracle, cycle-termination visited-set cases, deterministic equal-hop ties, and proofs that unavailable sensors cannot relay traffic.
+- `tests/SmartX.Infrastructure.Tests/Topology/MeshBfsLiveTopologyRegressionTests.cs` exercises the **actual** sensor registry and synchronized mesh store: registering sensors without links, changing sensor operational states, adding/removing links, real failover over configured redundant links, decommissioning, weighted-cost updates, and bounded read/write churn.
+- `docs/part3/P3-05_BFS_VERIFICATION.md` includes a reproducible requirement-to-test matrix, detailed fixtures and PR acceptance checks.
+
+No topology HTTP endpoint or dashboard implementation is introduced until P3-07/P3-08. No test assumes BFS minimizes summed energy cost or creates missing network connections.
 
 ## Verification — run locally from the repository root
 
@@ -73,9 +79,12 @@ dotnet test tests/SmartX.Domain.Tests/SmartX.Domain.Tests.csproj -c Release --fi
 # Commit 2 path and component calculations
 dotnet test tests/SmartX.Application.Tests/SmartX.Application.Tests.csproj -c Release --filter "FullyQualifiedName~MeshGatewayRoutingServiceTests"
 
-# Entire P3-05 domain/application test area, including Commit 1
+# Entire P3-05 domain/application test area, including Commits 1-3
 dotnet test tests/SmartX.Domain.Tests/SmartX.Domain.Tests.csproj -c Release --filter "FullyQualifiedName~MeshGatewayReachabilityTests|FullyQualifiedName~MeshRoutingContractTests"
-dotnet test tests/SmartX.Application.Tests/SmartX.Application.Tests.csproj -c Release --filter "FullyQualifiedName~MeshTraversalServiceTests|FullyQualifiedName~MeshGatewayRoutingServiceTests"
+dotnet test tests/SmartX.Application.Tests/SmartX.Application.Tests.csproj -c Release --filter "FullyQualifiedName~MeshTraversalServiceTests|FullyQualifiedName~MeshGatewayRoutingServiceTests|FullyQualifiedName~MeshBfsAdversarialRegressionTests"
+
+# P3-05 live-registry and graph-store integration regression
+dotnet test tests/SmartX.Infrastructure.Tests/SmartX.Infrastructure.Tests.csproj -c Release --filter "FullyQualifiedName~MeshBfsLiveTopologyRegressionTests"
 
 # Full code health / regression
 dotnet build SmartX.sln -c Release
