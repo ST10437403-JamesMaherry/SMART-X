@@ -1,8 +1,8 @@
-# P3-07: Typed topology APIs, simulation writes and realtime invalidation — Commits 1-3
+# P3-07: Typed topology APIs, simulation writes, realtime invalidation and greenhouse regression
 
 **Issue:** `[P3-07] Expose topology APIs and reproducible network simulations`
 **Branch:** `feature/part3-topology-api`
-**Status:** Commits 1–3 provide read-only topology APIs, guarded simulation writes and realtime invalidation; the deterministic greenhouse demonstration remains in Commit 4.
+**Status:** All four P3-07 implementation stages packaged; final local and CI verification must be recorded before merging.
 
 ## 1. Contract surface
 
@@ -245,5 +245,29 @@ git diff --check
 - Detection of equal-cost no-ops compares the pre-update snapshot with the
   returned link. Under concurrent writers it is advisory; regardless of the
   event count, the next HTTP GET is authoritative.
-- P3-08 owns actual view-state updates; P3-07 Commit 4 owns the end-to-end
-  greenhouse simulation scenario.
+- P3-08 owns actual view-state updates; P3-07 Commit 4 tests the end-to-end
+  greenhouse scenario through the real HTTP pipeline.
+
+
+## 8. P3-07 Commit 4: Deterministic greenhouse failover and explicit isolation
+
+`tests/SmartX.Api.IntegrationTests/Topology/MeshGreenhouseEndToEndScenarioTests.cs`
+registers six actual profiles, creates seven configured links and exercises
+real status transitions, GET projections and mutation endpoints. The
+initial minimum-cost backbone totals **5.75** simulated units. When the
+primary relay fails, an eligible moisture probe uses its configured backup
+route with a minimum spanning tree total of **8.25** while a vulnerable
+single-bridge probe becomes explicitly **Disconnected**. Removing G--B
+and then failing the primary relay yields **zero** reachable sensors and
+two reported disconnected components. Restoring the backup link recovers
+only the nodes with real eligible connections.
+
+The companion `scripts/demo_part3_greenhouse.py` runs the same scenario
+against a fresh, loopback-only Development API and optionally records JSON
+evidence with server-issued IDs. See the full fixture, expected results,
+command examples and scope boundaries in
+`docs/part3/P3-07_GREENHOUSE_SCENARIO_VERIFICATION.md`.
+
+This closes the **P3-07** backend/API issue pending local regression checks
+and a reviewed PR into `dev`. The interactive mesh dashboard, API data
+fetching in React, selection handling and graph visualization remain **P3-08**.
