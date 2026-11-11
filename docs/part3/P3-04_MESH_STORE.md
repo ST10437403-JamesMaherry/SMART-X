@@ -1,4 +1,4 @@
-# P3-04 / Commit 2 — Authoritative adjacency-list mesh store
+# P3-04 / Commits 1–3 — Validated adjacency-list mesh store
 
 **Baseline:** `dev` at `903390efb8557a9c70777dc8d96fd7bca8bd126d` (P3-03 complete) plus P3-04 Commit 1.
 
@@ -58,7 +58,8 @@ The simulated weight is a **relative energy cost**, not a measured watt/joule fi
 ```bash
 # From repository root
 
-dotnet test tests/SmartX.Infrastructure.Tests/SmartX.Infrastructure.Tests.csproj -c Release --filter "FullyQualifiedName~InMemoryMeshTopologyStoreTests"
+dotnet test tests/SmartX.Domain.Tests/SmartX.Domain.Tests.csproj -c Release --filter "FullyQualifiedName~MeshDomainModelTests"
+dotnet test tests/SmartX.Infrastructure.Tests/SmartX.Infrastructure.Tests.csproj -c Release --filter "FullyQualifiedName~InMemoryMeshTopologyStoreTests|FullyQualifiedName~MeshTopologyAdversarialTests|FullyQualifiedName~MeshTopologyConcurrencyTests"
 dotnet test SmartX.sln -c Release
 dotnet format SmartX.sln --verify-no-changes
 git diff --check
@@ -66,4 +67,6 @@ git diff --check
 
 The focused tests verify gateway-only startup, authoritative registration and isolation, symmetric link access, duplicate-pair validation, unknown-endpoint rejection, ID removal, immutable cost-update snapshots, deterministic ordering, Offline/Online eligibility, decommissioned link pruning, stable versions, and cancellation.
 
-**Next:** P3-04 Commit 3 adds adversarial graph invariants, disconnected components and concurrent read/write regression tests. P3-05 then implements actual BFS; P3-06 implements Prim's heap-based MST and rerouting. No traversal or physical radio claims are made by this commit.
+Commit 3 adds [the complete mesh verification matrix](P3-04_MESH_VERIFICATION.md) and dedicated adversarial/concurrency suites. These independently check disconnected components, dense undirected connectivity, duplicate IDs and pairs, invalid weights, link removal/recreation, status and decommissioning reconciliation, malformed registry recovery, deterministic versions, parallel writers/readers, and cancellation queued behind a deliberately blocked registry read.
+
+**Next:** P3-05 implements actual BFS and gateway reachability. P3-06 implements Prim's heap-based MST and rerouting. No traversal, physical radio, durability or measured performance claims are made by P3-04.
