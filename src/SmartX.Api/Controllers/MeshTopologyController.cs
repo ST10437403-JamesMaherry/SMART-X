@@ -19,11 +19,13 @@ public sealed class MeshTopologyController : ControllerBase
     private readonly MeshTopologyService _topologyService;
     private readonly MeshLinkSimulationService _simulationService;
     private readonly MeshSimulationAccessPolicy _simulationAccess;
+    private readonly MeshTopologyRealtimePublisher _topologyChanges;
 
     public MeshTopologyController(
         MeshTopologyService topologyService,
         MeshLinkSimulationService simulationService,
-        MeshSimulationAccessPolicy simulationAccess)
+        MeshSimulationAccessPolicy simulationAccess,
+        MeshTopologyRealtimePublisher topologyChanges)
     {
         _topologyService = topologyService
             ?? throw new ArgumentNullException(nameof(topologyService));
@@ -31,6 +33,8 @@ public sealed class MeshTopologyController : ControllerBase
             ?? throw new ArgumentNullException(nameof(simulationService));
         _simulationAccess = simulationAccess
             ?? throw new ArgumentNullException(nameof(simulationAccess));
+        _topologyChanges = topologyChanges
+            ?? throw new ArgumentNullException(nameof(topologyChanges));
     }
 
     /// <summary>
@@ -119,6 +123,11 @@ public sealed class MeshTopologyController : ControllerBase
             request.SimulatedEnergyCost,
             cancellationToken);
 
+        // Invalidate after the authoritative graph write, not before it.
+        // A broken hub cannot turn a committed link into an HTTP failure.
+        await _topologyChanges.PublishSafelyAsync(
+            MeshTopologyChangeReasons.LinkCreated);
+
         // Location refers to the authoritative collection snapshot. We do
         // not expose a redundant mutable link-by-ID GET endpoint.
         return CreatedAtAction(nameof(GetTopology), MapLink(link));
@@ -143,12 +152,24 @@ public sealed class MeshTopologyController : ControllerBase
             return SimulationDisabled();
         }
 
-        MeshLink? link = await _simulationService.UpdateLinkCostAsync(
-            id, request.SimulatedEnergyCost, cancellationToken);
+        MeshLinkCostUpdateOutcome outcome = await _simulationService
+            .UpdateLinkCostTrackedAsync(
+                id, request.SimulatedEnergyCost, cancellationToken);
 
-        return link is null
-            ? LinkNotFound(id)
-            : Ok(MapLink(link));
+        if (outcome.Link is null)
+        {
+            return LinkNotFound(id);
+        }
+
+        // The graph version does not change on an equal-cost PATCH; avoid
+        // broadcasting a no-op refresh under ordinary serial requests.
+        if (outcome.Changed)
+        {
+            await _topologyChanges.PublishSafelyAsync(
+                MeshTopologyChangeReasons.LinkCostChanged);
+        }
+
+        return Ok(MapLink(outcome.Link));
     }
 
     /// <summary>
@@ -171,7 +192,15 @@ public sealed class MeshTopologyController : ControllerBase
 
         bool removed = await _simulationService.RemoveLinkAsync(
             id, cancellationToken);
-        return removed ? NoContent() : LinkNotFound(id);
+
+        if (!removed)
+        {
+            return LinkNotFound(id);
+        }
+
+        await _topologyChanges.PublishSafelyAsync(
+            MeshTopologyChangeReasons.LinkRemoved);
+        return NoContent();
     }
 
     private static MeshLinkResponse MapLink(MeshLink link) =>

@@ -65,6 +65,23 @@ public sealed class MeshLinkSimulationService
         double simulatedEnergyCost,
         CancellationToken cancellationToken = default)
     {
+        MeshLinkCostUpdateOutcome outcome = await UpdateLinkCostTrackedAsync(
+            linkId, simulatedEnergyCost, cancellationToken).ConfigureAwait(false);
+        return outcome.Link;
+    }
+
+    /// <summary>
+    /// Retains the Commit 2 update contract while reporting whether the
+    /// previously observed weight differs from the successful stored result.
+    /// An equal-cost PATCH must not emit a redundant topology invalidation.
+    /// The store is still the only synchronized write authority; under
+    /// concurrent writers this flag is advisory, and clients always GET.
+    /// </summary>
+    public async Task<MeshLinkCostUpdateOutcome> UpdateLinkCostTrackedAsync(
+        Guid linkId,
+        double simulatedEnergyCost,
+        CancellationToken cancellationToken = default)
+    {
         if (linkId == Guid.Empty)
         {
             throw new InvalidMeshTopologyException(
@@ -82,14 +99,21 @@ public sealed class MeshLinkSimulationService
             .GetSnapshotAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (!snapshot.Links.Any(link => link.Id == linkId))
+        MeshLink? existing = snapshot.Links.FirstOrDefault(
+            link => link.Id == linkId);
+
+        if (existing is null)
         {
-            return null;
+            return new MeshLinkCostUpdateOutcome(null, Changed: false);
         }
 
-        return await _store
+        MeshLink updated = await _store
             .UpdateLinkCostAsync(linkId, simulatedEnergyCost, cancellationToken)
             .ConfigureAwait(false);
+
+        return new MeshLinkCostUpdateOutcome(
+            updated,
+            Changed: existing.SimulatedEnergyCost != updated.SimulatedEnergyCost);
     }
 
     /// <summary>

@@ -154,6 +154,10 @@ builder.Services.AddScoped<MeshTopologyService>();
 builder.Services.AddScoped<MeshLinkSimulationService>();
 builder.Services.AddSingleton<MeshSimulationAccessPolicy>();
 
+// Commit 3: best-effort topology invalidations reuse the established
+// RealtimeChanged event on /hubs/realtime; no second SignalR hub or graph store.
+builder.Services.AddScoped<MeshTopologyRealtimePublisher>();
+
 // -------------------------------------------------------------------------
 // P2-05 chronological operational history
 // -------------------------------------------------------------------------

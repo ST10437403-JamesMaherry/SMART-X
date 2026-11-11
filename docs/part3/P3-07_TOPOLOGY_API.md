@@ -1,8 +1,8 @@
-# P3-07: Typed topology API and simulation writes — Commits 1-2
+# P3-07: Typed topology APIs, simulation writes and realtime invalidation — Commits 1-3
 
 **Issue:** `[P3-07] Expose topology APIs and reproducible network simulations`
 **Branch:** `feature/part3-topology-api`
-**Status:** Commits 1–2 provide read-only topology API and gated simulation link writes; SignalR invalidation and the deterministic greenhouse demonstration follow in Commits 3–4.
+**Status:** Commits 1–3 provide read-only topology APIs, guarded simulation writes and realtime invalidation; the deterministic greenhouse demonstration remains in Commit 4.
 
 ## 1. Contract surface
 
@@ -62,7 +62,7 @@ git diff --check
 ## 5. Next commits
 
 - **Commit 2 (implemented):** Strictly validated link addition, removal and cost updates behind an explicit simulation-only gate. Reuses `IMeshTopologyStore` rather than creating competing topology state.
-- **Commit 3:** Publish topology invalidation reasons through the existing real-time pattern, including sensor health/status transitions; clients still use authoritative GET after invalidation/reconnect.
+- **Commit 3 (implemented):** Publish link and sensor-status invalidations through the existing real-time hub; reconnect and current-device selection remain a frontend concern for P3-08, supported by a reusable hook.
 - **Commit 4:** Deterministic, actual-API greenhouse demo and integration regression proving alternate paths or explicit disconnection after relay failure.
 
 No endpoint in Commit 1 edits the network or claims to control physical IoT radio hardware.
@@ -154,3 +154,96 @@ dotnet restore SmartX.sln
 dotnet format SmartX.sln --verify-no-changes --no-restore
 git diff --check
 ```
+
+
+## 7. P3-07 Commit 3: SignalR topology invalidation and reconnect
+
+### Reuse the existing hub; do not create a second network authority
+
+Smart-X already exposes **`/hubs/realtime`** and its `RealtimeChanged` event,
+containing `reason`, `sensorProfileId` and `occurredAtUtc`. Commit 3 extends
+this lightweight invalidation mechanism. It deliberately does **not** send a
+cached topology or routing calculation through SignalR. Only REST GETs are
+authoritative; no graph cache, second hub, websocket command handler or
+separate sensor-status API has been introduced.
+
+| Source of authoritative change | `RealtimeChanged.reason` | Sensor GUID |
+| --- | --- | --- |
+| Successful `POST /api/topology/links` | `topology-link-created` | null |
+| Successful changed-cost `PATCH /api/topology/links/{id}/cost` | `topology-link-cost-changed` | null |
+| Successful `DELETE /api/topology/links/{id}` | `topology-link-removed` | null |
+| Existing `POST /api/sensors` | `sensor-registered` | registered sensor |
+| Existing `PUT /api/sensors/{id}` | `sensor-updated` | edited sensor |
+| Existing changed `PATCH /api/sensors/{id}/status` | `sensor-status-changed` | changed sensor |
+| Accepted telemetry promotes Offline to Online | `sensor-status-changed` | revived sensor |
+
+Invalid requests, duplicate links, unknown deletions and equal-cost no-op
+PATCHes **do not** produce a new link-change notification under serial
+request execution. Telemetry that leaves a sensor's status unchanged continues
+to publish the existing ordinary telemetry invalidation, **not** a topology
+status event. The notifier is called only after an authoritative mutation.
+
+Graph state and SignalR transport have independent failure semantics. The
+server catches publisher failures so an already persisted link is still
+reported as a successful HTTP operation even if connected clients cannot
+receive the event. This is **best-effort notification**, not guaranteed event
+delivery. On reconnect, clients must issue a fresh authoritative GET.
+
+### Frontend subscription contract for P3-08
+
+`src/SmartX.Client/src/features/topology/useTopologyRealtime.ts` provides
+`useTopologyRealtime(onInvalidated)` and `shouldRefreshTopology(change)`.
+It reuses `useRealtimeStream` with its existing initial-connect retry and
+automatic-reconnect handling. A missing payload (`undefined`) means initial
+connection or reconnection and **always invalidates**, because messages may
+have been missed while disconnected. Other realtime messages (telemetry or
+command changes) do not unnecessarily re-query the mesh.
+
+When P3-08 consumes this hook, its callback should:
+
+1. Preserve the selected device's canonical GUID in React state. Do **not**
+   clear selection on graph invalidation or hub reconnect.
+2. Abort an older in-flight mesh snapshot request and increment a local
+   request-generation counter before issuing the next GET.
+3. Load graph, BFS and MST results from the authoritative HTTP endpoints.
+   Their graph versions must match before combining them in one visual.
+4. For the still-selected GUID, refetch its existing device route; show
+   explicit `Disconnected` / `Unavailable` or `404` if applicable.
+5. Ignore responses from superseded generations and preserve the last valid
+   displayed state until a coherent current revision is available.
+6. Do not reject same-version sensor **metadata** invalidations: a rename can
+   update displayed labels without advancing the graph connectivity version.
+
+The hook prepares this subscription pattern; the actual P3-08 mesh dashboard
+and selection-preserving rendering are **not** claimed as completed here.
+
+### Deterministic verification
+
+`tests/SmartX.Api.IntegrationTests/Topology/MeshTopologyRealtimeInvalidationTests.cs`
+uses real API registration, real synchronized mesh persistence and real HTTP
+mutations. Only the `IRealtimeNotifier` transport is replaced by an
+instrumented recording implementation to assert the exact reasons. Coverage
+includes link creation, no-op and changed-cost updates, removal, rejected
+mutations, read-only GETs, explicit statuses, registry/metadata updates,
+telemetry-driven recovery, and simulated SignalR delivery failure.
+
+```bash
+dotnet test tests/SmartX.Api.IntegrationTests/SmartX.Api.IntegrationTests.csproj -c Release --filter "FullyQualifiedName~MeshTopologyRealtimeInvalidationTests"
+dotnet build SmartX.sln -c Release
+dotnet test SmartX.sln -c Release
+dotnet restore SmartX.sln
+dotnet format SmartX.sln --verify-no-changes --no-restore
+git diff --check
+```
+
+### Limitations and scope
+
+- Topology is process-local and simulated: there is no physical radio control,
+  delivery acknowledgement, or persistence across API restarts.
+- `GraphVersion` belongs to each GET response, not the SignalR invalidation.
+  A quick succession of changes can coalesce into one latest GET.
+- Detection of equal-cost no-ops compares the pre-update snapshot with the
+  returned link. Under concurrent writers it is advisory; regardless of the
+  event count, the next HTTP GET is authoritative.
+- P3-08 owns actual view-state updates; P3-07 Commit 4 owns the end-to-end
+  greenhouse simulation scenario.
