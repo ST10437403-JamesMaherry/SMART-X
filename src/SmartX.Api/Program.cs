@@ -143,6 +143,10 @@ builder.Services.AddSingleton<
 // graph revision; it does not cache routes across status or link changes.
 builder.Services.AddScoped<MeshTraversalService>();
 
+// P3-07 read-only typed API facade. It reuses the existing graph, BFS and
+// Prim algorithms without keeping a second topology or route cache.
+builder.Services.AddScoped<MeshTopologyService>();
+
 // -------------------------------------------------------------------------
 // P2-05 chronological operational history
 // -------------------------------------------------------------------------
