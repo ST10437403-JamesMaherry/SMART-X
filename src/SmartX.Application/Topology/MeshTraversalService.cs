@@ -48,8 +48,132 @@ public sealed class MeshTraversalService
         TraverseGateway(snapshot, cancellationToken).Reachability;
 
     /// <summary>
-    /// Retains predecessors for Commit 2's sensor-to-gateway path builder.
-    /// Its reachability projection is already useful as an isolated C1 change.
+    /// Fetches one registry-reconciled snapshot and classifies every
+    /// registered sensor as reachable, disconnected, or unavailable. The
+    /// result reconstructs requested routes from BFS parents on demand.
+    /// </summary>
+    public async Task<MeshGatewayRouting> GetGatewayRoutingAsync(
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        MeshGraphSnapshot snapshot = await _topologyStore
+            .GetSnapshotAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return CalculateGatewayRouting(snapshot, cancellationToken);
+    }
+
+    /// <summary>
+    /// Returns the fewest-hop route for a registered sensor, or null if its
+    /// identity is not in the current authoritative registry. A registered
+    /// but offline or disconnected sensor returns an explicit status instead.
+    /// </summary>
+    public async Task<MeshRoute?> GetSensorRouteAsync(
+        Guid sensorProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        if (sensorProfileId == Guid.Empty)
+        {
+            throw new InvalidMeshTopologyException(
+                "A gateway-route lookup requires a non-empty sensor profile ID.");
+        }
+
+        MeshGatewayRouting routing = await GetGatewayRoutingAsync(cancellationToken)
+            .ConfigureAwait(false);
+        routing.TryGetRouteToGateway(MeshNodeKey.ForSensor(sensorProfileId),
+            out MeshRoute? route);
+        return route;
+    }
+
+    /// <summary>
+    /// Pure, deterministic routing calculation over one immutable graph
+    /// revision. Total computation is O(V + E): one gateway BFS, followed by
+    /// one component scan over the same forwarding-eligible adjacency.
+    /// Individual sensor paths are only constructed on request in O(hops).
+    /// </summary>
+    public static MeshGatewayRouting CalculateGatewayRouting(
+        MeshGraphSnapshot snapshot,
+        CancellationToken cancellationToken = default)
+    {
+        GatewayTraversalState state = TraverseGateway(snapshot, cancellationToken);
+        var registered = new List<MeshNodeKey>();
+        var unavailable = new List<MeshNodeKey>();
+        var gatewayReached = new HashSet<MeshNodeKey>(
+            state.Reachability.ReachableNodes.Select(entry => entry.Node));
+
+        // Assign an ID to each forwarding-eligible, gateway-disconnected
+        // component. The membership map prevents revisits even in cycles.
+        var componentByNode = new Dictionary<MeshNodeKey, int>();
+        var components = new List<List<MeshNodeKey>>();
+
+        foreach (MeshNode node in snapshot.Nodes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (node.IsGateway)
+            {
+                continue;
+            }
+
+            registered.Add(node.Key);
+            if (!node.IsForwardingEligible)
+            {
+                unavailable.Add(node.Key);
+                continue;
+            }
+
+            if (gatewayReached.Contains(node.Key) ||
+                componentByNode.ContainsKey(node.Key))
+            {
+                continue;
+            }
+
+            int componentId = components.Count;
+            components.Add(new List<MeshNodeKey>());
+            var pending = new Queue<MeshNodeKey>();
+            componentByNode.Add(node.Key, componentId);
+            pending.Enqueue(node.Key);
+
+            while (pending.Count > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                MeshNodeKey current = pending.Dequeue();
+
+                foreach (MeshNodeKey adjacent in state.EligibleNeighbours[current])
+                {
+                    if (gatewayReached.Contains(adjacent) ||
+                        !componentByNode.TryAdd(adjacent, componentId))
+                    {
+                        continue;
+                    }
+
+                    pending.Enqueue(adjacent);
+                }
+            }
+        }
+
+        // Snapshot.Nodes has canonical ordering. A second linear pass emits
+        // sorted members without imposing O(V log V) sorts on components.
+        foreach (MeshNode node in snapshot.Nodes)
+        {
+            if (componentByNode.TryGetValue(node.Key, out int componentId))
+            {
+                components[componentId].Add(node.Key);
+            }
+        }
+
+        return new MeshGatewayRouting(
+            state.Reachability,
+            registered,
+            unavailable,
+            components.Select(nodes => new MeshDisconnectedComponent(nodes)),
+            state.Predecessors);
+    }
+
+    /// <summary>
+    /// Retains one predecessor and one eligible adjacency for each BFS
+    /// vertex, so routing and component classification share the same graph
+    /// revision and never perform independent registry reads.
     /// </summary>
     private static GatewayTraversalState TraverseGateway(
         MeshGraphSnapshot snapshot,
@@ -60,7 +184,7 @@ public sealed class MeshTraversalService
 
         // Only forwarding-eligible vertices belong to the traversable graph.
         // The snapshot still retains offline/failed vertices for later
-        // disconnected/unavailable-node reporting (Commit 2).
+        // disconnected/unavailable-node reporting below.
         var neighbours = new Dictionary<MeshNodeKey, List<MeshNodeKey>>();
         foreach (MeshNode node in snapshot.Nodes)
         {
@@ -134,14 +258,16 @@ public sealed class MeshTraversalService
 
         return new GatewayTraversalState(
             new MeshGatewayReachability(snapshot.Version, reachable),
-            predecessors);
+            predecessors,
+            neighbours);
     }
 
     /// <summary>
-    /// Internal computation state for the next commit; never exposes a
-    /// mutable predecessor dictionary to an API or frontend consumer.
+    /// Internal BFS state never published to an API or frontend consumer;
+    /// the returned MeshGatewayRouting makes independent defensive copies.
     /// </summary>
     private sealed record GatewayTraversalState(
         MeshGatewayReachability Reachability,
-        Dictionary<MeshNodeKey, MeshNodeKey> Predecessors);
+        Dictionary<MeshNodeKey, MeshNodeKey> Predecessors,
+        Dictionary<MeshNodeKey, List<MeshNodeKey>> EligibleNeighbours);
 }
