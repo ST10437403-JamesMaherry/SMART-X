@@ -83,11 +83,13 @@ public sealed class DashboardEventCoordinator
     /// telemetry proves gateway connectivity. The exact classification captured at acceptance
     /// is then applied once, independently of HTTP request cancellation.
     /// </summary>
-    public Task AnalyzeAcceptedTelemetryAsync(
+    public async Task AnalyzeAcceptedTelemetryAsync(
         Guid sensorProfileId,
         TelemetryAnomalyObservation observation)
     {
-        return ExecuteAndPublishAsync(
+        bool becameOnline = false;
+
+        await ExecuteAndPublishAsync(
             sensorProfileId,
             DashboardChangeReasons.TelemetryChanged,
             async token =>
@@ -103,6 +105,12 @@ public sealed class DashboardEventCoordinator
                         Changed: true
                     })
                 {
+                    // The existing telemetry observer can change forwarding
+                    // eligibility without a PATCH /api/sensors/{id}/status.
+                    // Publish a topology-relevant status reason only for
+                    // this actual transition, never for every telemetry packet.
+                    becameOnline = true;
+
                     await _analysisService
                         .AnalyzeSensorStateAsync(
                             sensorProfileId,
@@ -117,6 +125,14 @@ public sealed class DashboardEventCoordinator
                         token);
             },
             CancellationToken.None);
+
+        if (becameOnline)
+        {
+            await PublishSafelyAsync(
+                DashboardChangeReasons.SensorStatusChanged,
+                sensorProfileId,
+                CancellationToken.None);
+        }
     }
 
     /// <summary>

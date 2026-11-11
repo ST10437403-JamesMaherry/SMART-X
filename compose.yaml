@@ -46,6 +46,10 @@ services:
       # ASP.NET Core execution.
       HttpsRedirection__Enabled: "false"
 
+      # Only the logical, process-local mesh may be edited. This is OFF in
+      # Production by default; enable it explicitly for a trusted demo only.
+      Topology__Simulation__Enabled: ${SMARTX_TOPOLOGY_SIMULATION_ENABLED:-false}
+
       # Store encrypted payload and metadata files on the persistent Docker
       # volume rather than inside the replaceable container filesystem.
       Attachments__StoragePath: /data/attachments
