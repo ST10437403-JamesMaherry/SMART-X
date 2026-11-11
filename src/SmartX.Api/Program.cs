@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartX.Api.Dashboard;
 using SmartX.Api.ExceptionHandling;
 using SmartX.Api.Realtime;
+using SmartX.Api.Topology;
 using SmartX.Application.Attachments;
 using SmartX.Application.Commands;
 using SmartX.Application.Dashboard;
@@ -146,6 +147,12 @@ builder.Services.AddScoped<MeshTraversalService>();
 // P3-07 read-only typed API facade. It reuses the existing graph, BFS and
 // Prim algorithms without keeping a second topology or route cache.
 builder.Services.AddScoped<MeshTopologyService>();
+
+// P3-07 Commit 2: one scoped simulation write facade over the SAME store.
+// Mutations are gated per environment; Docker Production requires an
+// explicit opt-in and never opens physical network-control operations.
+builder.Services.AddScoped<MeshLinkSimulationService>();
+builder.Services.AddSingleton<MeshSimulationAccessPolicy>();
 
 // -------------------------------------------------------------------------
 // P2-05 chronological operational history
