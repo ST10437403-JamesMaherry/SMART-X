@@ -4,9 +4,9 @@
 **Branch:** `feature/part3-prim-mst`
 **Dependency:** P3-05 BFS routing merged into `dev` before branching.
 
-This note describes the implemented Commit 1 Prim foundation and Commit 2
-weighted tree-route and connectivity projections, plus the boundaries of
-remaining work. It is a design and verification plan, not a claim that local
+This note describes the implemented Commit 1 Prim foundation, Commit 2
+weighted tree routes, and Commit 3 version-aware recalculation after explicit
+mesh and sensor changes. It also records the remaining proof work. It is a design and verification plan, not a claim that local
 builds, test runs, benchmark measurements, or CI have passed.
 
 ## Commit 1: Gateway-rooted weighted Prim backbone
@@ -223,8 +223,9 @@ components, not added to the gateway-rooted tree.
 - Snapshot creation and registry reconciliation are P3-04 store costs, not
   concealed as part of the pure algorithm.
 - Each public asynchronous projection reads the store once; the service
-  does not retain a stale tree or a global route cache. Commit 3 will test
-  live mutation/failure/recovery with actual registry and link operations.
+  does not retain a stale tree or a global route cache. Commit 3 adds an
+  explicit version-aware before/after refresh without a second mutable tree
+  store or extra radio edges.
 
 ### Test coverage for Commit 2
 
@@ -256,16 +257,135 @@ git diff --check
 Record the **actual** local results and GitHub Actions evidence after running
 these commands. Archive/static verification is not a claim of compiled tests.
 
+## Commit 3: Recompute after explicit mesh/sensor changes
+
+### Version-aware refresh contract
+
+`MeshSpanningTreeService.RefreshGatewaySpanningTreeRoutingAsync(previous, token)`
+reads **one** authoritative, registry-reconciled `MeshGraphSnapshot`.
+`CalculateGatewaySpanningTreeRefresh(previous, snapshot, token)` exposes the
+identical, pure calculation for deterministic tests.
+
+1. **Same graph version:** Reuse the supplied immutable `previous` projection
+   without recalculating Prim or BFS. No route transition is fabricated.
+2. **Newer graph version:** Recalculate Prim's selected tree and BFS's
+   connectivity classifications from the **same new snapshot**, then create
+   `MeshSpanningTreeRefresh(Previous, Current)`.
+3. **Older graph version:** Reject a backwards revision instead of claiming
+   an older topology is current. A previous result must come from the same
+   process-local store instance. Process restart requires a fresh initial
+   read, not comparison of version counters across processes.
+4. **Cancellation:** Propagates cancellation; no partial refresh is published.
+
+The service performs **no writes** to the graph, sensor registry or existing
+links. Configured alternative links must already exist. A newer mesh operation
+that completes after the snapshot is read belongs to the **next** refresh,
+not this already versioned result.
+
+### Result classification and meaningful differences
+
+- `MeshSpanningTreeRefresh`: immutable `Previous`, `Current`, revisions,
+  `HasGraphRevisionChanged`, `HasBackboneChanged`,
+  `HasDisconnectedComponentsChanged`, and canonical `RouteTransitions`.
+- `MeshTreeRouteTransition`: sensor ID, optional old/new tree routes, and
+  independent flags for registration/removal, gateway connectivity loss or
+  recovery, selected-route changes and accumulated simulated cost changes.
+- Old/new routes are compared **semantically**, not merely by graph revision.
+  Equal parent paths with new selected costs are reported as a cost change,
+  **not** falsely claimed to be a reroute.
+- A revision caused by an unused link-cost update or Online -> Warning status
+  change does not falsely change selected tree paths. Nonetheless the new
+  revision and current sensor status remain accessible in graph snapshots.
+- Disconnected islands may merge/split without changing any individual
+  sensor's `Disconnected` status; the component-change flag handles this.
+- A missing registered sensor is represented by a null old/new route. This
+  is not conflated with an existing Offline or Fault sensor.
+- Immutable previous results remain valid audit evidence, even when the new
+  projection excludes previously selected links or unavailable relays.
+
+### Deterministic before/after example
+
+The simulated mesh contains gateway GW, preferred relay A, backup relay B
+and leaf L. **All four edges are configured before the failure.**
+
+| Undirected link | Relative simulated cost |
+| --- | ---: |
+| GW -- A | 1 |
+| A -- L | 1 |
+| GW -- B | 2 |
+| B -- L | 3 |
+
+| Snapshot | Prim selected edges | Total tree cost | L's tree route | L's path cost |
+| --- | --- | ---: | --- | ---: |
+| Before (all Online) | GW--A, A--L, GW--B | 4 | L -> A -> GW | 2 |
+| A Offline | GW--B, B--L | 5 | L -> B -> GW | 5 |
+| A Online again | GW--A, A--L, GW--B | 4 | L -> A -> GW | 2 |
+
+A becomes `Unavailable` while Offline; L remains `Reachable` because an
+**already configured** fallback path exists. All four links remain in the
+source snapshot for Offline status. With **only** GW--A and A--L configured,
+A's failure instead produces `Unavailable(A)` and `Disconnected(L)` with an
+empty gateway MST; no self-healing can be claimed. Decommissioning is different
+from Offline: P3-04 intentionally removes its incident simulated links.
+
+### Cost/complexity and scope
+
+The basic Prim computation remains **O(E log E)**; BFS classification is
+**O(V + E)**. Same-revision refresh costs a single store snapshot read, then
+reuses the immutable projection. A newer revision recomputes both algorithms.
+Comparison of chosen branches/registered/unavailable sensors is **O(V)**.
+When selected routes change, reconstructing all affected paths can take
+**O(sum of route lengths)**, worst-case O(V²) on a long chain; this extra
+comparison is optional orchestration, not part of Prim's heap complexity.
+The result retains only changed routes, not a full copied route per sensor.
+
+No new HTTP endpoints, background watchers, SignalR subscribers, automatic
+radio configuration, or concurrency-breaking shadow topology are added.
+P3-07 will expose these read projections and explicit simulation mutations
+through typed APIs. `RefreshGatewaySpanningTreeRoutingAsync` performs a
+fresh read when called after a change; it does **not** run itself in a
+background process.
+
+### Commit 3 verification
+
+- `tests/SmartX.Domain.Tests/Topology/MeshSpanningTreeRefreshTests.cs`
+  validates immutable transition semantics, registration/removal, revision
+  ordering, connectivity changes, cost-only changes and component changes.
+- `tests/SmartX.Application.Tests/Topology/MeshSpanningTreeRefreshServiceTests.cs`
+  tests known before/after graph revisions without mutable infrastructure,
+  including numeric alternate-tree costs and failure without redundancy.
+- `tests/SmartX.Infrastructure.Tests/Topology/MeshPrimReroutingLiveTopologyTests.cs`
+  uses the **real** sensor registry and synchronized mesh store to verify
+  status changes, decommissioning, link removal, cost updates, isolated
+  registration and recovery through existing links.
+- `docs/part3/P3-06_REROUTING_SCENARIOS.md` documents the exact fixtures,
+  expected outcomes and commands without fabricating test run counts.
+
+```bash
+# New Commit 3 suites
+
+dotnet test tests/SmartX.Domain.Tests/SmartX.Domain.Tests.csproj -c Release --filter "FullyQualifiedName~MeshSpanningTreeRefreshTests"
+dotnet test tests/SmartX.Application.Tests/SmartX.Application.Tests.csproj -c Release --filter "FullyQualifiedName~MeshSpanningTreeRefreshServiceTests"
+dotnet test tests/SmartX.Infrastructure.Tests/SmartX.Infrastructure.Tests.csproj -c Release --filter "FullyQualifiedName~MeshPrimReroutingLiveTopologyTests"
+
+# Full quality gate
+
+dotnet build SmartX.sln -c Release
+dotnet test SmartX.sln -c Release
+dotnet restore SmartX.sln
+dotnet format SmartX.sln --verify-no-changes --no-restore
+git diff --check
+```
+
 ## Remaining planned commits
 
 1. **Completed:** `feat(topology): calculate Prim MST using a priority heap`.
-2. **Completed in this change:** `feat(topology): expose MST-backed routes and cost summaries`.
-3. **Next:** `feat(topology): recompute routes after mesh and sensor failures` -
-   demonstrate correct revision changes and real alternate-link failover.
-4. `test(topology): prove MST optimality and self-healing scenarios` -
-   independent minimality checks, fixed weighted examples, bridge failures,
-   disconnected topologies, and state reactivation.
+2. **Completed:** `feat(topology): expose MST-backed routes and cost summaries`.
+3. **This commit:** `feat(topology): recompute routes after mesh and sensor failures`.
+4. **Next:** `test(topology): prove MST optimality and self-healing scenarios` -
+   add independent minimality/cut/cycle checks, hand-verified weighted graphs,
+   and adversarial redundant and non-redundant failure fixtures.
 
 P3-07 will expose typed topology HTTP endpoints and integrate read-only
-projections with the UI. P3-06 does not add public API endpoints or pretend
-that physical topology or RF quality can be inferred from graph coordinates.
+projections with the UI. The graph cost remains a **simulated relative
+weight**, not measured energy consumption or verified RF connectivity.

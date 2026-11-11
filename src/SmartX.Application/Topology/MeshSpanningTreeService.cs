@@ -55,6 +55,61 @@ public sealed class MeshSpanningTreeService
     }
 
     /// <summary>
+    /// Refreshes a previous tree after an explicit mesh-link or authoritative
+    /// sensor-status change. Exactly one reconciled snapshot is read. If its
+    /// monotonic process-local version is unchanged, reuse the prior immutable
+    /// projection; otherwise rerun Prim and BFS on THAT SAME new revision.
+    /// This method performs no writes and creates no recovery connections.
+    /// </summary>
+    public async Task<MeshSpanningTreeRefresh> RefreshGatewaySpanningTreeRoutingAsync(
+        MeshGatewaySpanningTreeRouting previous,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(previous);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        MeshGraphSnapshot snapshot = await _topologyStore
+            .GetSnapshotAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return CalculateGatewaySpanningTreeRefresh(
+            previous, snapshot, cancellationToken);
+    }
+
+    /// <summary>
+    /// Pure and deterministic version-aware refresh for tests and future API
+    /// orchestration. The previous projection must originate from the same
+    /// process-local topology store; a backwards version is rejected rather
+    /// than silently returning a stale or incomparable routing result.
+    /// </summary>
+    public static MeshSpanningTreeRefresh CalculateGatewaySpanningTreeRefresh(
+        MeshGatewaySpanningTreeRouting previous,
+        MeshGraphSnapshot snapshot,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(previous);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (snapshot.Version < previous.GraphVersion)
+        {
+            throw new InvalidMeshTopologyException(
+                "The topology snapshot predates the supplied routing projection.");
+        }
+
+        if (snapshot.Version == previous.GraphVersion)
+        {
+            return new MeshSpanningTreeRefresh(previous, previous);
+        }
+
+        MeshGatewaySpanningTreeRouting current =
+            CalculateGatewaySpanningTreeRouting(snapshot, cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return new MeshSpanningTreeRefresh(previous, current);
+    }
+
+    /// <summary>
     /// Returns the selected MST path and its accumulated simulated cost for
     /// a registered sensor, or null for an unknown sensor profile. Offline or
     /// disconnected sensors return an explicit status, not an invented path.
