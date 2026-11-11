@@ -38,6 +38,85 @@ public sealed class MeshSpanningTreeService
     }
 
     /// <summary>
+    /// Reads a single authoritative graph revision, then combines Prim's
+    /// selected weighted tree with P3-05's connectivity classifications.
+    /// No second store read can mix old parents with new health states.
+    /// </summary>
+    public async Task<MeshGatewaySpanningTreeRouting> GetGatewaySpanningTreeRoutingAsync(
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        MeshGraphSnapshot snapshot = await _topologyStore
+            .GetSnapshotAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return CalculateGatewaySpanningTreeRouting(snapshot, cancellationToken);
+    }
+
+    /// <summary>
+    /// Returns the selected MST path and its accumulated simulated cost for
+    /// a registered sensor, or null for an unknown sensor profile. Offline or
+    /// disconnected sensors return an explicit status, not an invented path.
+    /// </summary>
+    public async Task<MeshTreeRoute?> GetSensorTreeRouteAsync(
+        Guid sensorProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        if (sensorProfileId == Guid.Empty)
+        {
+            throw new InvalidMeshTopologyException(
+                "A tree-route lookup requires a non-empty sensor profile ID.");
+        }
+
+        MeshGatewaySpanningTreeRouting projection =
+            await GetGatewaySpanningTreeRoutingAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+        projection.TryGetTreeRouteToGateway(
+            MeshNodeKey.ForSensor(sensorProfileId), out MeshTreeRoute? route);
+        return route;
+    }
+
+    /// <summary>
+    /// Pure projection over ONE immutable snapshot. Prim supplies selected
+    /// weighted parent links; existing BFS supplies only the membership and
+    /// disconnected-component partition. Actual tree routes NEVER use the
+    /// BFS predecessor map. Cost is O(E log E + V log V) including Prim's
+    /// result ordering and one O(V + E) BFS classification pass.
+    /// </summary>
+    public static MeshGatewaySpanningTreeRouting CalculateGatewaySpanningTreeRouting(
+        MeshGraphSnapshot snapshot,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        MinimumSpanningTreeResult tree =
+            CalculateGatewayMinimumSpanningTree(snapshot, cancellationToken);
+        MeshGatewayRouting classification =
+            MeshTraversalService.CalculateGatewayRouting(snapshot, cancellationToken);
+
+        // Prim and BFS must identify the SAME forwarding-eligible gateway
+        // component, despite selecting different edges and routes within it.
+        // This also catches accidental changes to the eligibility policy.
+        if (tree.GraphVersion != classification.GraphVersion ||
+            !tree.ReachedNodes.SequenceEqual(
+                classification.Reachability.ReachableNodes.Select(node => node.Node)))
+        {
+            throw new InvalidMeshTopologyException(
+                "Prim and BFS disagree about gateway-connected mesh membership.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return new MeshGatewaySpanningTreeRouting(
+            tree,
+            classification.RegisteredSensors,
+            classification.UnavailableSensors,
+            classification.DisconnectedComponents);
+    }
+
+    /// <summary>
     /// Pure Prim calculation on a single graph snapshot. The gateway is the
     /// fixed root. A candidate is accepted only when its child has not been
     /// visited, preventing cycles even in dense undirected graphs.

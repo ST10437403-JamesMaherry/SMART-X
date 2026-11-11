@@ -5,8 +5,8 @@ namespace SmartX.Domain.Topology;
 /// forwarding-eligible connected component in one mesh graph revision.
 ///
 /// This is NOT a minimum-cost path to each sensor. It contains only sensors
-/// reached from the gateway; disconnected/unavailable classifications and
-/// tree-path reconstruction are added in P3-06 Commit 2.
+/// reached from the gateway. P3-06's MeshGatewaySpanningTreeRouting wraps
+/// this tree with sensor classifications and on-demand weighted tree routes.
 /// </summary>
 public sealed class MinimumSpanningTreeResult
 {
@@ -174,7 +174,7 @@ public sealed class MinimumSpanningTreeResult
     /// <summary>
     /// True only for the gateway and sensors in its selected tree. An
     /// absent key may be disconnected, unavailable or not registered;
-    /// Commit 2 will provide those distinct classifications.
+    /// MeshGatewaySpanningTreeRouting supplies those distinct classifications.
     /// </summary>
     public bool ContainsNode(MeshNodeKey node)
     {

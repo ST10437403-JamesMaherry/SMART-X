@@ -1,10 +1,11 @@
 # P3-06 - Prim minimum spanning tree and automatic mesh rerouting
 
-**GitHub issue:** `[P3-06] Implement Prim MST and automatic mesh rerouting`  
-**Branch:** `feature/part3-prim-mst`  
+**GitHub issue:** `[P3-06] Implement Prim MST and automatic mesh rerouting`
+**Branch:** `feature/part3-prim-mst`
 **Dependency:** P3-05 BFS routing merged into `dev` before branching.
 
-This note describes the implemented Commit 1 foundation and the boundaries of
+This note describes the implemented Commit 1 Prim foundation and Commit 2
+weighted tree-route and connectivity projections, plus the boundaries of
 remaining work. It is a design and verification plan, not a claim that local
 builds, test runs, benchmark measurements, or CI have passed.
 
@@ -51,9 +52,9 @@ remain in the authoritative snapshot, but does not enter Prim's temporary
 adjacency; its configured links are **not** silently deleted. A healthy sensor
 isolated from the gateway is absent from this gateway-rooted tree. The selected
 backbone is intentionally **not** a spanning forest across disconnected islands.
-Commit 2 will explicitly classify disconnected and unavailable sensors and
-reconstruct sensor-to-gateway **tree paths**, not claim they are globally
-least-cost point-to-point paths.
+Commit 2 explicitly classifies disconnected and unavailable sensors and
+reconstructs sensor-to-gateway **tree paths**. It does not claim those paths
+are globally least-cost point-to-point paths.
 
 ### Result contract
 
@@ -67,7 +68,8 @@ least-cost point-to-point paths.
 - `SelectedEdgeCount == ReachedNodeCount - 1`: gateway-tree cardinality.
 - `TryGetParent`, `TryGetBranch`, `ContainsNode`: O(1) expected identity lookups.
   `ContainsNode(false)` alone does not distinguish an unregistered sensor from
-  a registered but unavailable/disconnected sensor; classification comes later.
+  a registered but unavailable/disconnected sensor; the separate Commit 2
+  routing projection supplies those classifications.
 
 The domain constructor independently rejects invalid versions, malformed
 branches, duplicate children, repeated link identities/pairs, non-gateway
@@ -136,12 +138,129 @@ git diff --check
 Record **actual** local/CI totals and any failures after running these checks;
 archive validation alone is not a C# compilation or xUnit run.
 
+## Commit 2: Tree routes, accumulated costs and complete connectivity summary
+
+### One-snapshot projection and separation of algorithms
+
+- `MeshSpanningTreeService.GetGatewaySpanningTreeRoutingAsync()` calls
+  `IMeshTopologyStore.GetSnapshotAsync()` **once** per request, then passes the
+  same immutable `MeshGraphSnapshot` to the pure
+  `CalculateGatewaySpanningTreeRouting(snapshot)` method.
+- **Prim** calculates the chosen minimum-total-cost gateway backbone. Existing
+  P3-05 **BFS** runs on that **same** snapshot **only** to classify registered
+  sensors and their disconnected eligible components. It does **not** supply
+  the tree's parent links or its selected route edges.
+- A consistency check requires Prim and BFS to agree on the exact
+  forwarding-eligible gateway-connected vertex set and source graph revision.
+  This prevents an accidental eligibility-policy mismatch from being exposed.
+- `MeshGatewaySpanningTreeRouting` publishes the original immutable `Tree`,
+  its `TotalSimulatedEnergyCost`, `SelectedEdgeCount`, and the counts and
+  canonical identities for `RegisteredSensors`, `UnavailableSensors`, and
+  `DisconnectedComponents`.
+- Every registered sensor belongs to **exactly one** category: reached by
+  Prim, unavailable due to sensor status, or in one gateway-disconnected
+  eligible component. The constructor rejects missing, repeated and
+  overlapping memberships, unsorted sensor identities and malformed groups.
+- An **unknown sensor ID** is not silently labelled offline: the typed
+  `TryGetTreeRouteToGateway` method returns `false` with `null`. Registered
+  unavailable/disconnected devices return explicit `MeshRouteStatus` values.
+
+### Selected tree path versus total backbone cost
+
+`MeshGatewaySpanningTreeRouting.TryGetTreeRouteToGateway(sensor, out route)`
+reconstructs the path by following `MinimumSpanningTreeResult.TryGetBranch`
+from the selected sensor through its unique parents until the gateway.
+The immutable `MeshTreeRoute` includes:
+
+- `GraphVersion`, `Sensor`, and `Status` (`Reachable`, `Disconnected`, or
+  `Unavailable`) matching the one source graph revision.
+- `PathToGateway`: sensor -> ... -> gateway for a reached sensor; otherwise
+  empty. `SelectedLinksToGateway` contains those **actual selected MST links**
+  in the same order, not merely all configured edges.
+- `HopCount`: the number of selected links, or **null** when unreachable.
+- `AccumulatedSimulatedEnergyCost`: the sum of that sensor's tree-path weights,
+  or **null** when unreachable. A null cost is intentional: a missing route
+  must never be displayed as a real **zero-cost** path.
+
+`TotalSimulatedEnergyCost` belongs to the entire chosen **tree backbone**. It
+is **not** the same metric as one sensor's `AccumulatedSimulatedEnergyCost`.
+Routes are reconstructed on demand in **O(h)** time and memory for h hops,
+not precalculated or cached for every sensor. Every route and selected link
+is defensively copied and validated before publication.
+
+### Numeric example: the MST need not have the shortest weighted route
+
+| Configured undirected edge | Relative simulated cost | Selected by Prim? |
+| --- | ---: | --- |
+| GW-A | 1 | Yes |
+| A-B | 1 | Yes |
+| B-C | 1 | Yes |
+| GW-C | 2.5 | No |
+
+The gateway-rooted MST has total backbone cost **3** and routes C through
+`C -> B -> A -> GW`, with **3 hops** and **tree-path cost 3**. The separate
+configured `C -> GW` edge has weight **2.5**, which is cheaper for this
+individual device but would increase the tree's **overall** total cost if
+chosen in place of `B-C`. **Prim is not Dijkstra** and this implementation
+makes no shortest-weighted-sensor-route guarantee.
+
+### Forwarding state and disconnected groups
+
+A sensor in `Online` or `Warning` may forward. `Offline`, `Fault`,
+`Maintenance`, and `Decommissioned` sensors cannot forward. A healthy
+sensor behind an unavailable bridge is **Disconnected** (not Unavailable).
+Configured edges touching an unavailable sensor remain in the source graph
+unless the P3-04 store has removed them due to decommissioning. Isolated
+eligible sensors and cyclic islands are grouped into canonical disconnected
+components, not added to the gateway-rooted tree.
+
+### Complexity and isolation
+
+- Prim: **O(E log E)** heap work plus **O(V + E)** adjacency construction;
+  immutable tree result ordering adds **O(R log R)** for R reached nodes.
+- BFS connectivity classification on the same snapshot: **O(V + E)**.
+- One target's on-demand tree-route construction: **O(h)** time and memory.
+- Snapshot creation and registry reconciliation are P3-04 store costs, not
+  concealed as part of the pure algorithm.
+- Each public asynchronous projection reads the store once; the service
+  does not retain a stale tree or a global route cache. Commit 3 will test
+  live mutation/failure/recovery with actual registry and link operations.
+
+### Test coverage for Commit 2
+
+- `tests/SmartX.Domain.Tests/Topology/MeshSpanningTreeRoutingContractTests.cs`:
+  immutable path/link copies, version and sensor validation, adjacency and
+  cycle rejection, unavailable/disconnected null-cost routes, malformed
+  classifications, component ordering, unknown IDs and overflow.
+- `tests/SmartX.Application.Tests/Topology/MeshSpanningTreeRoutingServiceTests.cs`:
+  exact selected path/weight fixtures, BFS-vs-Prim path distinction, MST vs
+  shortest weighted path distinction, islands, unavailable bridges, Warning
+  relays, deterministic equal-cost ties, no stale snapshot caching,
+  cancellation and typed per-device lookup.
+
+```bash
+# P3-06 Commit 2 focused checks
+
+dotnet test tests/SmartX.Domain.Tests/SmartX.Domain.Tests.csproj -c Release --filter "FullyQualifiedName~MeshSpanningTreeRoutingContractTests"
+dotnet test tests/SmartX.Application.Tests/SmartX.Application.Tests.csproj -c Release --filter "FullyQualifiedName~MeshSpanningTreeRoutingServiceTests"
+
+# Full regression and quality gate
+
+dotnet build SmartX.sln -c Release
+dotnet test SmartX.sln -c Release
+dotnet restore SmartX.sln
+dotnet format SmartX.sln --verify-no-changes --no-restore
+git diff --check
+```
+
+Record the **actual** local results and GitHub Actions evidence after running
+these commands. Archive/static verification is not a claim of compiled tests.
+
 ## Remaining planned commits
 
-1. **Completed in this change:** `feat(topology): calculate Prim MST using a priority heap`
-2. **Next:** `feat(topology): expose MST-backed routes and cost summaries` -
-   classify every sensor; provide gateway tree paths and their summed weights.
-3. `feat(topology): recompute routes after mesh and sensor failures` -
+1. **Completed:** `feat(topology): calculate Prim MST using a priority heap`.
+2. **Completed in this change:** `feat(topology): expose MST-backed routes and cost summaries`.
+3. **Next:** `feat(topology): recompute routes after mesh and sensor failures` -
    demonstrate correct revision changes and real alternate-link failover.
 4. `test(topology): prove MST optimality and self-healing scenarios` -
    independent minimality checks, fixed weighted examples, bridge failures,
