@@ -11,6 +11,7 @@ using SmartX.Application.Realtime;
 using SmartX.Application.Recommendations;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
+using SmartX.Application.Topology;
 using SmartX.Domain.Dashboard;
 using SmartX.Infrastructure.Attachments;
 using SmartX.Infrastructure.Commands;
@@ -19,6 +20,7 @@ using SmartX.Infrastructure.Realtime;
 using SmartX.Infrastructure.Recommendations;
 using SmartX.Infrastructure.Sensors;
 using SmartX.Infrastructure.Telemetry;
+using SmartX.Infrastructure.Topology;
 
 const string clientCorsPolicyName = "SmartXClient";
 
@@ -125,6 +127,17 @@ builder.Services.AddSingleton<
 builder.Services.AddScoped<SensorRegistrationService>();
 
 builder.Services.AddScoped<SensorManagementService>();
+
+// -------------------------------------------------------------------------
+// P3-04 simulated IoT mesh graph
+// -------------------------------------------------------------------------
+
+// One shared adjacency-list store uses the authoritative singleton sensor
+// repository for registered vertices and current operational health. Links
+// are added only by explicit simulation operations; no radio link is inferred.
+builder.Services.AddSingleton<
+    IMeshTopologyStore,
+    InMemoryMeshTopologyStore>();
 
 // -------------------------------------------------------------------------
 // P2-05 chronological operational history
