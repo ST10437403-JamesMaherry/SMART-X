@@ -1,9 +1,10 @@
 namespace SmartX.Domain.Topology;
 
 /// <summary>
-/// Explicit outcome for a registered sensor's BFS route to the gateway.
-/// Unregistered sensor identities are not represented by this enum: callers
-/// can distinguish them using MeshGatewayRouting.TryGetRouteToGateway.
+/// Explicit gateway-connectivity outcome for a registered sensor. Shared by
+/// BFS fewest-hop routes (P3-05) and selected Prim tree routes (P3-06).
+/// Unregistered identities are NOT a status: each routing projection exposes
+/// a TryGet method that returns false for unknown sensor identities.
 /// </summary>
 public enum MeshRouteStatus : byte
 {
