@@ -1,7 +1,7 @@
 # P3-06 Commit 4 - MST optimality and self-healing verification
 
-**Issue:** `[P3-06] Implement Prim MST and automatic mesh rerouting`  
-**Branch:** `feature/part3-prim-mst`  
+**Issue:** `[P3-06] Implement Prim MST and automatic mesh rerouting`
+**Branch:** `feature/part3-prim-mst`
 **Commit:** `test(topology): prove MST optimality and self-healing scenarios`
 
 This document specifies **expected** outcomes, independent mathematical checks,
