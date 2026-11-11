@@ -377,14 +377,33 @@ dotnet format SmartX.sln --verify-no-changes --no-restore
 git diff --check
 ```
 
-## Remaining planned commits
+## Commit 4 - independent optimality and adversarial rerouting evidence
 
-1. **Completed:** `feat(topology): calculate Prim MST using a priority heap`.
-2. **Completed:** `feat(topology): expose MST-backed routes and cost summaries`.
-3. **This commit:** `feat(topology): recompute routes after mesh and sensor failures`.
-4. **Next:** `test(topology): prove MST optimality and self-healing scenarios` -
-   add independent minimality/cut/cycle checks, hand-verified weighted graphs,
-   and adversarial redundant and non-redundant failure fixtures.
+- `tests/SmartX.Application.Tests/Topology/MeshPrimOptimalityAdversarialTests.cs`
+  exhaustively evaluates **1,216** tiny undirected graph/weight
+  configurations against an independently implemented Kruskal union-find
+  minimum-spanning-forest oracle. Only Kruskal's **gateway component** is
+  compared with the gateway-rooted Prim result.
+- Each result must have exactly reached-vertices-minus-one selected links,
+  real configured link IDs and weights, and no cycles. The independent
+  cycle/exchange certificate also rules out an omitted cheaper link that
+  could replace a higher-cost edge on its selected tree path.
+- `tests/SmartX.Infrastructure.Tests/Topology/MeshPrimSelfHealingAdversarialTests.cs`
+  checks three successive relay failures, all unavailable-relay statuses,
+  no-backup disconnection, disconnected-island splitting and reconnection,
+  unused-cost changes, and parent-path changes against the real registry
+  and synchronized mesh store.
+- `docs/part3/P3-06_MST_OPTIMALITY_VERIFICATION.md` provides all deterministic
+  expected selected edges, totals, routes, commands and evidence boundaries.
+  These are **test expectations**, not a statement that the tests ran.
+
+## Planned commit completion
+
+1. `feat(topology): calculate Prim MST using a priority heap` - implemented.
+2. `feat(topology): expose MST-backed routes and cost summaries` - implemented.
+3. `feat(topology): recompute routes after mesh and sensor failures` - implemented.
+4. `test(topology): prove MST optimality and self-healing scenarios` - tests and
+   documentation prepared; verify with actual .NET and CI output before merge.
 
 P3-07 will expose typed topology HTTP endpoints and integrate read-only
 projections with the UI. The graph cost remains a **simulated relative
