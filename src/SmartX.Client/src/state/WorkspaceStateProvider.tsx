@@ -7,6 +7,7 @@ import {
   type RegistrationDraft,
   type TelemetryBatchDraft,
   type TelemetryDraft,
+  type TopologyHistoryDraft,
   type WorkspaceState,
 } from './workspaceState';
 
@@ -32,6 +33,12 @@ function WorkspaceStateProvider({ children }: WorkspaceStateProviderProps) {
   const [deviceSearchOffset, setDeviceSearchOffset] = useState(0);
   const [sourceAlertEpisodeId, setSourceAlertEpisodeId] = useState<string | null>(null);
 
+  // Preserve only bounded, nonsensitive date-range form inputs across route
+  // unmounts. Authoritative telemetry pages are always re-read from the AVL.
+  const [topologyHistoryDrafts, setTopologyHistoryDrafts] = useState<
+    Readonly<Record<string, TopologyHistoryDraft>>
+  >({});
+
   const [registrationDraft, setRegistrationDraft] = useState<RegistrationDraft>(() => ({
     values: createInitialSensorRegistrationValues(),
     touched: {},
@@ -56,6 +63,8 @@ function WorkspaceStateProvider({ children }: WorkspaceStateProviderProps) {
       setDeviceSearchOffset,
       sourceAlertEpisodeId,
       setSourceAlertEpisodeId,
+      topologyHistoryDrafts,
+      setTopologyHistoryDrafts,
       registrationDraft,
       setRegistrationDraft,
       telemetryDrafts,
@@ -69,6 +78,7 @@ function WorkspaceStateProvider({ children }: WorkspaceStateProviderProps) {
       deviceSearchApplied,
       deviceSearchOffset,
       sourceAlertEpisodeId,
+      topologyHistoryDrafts,
       registrationDraft,
       telemetryDrafts,
       batchDrafts,

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { routes } from '../routing/routes';
+import { PillarDeepLinkFocus } from './PillarDeepLinkFocus';
 
 interface ApplicationShellProps {
   readonly children: ReactNode;
@@ -34,6 +35,7 @@ function ApplicationShell({ children }: ApplicationShellProps) {
         </header>
 
         <main id="main-content" className="page-content">
+          <PillarDeepLinkFocus />
           {children}
         </main>
       </div>

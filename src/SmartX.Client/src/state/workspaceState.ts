@@ -39,6 +39,16 @@ export interface TelemetryDraft {
   readonly submissionState: TelemetrySubmissionState;
 }
 
+/**
+ * Safe AVL range inputs only. No result rows, packet payloads, cursors,
+ * attachment bytes or pending actuator commands may be persisted here.
+ */
+export interface TopologyHistoryDraft {
+  readonly fromLocal: string;
+  readonly toLocal: string;
+  readonly pageSize: number;
+}
+
 export interface TelemetryBatchDraft {
   readonly rows: readonly TelemetryBatchRow[];
   readonly touchedRows: Readonly<Record<string, boolean>>;
@@ -62,6 +72,11 @@ export interface WorkspaceState {
   /** Explicitly inspected unresolved alert episode for cross-device discovery. */
   readonly sourceAlertEpisodeId: string | null;
   readonly setSourceAlertEpisodeId: Dispatch<SetStateAction<string | null>>;
+  /** Per-sensor history filters only; oldest drafts are bounded by the editor. */
+  readonly topologyHistoryDrafts: Readonly<Record<string, TopologyHistoryDraft>>;
+  readonly setTopologyHistoryDrafts: Dispatch<
+    SetStateAction<Readonly<Record<string, TopologyHistoryDraft>>>
+  >;
   readonly registrationDraft: RegistrationDraft;
   readonly setRegistrationDraft: Dispatch<SetStateAction<RegistrationDraft>>;
   readonly telemetryDrafts: Readonly<Record<string, TelemetryDraft>>;

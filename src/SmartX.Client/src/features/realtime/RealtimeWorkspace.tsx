@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { getApiErrorMessage } from '../../api/apiTypes';
+import { SelectedSensorLinks } from '../../components/SelectedSensorLinks';
 import { recordOperatorView } from '../../api/operatorInteractionsApi';
 import {
   getRealtimeActiveConditions,
@@ -407,6 +408,7 @@ function RealtimeWorkspace() {
                       </div>
                     )}
                   </dl>
+                  <SelectedSensorLinks source="realtime" sensorName={selectedDevice.name} />
                   <p className="realtime-explainer">
                     Latest processed telemetry is separate from latest accepted traffic, operational
                     sensor status and simulated commanded relay state.

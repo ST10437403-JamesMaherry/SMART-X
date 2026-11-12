@@ -3,6 +3,7 @@ import { useState } from 'react';
 import ApplicationShell from '../components/ApplicationShell';
 import PillarNavigation from '../components/PillarNavigation';
 import { TopologyWorkspace, type MeshViewMode } from '../features/topology/TopologyWorkspace';
+import { TopologySensorHistory } from '../features/topology/TopologySensorHistory';
 import { useTopologyData } from '../features/topology/useTopologyData';
 import type { MeshOverlayMode } from '../features/topology/meshOverlay';
 import { useTopologySimulation } from '../features/topology/useTopologySimulation';
@@ -189,6 +190,20 @@ function TopologyPage() {
           </>
         )}
       </section>
+
+      {/*
+       * The history view is mounted outside the asynchronous graph-ready
+       * branch. Refreshing BFS/MST therefore cannot erase the operator's
+       * local range inputs or an in-flight AVL query. Changing sensors gets
+       * a fresh component instance and aborts the old device request.
+       */}
+      <TopologySensorHistory
+        key={selectedSensorId ?? 'no-sensor'}
+        sensorProfileId={selectedSensorId}
+        sensorName={selected?.name ?? null}
+        deviceIdentifier={selected?.deviceIdentifier ?? null}
+        telemetryDataType={selected?.telemetryDataType ?? null}
+      />
     </ApplicationShell>
   );
 }

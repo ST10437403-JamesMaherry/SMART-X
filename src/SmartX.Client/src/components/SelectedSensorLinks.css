@@ -1,0 +1,77 @@
+/*
+ * P3-09 — intentionally flat, high-contrast cross-pillar navigation.
+ * These are links only: device identity comes from the existing provider.
+ */
+.device-shortcuts {
+  min-width: 0;
+  margin-top: 1.75rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+.device-shortcuts__eyebrow {
+  margin: 0 0 0.7rem;
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.device-shortcuts__context {
+  max-width: 48rem;
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.device-shortcuts__context strong {
+  color: var(--heading);
+  font-weight: 600;
+}
+
+.device-shortcuts__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.device-shortcuts__link {
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 2.6rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  color: var(--heading);
+  background: var(--surface);
+  font-size: 0.69rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.device-shortcuts__link:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.device-shortcuts__link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.device-shortcuts__link span {
+  color: var(--accent);
+}
+
+@media (max-width: 420px) {
+  .device-shortcuts__list {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
