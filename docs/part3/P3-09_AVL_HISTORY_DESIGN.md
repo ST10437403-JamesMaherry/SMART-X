@@ -4,7 +4,7 @@
 
 **Baseline:** post-P3-08 merge `6dfe8c23e2ed` on `dev`.
 **Feature branch:** `feature/part3-topology-history`.
-**Scope:** this commit adds an indexed history panel to Topology without changing the backend, the Part 1 recent-history endpoint, the mesh graph, BFS, Prim, or application-wide state contracts.
+**Scope of Commit 1:** adds the indexed history panel without changing the backend, Part 1 recent-history endpoint, mesh graph, BFS, or Prim. Commit 2 extends the existing application-wide state for safe drafts and navigation.
 
 ### Source of truth
 
@@ -30,7 +30,7 @@ The backend accepts page sizes 1 through 1,000; the frontend deliberately caps o
 - The AVL and telemetry repository remain **process-local**; neither survives an API restart.
 - Sequential pages are individually authoritative snapshots, but the server does not promise transaction-level isolation over writes occurring between HTTP requests.
 - The index does not expose a global total-count field or a durable per-reading ID. Neither is invented in the client.
-- Cross-pillar navigation shortcuts and shared range-draft persistence are explicitly planned for **Commit 2**; larger 10,000+ packet end-to-end evidence is planned for **Commit 3**.
+- Cross-pillar navigation shortcuts and safe shared range drafts are implemented in **Commit 2**. Commit 3 supplies separate routine regression and opt-in large-dataset evidence.
 
 ### Focused verification
 
@@ -65,3 +65,37 @@ cursors are **not** retained across route unmounts or device changes.
 
 For the full identity, accessibility, and automated verification contracts, see
 `docs/part3/P3-09_CROSS_PILLAR_WORKFLOWS.md`.
+
+
+## Commit 3 — Authoritative history and full workflow regression
+
+The final commit adds two independent verification tracks without altering runtime
+API semantics or replacing the AVL index:
+
+1. **Routine browser regression:** `part3-topology-history-final.spec.ts`
+   tests four real-API scenarios. It seeds out-of-order Float packets with
+   duplicate timestamps, verifies forward/backward keyset pagination and a
+   narrow inclusive range, checks Integer zero/negative and Boolean false/true
+   in isolated sensors, selects a real MAC-registered device by the mesh search
+   and follows its selected identity across pillars, then verifies malformed
+   and oversized range requests fail without changing accepted readings.
+2. **Opt-in dataset verification:** `part3-avl-large-dataset.spec.ts`
+   deliberately seeds 10,002 accepted Integer packets through the actual
+   `/telemetry/batches` API. It checks the sum of server-acknowledged counts,
+   walks the *entire* AVL index in server-bounded 1,000-row pages to establish
+   its true content, and then checks a three-reading same-timestamp window
+   with 2-row cursor pages and the visible Topology history panel. This test
+   is skipped in normal runs to avoid turning every CI regression into a
+   resource-intensive load scenario. Enable it explicitly when capturing
+   assessment evidence.
+
+The full reproducible command set, expected assertions, current limitations,
+and evidence guidance are recorded in `docs/part3/P3-09_FINAL_VERIFICATION.md`.
+Do **not** claim successful execution, benchmark performance, or a pass total
+until the relevant tests actually run on a developer machine or CI.
+
+**Historical semantics remain unchanged:** the browser does not sort packets,
+fetch all history, or merge it with Part 2's processed-event timeline. The
+backend retains timestamp/acceptance-sequence ordering and process-local
+storage; a deliberately seeded test series receives no concurrent writes
+during paginated verification.
