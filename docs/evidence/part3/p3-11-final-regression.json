@@ -1,0 +1,538 @@
+{
+  "commands": [
+    {
+      "command": [
+        "dotnet",
+        "restore",
+        "SmartX.sln",
+        "-p:NuGetAudit=true",
+        "-p:NuGetAuditMode=all",
+        "-warnaserror:NU1901;NU1902;NU1903;NU1904"
+      ],
+      "elapsedMilliseconds": 563,
+      "exitCode": 0,
+      "name": "Audited .NET restore",
+      "outputTail": [
+        "  Determining projects to restore...",
+        "  All projects are up-to-date for restore."
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry"
+    },
+    {
+      "command": [
+        "dotnet",
+        "format",
+        "SmartX.sln",
+        "--verify-no-changes",
+        "--no-restore"
+      ],
+      "elapsedMilliseconds": 7153,
+      "exitCode": 0,
+      "name": ".NET formatting",
+      "outputTail": [],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry"
+    },
+    {
+      "command": [
+        "dotnet",
+        "build",
+        "SmartX.sln",
+        "-c",
+        "Release",
+        "--no-restore"
+      ],
+      "elapsedMilliseconds": 806,
+      "exitCode": 0,
+      "name": "Release build",
+      "outputTail": [
+        "  SmartX.Contracts -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Contracts/bin/Release/net10.0/SmartX.Contracts.dll",
+        "  SmartX.Domain -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Domain/bin/Release/net10.0/SmartX.Domain.dll",
+        "  SmartX.Application -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Application/bin/Release/net10.0/SmartX.Application.dll",
+        "  SmartX.Domain.Tests -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Domain.Tests/bin/Release/net10.0/SmartX.Domain.Tests.dll",
+        "  SmartX.Infrastructure -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Infrastructure/bin/Release/net10.0/SmartX.Infrastructure.dll",
+        "  SmartX.Application.Tests -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Application.Tests/bin/Release/net10.0/SmartX.Application.Tests.dll",
+        "  SmartX.Infrastructure.Tests -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Infrastructure.Tests/bin/Release/net10.0/SmartX.Infrastructure.Tests.dll",
+        "  SmartX.Api -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Api/bin/Release/net10.0/SmartX.Api.dll",
+        "  SmartX.Api.IntegrationTests -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Api.IntegrationTests/bin/Release/net10.0/SmartX.Api.IntegrationTests.dll",
+        "",
+        "Build succeeded.",
+        "    0 Warning(s)",
+        "    0 Error(s)",
+        "",
+        "Time Elapsed 00:00:00.69"
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry"
+    },
+    {
+      "command": [
+        "dotnet",
+        "test",
+        "SmartX.sln",
+        "-c",
+        "Release",
+        "--no-restore"
+      ],
+      "elapsedMilliseconds": 14378,
+      "exitCode": 0,
+      "name": "Backend regression",
+      "outputTail": [
+        "  SmartX.Contracts -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Contracts/bin/Release/net10.0/SmartX.Contracts.dll",
+        "  SmartX.Domain -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Domain/bin/Release/net10.0/SmartX.Domain.dll",
+        "  SmartX.Application -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Application/bin/Release/net10.0/SmartX.Application.dll",
+        "  SmartX.Domain.Tests -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Domain.Tests/bin/Release/net10.0/SmartX.Domain.Tests.dll",
+        "Test run for /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Domain.Tests/bin/Release/net10.0/SmartX.Domain.Tests.dll (.NETCoreApp,Version=v10.0)",
+        "  SmartX.Infrastructure -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Infrastructure/bin/Release/net10.0/SmartX.Infrastructure.dll",
+        "  SmartX.Application.Tests -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Application.Tests/bin/Release/net10.0/SmartX.Application.Tests.dll",
+        "Test run for /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Application.Tests/bin/Release/net10.0/SmartX.Application.Tests.dll (.NETCoreApp,Version=v10.0)",
+        "A total of 1 test files matched the specified pattern.",
+        "  SmartX.Infrastructure.Tests -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Infrastructure.Tests/bin/Release/net10.0/SmartX.Infrastructure.Tests.dll",
+        "Test run for /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Infrastructure.Tests/bin/Release/net10.0/SmartX.Infrastructure.Tests.dll (.NETCoreApp,Version=v10.0)",
+        "A total of 1 test files matched the specified pattern.",
+        "A total of 1 test files matched the specified pattern.",
+        "  SmartX.Api -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Api/bin/Release/net10.0/SmartX.Api.dll",
+        "",
+        "Passed!  - Failed:     0, Passed:   249, Skipped:     0, Total:   249, Duration: 175 ms - SmartX.Domain.Tests.dll (net10.0)",
+        "  SmartX.Api.IntegrationTests -> /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Api.IntegrationTests/bin/Release/net10.0/SmartX.Api.IntegrationTests.dll",
+        "",
+        "Passed!  - Failed:     0, Passed:   313, Skipped:     0, Total:   313, Duration: 172 ms - SmartX.Application.Tests.dll (net10.0)",
+        "Test run for /Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/tests/SmartX.Api.IntegrationTests/bin/Release/net10.0/SmartX.Api.IntegrationTests.dll (.NETCoreApp,Version=v10.0)",
+        "",
+        "Passed!  - Failed:     0, Passed:   230, Skipped:     0, Total:   230, Duration: 156 ms - SmartX.Infrastructure.Tests.dll (net10.0)",
+        "A total of 1 test files matched the specified pattern.",
+        "",
+        "Passed!  - Failed:     0, Passed:   314, Skipped:     0, Total:   314, Duration: 12 s - SmartX.Api.IntegrationTests.dll (net10.0)"
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry"
+    },
+    {
+      "command": [
+        "npm",
+        "ci"
+      ],
+      "elapsedMilliseconds": 2284,
+      "exitCode": 0,
+      "name": "Frontend clean install",
+      "outputTail": [
+        "",
+        "added 185 packages, and audited 186 packages in 2s",
+        "",
+        "45 packages are looking for funding",
+        "  run `npm fund` for details",
+        "",
+        "10 moderate severity vulnerabilities",
+        "",
+        "To address issues that do not require attention, run:",
+        "  npm audit fix",
+        "",
+        "To address all issues (including breaking changes), run:",
+        "  npm audit fix --force",
+        "",
+        "Run `npm audit` for details.",
+        "npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:",
+        "npm warn allow-scripts   fsevents@2.3.3 (install: (install scripts present))",
+        "npm warn allow-scripts",
+        "npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow."
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Client"
+    },
+    {
+      "command": [
+        "npm",
+        "audit",
+        "--audit-level=high"
+      ],
+      "elapsedMilliseconds": 1081,
+      "exitCode": 0,
+      "name": "Frontend dependency audit",
+      "outputTail": [
+        "      Depends on vulnerable versions of @typescript-eslint/parser",
+        "      Depends on vulnerable versions of @typescript-eslint/typescript-estree",
+        "      Depends on vulnerable versions of @typescript-eslint/utils",
+        "      node_modules/typescript-eslint",
+        "    @typescript-eslint/type-utils  6.16.0 - 8.72.2",
+        "    Depends on vulnerable versions of @typescript-eslint/typescript-estree",
+        "    Depends on vulnerable versions of @typescript-eslint/utils",
+        "    node_modules/@typescript-eslint/type-utils",
+        "      @typescript-eslint/eslint-plugin  6.16.0 - 8.72.2",
+        "      Depends on vulnerable versions of @typescript-eslint/type-utils",
+        "      Depends on vulnerable versions of @typescript-eslint/utils",
+        "      node_modules/@typescript-eslint/eslint-plugin",
+        "    @typescript-eslint/utils  6.16.0 - 8.72.2",
+        "    Depends on vulnerable versions of @typescript-eslint/typescript-estree",
+        "    node_modules/@typescript-eslint/utils",
+        "  eslint  >=10.0.0-alpha.0",
+        "  Depends on vulnerable versions of @eslint/config-array",
+        "  Depends on vulnerable versions of minimatch",
+        "  node_modules/eslint",
+        "    @eslint/js  >=10.0.1",
+        "    Depends on vulnerable versions of eslint",
+        "    node_modules/@eslint/js",
+        "",
+        "10 moderate severity vulnerabilities",
+        "",
+        "To address issues that do not require attention, run:",
+        "  npm audit fix",
+        "",
+        "To address all issues (including breaking changes), run:",
+        "  npm audit fix --force"
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Client"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "lint"
+      ],
+      "elapsedMilliseconds": 1981,
+      "exitCode": 0,
+      "name": "Frontend lint",
+      "outputTail": [
+        "",
+        "> smartx-client@0.0.0 lint",
+        "> eslint .",
+        ""
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Client"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "format:check"
+      ],
+      "elapsedMilliseconds": 1139,
+      "exitCode": 0,
+      "name": "Frontend formatting",
+      "outputTail": [
+        "",
+        "> smartx-client@0.0.0 format:check",
+        "> prettier --check .",
+        "",
+        "Checking formatting...",
+        "All matched files use Prettier code style!"
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Client"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "elapsedMilliseconds": 1984,
+      "exitCode": 0,
+      "name": "Frontend build",
+      "outputTail": [
+        "",
+        "> smartx-client@0.0.0 build",
+        "> tsc -b && vite build",
+        "",
+        "vite v8.3.7 building client environment for production...",
+        "transforming...",
+        "\u2713 129 modules transformed.",
+        "rendering chunks...",
+        "computing gzip size...",
+        "dist/index.html                   0.58 kB \u2502 gzip:   0.34 kB",
+        "dist/assets/index-ClDpf0V6.css   79.10 kB \u2502 gzip:  11.73 kB",
+        "dist/assets/index-BXcEWviN.js   458.55 kB \u2502 gzip: 130.86 kB",
+        "",
+        "\u2713 built in 155ms"
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Client"
+    },
+    {
+      "command": [
+        "npx",
+        "playwright",
+        "test",
+        "e2e/part3-p3-11-integrated-regression.spec.ts"
+      ],
+      "elapsedMilliseconds": 4919,
+      "exitCode": 0,
+      "name": "Focused P3-11 browser regression",
+      "outputTail": [
+        "",
+        "Running 3 tests using 1 worker",
+        "",
+        "  \u2713  1 [chromium] \u203a e2e/part3-p3-11-integrated-regression.spec.ts:66:3 \u203a P3-11 integrated three-pillar regression \u203a all three pillars retain one document and the selected server device (884ms)",
+        "  \u2713  2 [chromium] \u203a e2e/part3-p3-11-integrated-regression.spec.ts:118:3 \u203a P3-11 integrated three-pillar regression \u203a topology read failure recovers in place without losing cross-pillar state (586ms)",
+        "  \u2713  3 [chromium] \u203a e2e/part3-p3-11-integrated-regression.spec.ts:152:3 \u203a P3-11 integrated three-pillar regression \u203a keyboard navigation and narrow layout remain accessible across all pillars (408ms)",
+        "",
+        "  3 passed (4.5s)",
+        "",
+        "To open last HTML report run:",
+        "\u001b[36m\u001b[39m",
+        "\u001b[36m  npx playwright show-report\u001b[39m",
+        "\u001b[36m\u001b[39m"
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Client"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:e2e"
+      ],
+      "elapsedMilliseconds": 74694,
+      "exitCode": 0,
+      "name": "Complete Playwright regression",
+      "outputTail": [
+        "  \u2713   79 [chromium] \u203a e2e/part3-topology-data.spec.ts:124:3 \u203a Part 3 live topology API foundation \u203a shows a recoverable error without inventing a graph on network failure (288ms)",
+        "  \u2713   80 [chromium] \u203a e2e/part3-topology-final-regression.spec.ts:116:3 \u203a P3-08 final accessible topology and rerouting regression \u203a supports keyboard-only graph and table selection with explicit overlay semantics (526ms)",
+        "  \u2713   81 [chromium] \u203a e2e/part3-topology-final-regression.spec.ts:168:3 \u203a P3-08 final accessible topology and rerouting regression \u203a live primary-relay failure switches to the backup MST route and recovers without a reload (610ms)",
+        "  \u2713   82 [chromium] \u203a e2e/part3-topology-final-regression.spec.ts:246:3 \u203a P3-08 final accessible topology and rerouting regression \u203a shows explicit disconnection when the only relay fails, without deleting configured links (581ms)",
+        "  \u2713   83 [chromium] \u203a e2e/part3-topology-final-regression.spec.ts:295:3 \u203a P3-08 final accessible topology and rerouting regression \u203a preserves selection and observes missed health changes after navigating away and reconnecting (468ms)",
+        "  \u2713   84 [chromium] \u203a e2e/part3-topology-final-regression.spec.ts:323:3 \u203a P3-08 final accessible topology and rerouting regression \u203a keeps the mobile page within 375px while graph scrolls locally and simulation controls remain usable (501ms)",
+        "  \u2713   85 [chromium] \u203a e2e/part3-topology-final-regression.spec.ts:364:3 \u203a P3-08 final accessible topology and rerouting regression \u203a keeps a selected sensor beyond the 25-node diagram limit reachable through the paginated table (638ms)",
+        "  \u2713   86 [chromium] \u203a e2e/part3-topology-history-final.spec.ts:102:3 \u203a P3-09 final chronological AVL and cross-pillar regression \u203a orders out-of-order Float readings and pages across duplicate timestamps without losing a value (822ms)",
+        "  \u2713   87 [chromium] \u203a e2e/part3-topology-history-final.spec.ts:175:3 \u203a P3-09 final chronological AVL and cross-pillar regression \u203a retains exact Integer zero/negative values and Boolean false/true for separate registered sensors (631ms)",
+        "  \u2713   88 [chromium] \u203a e2e/part3-topology-history-final.spec.ts:205:3 \u203a P3-09 final chronological AVL and cross-pillar regression \u203a finds a real MAC device and retains its history bounds across the ingestion pillar and Back navigation (802ms)",
+        "  \u2713   89 [chromium] \u203a e2e/part3-topology-history-final.spec.ts:250:3 \u203a P3-09 final chronological AVL and cross-pillar regression \u203a rejects malformed and oversized direct AVL queries while preserving the correct indexed data (10ms)",
+        "  \u2713   90 [chromium] \u203a e2e/part3-topology-overlays.spec.ts:64:3 \u203a P3-08 real API mesh routing overlays and simulation controls \u203a highlights true BFS and Prim edges differently while preserving graph identity (628ms)",
+        "  \u2713   91 [chromium] \u203a e2e/part3-topology-overlays.spec.ts:116:3 \u203a P3-08 real API mesh routing overlays and simulation controls \u203a uses the actual create, patch and delete link endpoints and reports only confirmed writes (641ms)",
+        "  \u2713   92 [chromium] \u203a e2e/part3-topology-overlays.spec.ts:160:3 \u203a P3-08 real API mesh routing overlays and simulation controls \u203a shows unavailable forwarding and recovers the same selected sensor after live status edits (700ms)",
+        "  \u2713   93 [chromium] \u203a e2e/part3-topology-overlays.spec.ts:196:3 \u203a P3-08 real API mesh routing overlays and simulation controls \u203a rejects invalid same-endpoint links without inventing a graph change (433ms)",
+        "  \u2713   94 [chromium] \u203a e2e/part3-topology-visualization.spec.ts:64:3 \u203a P3-08 accessible interactive mesh visualization \u203a renders only configured HTTP links and selects a real sensor from the diagram (477ms)",
+        "  \u2713   95 [chromium] \u203a e2e/part3-topology-visualization.spec.ts:107:3 \u203a P3-08 accessible interactive mesh visualization \u203a searches authentic identifiers and provides a semantic table alternative (557ms)",
+        "  \u2713   96 [chromium] \u203a e2e/part3-topology-visualization.spec.ts:142:3 \u203a P3-08 accessible interactive mesh visualization \u203a supports mobile width and keyboard-only sensor selection (363ms)",
+        "  \u2713   97 [chromium] \u203a e2e/part3-topology-visualization.spec.ts:163:3 \u203a P3-08 accessible interactive mesh visualization \u203a caps diagram nodes but keeps the complete result searchable and pageable (552ms)",
+        "  \u2713   98 [chromium] \u203a e2e/smartx.spec.ts:134:3 \u203a Smart-X Part 1 regression \u203a completes the core sensor, attachment, telemetry and anomaly journey (1.3s)",
+        "  \u2713   99 [chromium] \u203a e2e/smartx.spec.ts:339:3 \u203a Smart-X Part 1 regression \u203a preserves accessible controls and responsive layouts (652ms)",
+        "  \u2713  100 [chromium] \u203a e2e/smartx.spec.ts:462:3 \u203a Smart-X Part 1 regression \u203a fails cleanly when the API is unavailable (494ms)",
+        "",
+        "  1 skipped",
+        "  99 passed (1.2m)",
+        "",
+        "To open last HTML report run:",
+        "\u001b[36m\u001b[39m",
+        "\u001b[36m  npx playwright show-report\u001b[39m",
+        "\u001b[36m\u001b[39m"
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry/src/SmartX.Client"
+    },
+    {
+      "command": [
+        "docker",
+        "compose",
+        "config",
+        "--quiet"
+      ],
+      "elapsedMilliseconds": 332,
+      "exitCode": 0,
+      "name": "Docker Compose configuration",
+      "outputTail": [],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry"
+    },
+    {
+      "command": [
+        "docker",
+        "compose",
+        "build"
+      ],
+      "elapsedMilliseconds": 8299,
+      "exitCode": 0,
+      "name": "Docker Compose build",
+      "outputTail": [
+        "#34 2.758 \u2713 129 modules transformed.",
+        "#34 2.787 rendering chunks...",
+        "#34 2.815 computing gzip size...",
+        "#34 2.819 dist/index.html                   0.58 kB \u2502 gzip:   0.34 kB",
+        "#34 2.819 dist/assets/index-ClDpf0V6.css   79.10 kB \u2502 gzip:  11.73 kB",
+        "#34 2.819 dist/assets/index-BXcEWviN.js   458.55 kB \u2502 gzip: 130.86 kB",
+        "#34 2.819 ",
+        "#34 2.819 \u2713 built in 99ms",
+        "#34 DONE 2.8s",
+        "",
+        "#40 [client final 2/3] COPY src/SmartX.Client/nginx.conf /etc/nginx/conf.d/default.conf",
+        "#40 CACHED",
+        "",
+        "#41 [client final 3/3] COPY --from=build /app/dist /usr/share/nginx/html",
+        "#41 DONE 0.0s",
+        "",
+        "#42 [client] exporting to image",
+        "#42 exporting layers 0.0s done",
+        "#42 exporting manifest sha256:7237ce85896363d7af3a05fd5c38b215c0e61927cf88af81e58ed27b592f4b2a done",
+        "#42 exporting config sha256:3292fa5af395c0c28ab65159662a9ee3170ba4528a3da5e875d6623bfbd418f5 done",
+        "#42 exporting attestation manifest sha256:759a7b1c73d24148b822fda2e08bf696937b4de6fbd9d463d9d83a1775c504c5 done",
+        "#42 exporting manifest list sha256:170e3535e4c8c0f120e25f95c9793a78139ed02266f0332f4f8e30d4efb6ad22 done",
+        "#42 naming to docker.io/library/smartx-client:local done",
+        "#42 unpacking to docker.io/library/smartx-client:local done",
+        "#42 DONE 0.0s",
+        "",
+        "#43 [client] resolving provenance for metadata file",
+        "#43 DONE 0.0s",
+        " Image smartx-client:local Built ",
+        " Image smartx-api:local Built "
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry"
+    },
+    {
+      "command": [
+        "docker",
+        "compose",
+        "up",
+        "-d",
+        "--wait"
+      ],
+      "elapsedMilliseconds": 10866,
+      "exitCode": 0,
+      "name": "Docker Compose start",
+      "outputTail": [
+        " Network smartx_smartx-network Creating ",
+        " Network smartx_smartx-network Creating ",
+        " Network smartx_smartx-network Created ",
+        " Network smartx_smartx-network Created ",
+        " Container smartx-api-1 Creating ",
+        " Container smartx-api-1 Created ",
+        " Container smartx-client-1 Creating ",
+        " Container smartx-client-1 Created ",
+        " Container smartx-api-1 Starting ",
+        " Container smartx-api-1 Started ",
+        " Container smartx-api-1 Waiting ",
+        " Container smartx-api-1 Healthy ",
+        " Container smartx-client-1 Starting ",
+        " Container smartx-client-1 Started ",
+        " Container smartx-api-1 Waiting ",
+        " Container smartx-client-1 Waiting ",
+        " Container smartx-api-1 Healthy ",
+        " Container smartx-client-1 Healthy "
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry"
+    },
+    {
+      "command": [
+        "docker",
+        "compose",
+        "down"
+      ],
+      "elapsedMilliseconds": 367,
+      "exitCode": 0,
+      "name": "Docker Compose stop",
+      "outputTail": [
+        " Container smartx-client-1 Stopping ",
+        " Container smartx-client-1 Stopped ",
+        " Container smartx-client-1 Removing ",
+        " Container smartx-client-1 Removed ",
+        " Container smartx-api-1 Stopping ",
+        " Container smartx-api-1 Stopped ",
+        " Container smartx-api-1 Removing ",
+        " Container smartx-api-1 Removed ",
+        " Network smartx_smartx-network Removing ",
+        " Network smartx_smartx-network Removed "
+      ],
+      "passed": true,
+      "workingDirectory": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry"
+    }
+  ],
+  "completedAtUtc": "2026-11-12T13:48:06.026588Z",
+  "docker": {
+    "baseUrl": "http://127.0.0.1:8080",
+    "checks": [
+      {
+        "contentType": "text/plain",
+        "path": "/healthz",
+        "status": 200
+      },
+      {
+        "contentType": "application/json; charset=utf-8",
+        "path": "/api/health",
+        "status": 200
+      },
+      {
+        "contentType": "text/html",
+        "path": "/ingestion",
+        "status": 200
+      },
+      {
+        "contentType": "text/html",
+        "path": "/realtime",
+        "status": 200
+      },
+      {
+        "contentType": "text/html",
+        "path": "/topology",
+        "status": 200
+      },
+      {
+        "contentType": "application/json; charset=utf-8",
+        "path": "/api/topology",
+        "status": 200
+      },
+      {
+        "contentType": "application/json; charset=utf-8",
+        "path": "/api/topology/reachability",
+        "status": 200
+      },
+      {
+        "contentType": "application/json; charset=utf-8",
+        "path": "/api/topology/mst",
+        "status": 200
+      },
+      {
+        "path": "/hubs/realtime/negotiate?negotiateVersion=1",
+        "status": 200,
+        "webSocketsAdvertised": true
+      }
+    ]
+  },
+  "environment": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "pythonVersion": "3.14.6"
+  },
+  "notes": [
+    "The report records exit codes and bounded terminal tails; it does not fabricate test counts.",
+    "P3-11 telemetry and mesh load artifacts are validated before final gates run.",
+    "Docker uses normal compose down; named attachment storage is not deleted.",
+    "Run with --with-docker for the complete local release gate before merging P3-11."
+  ],
+  "repositoryRoot": "/Users/jamesmaherry/Documents/GitHub/prog7312-group1-2026-prog7312-poe-part1-st10437403-jamesmaherry",
+  "result": "PASS",
+  "startedAtUtc": "2026-11-12T13:45:55.078860Z",
+  "validatedLoadEvidence": [
+    {
+      "expectedReadingScale": 10000,
+      "passIndicator": "result",
+      "path": "docs/evidence/part3/telemetry-10k.json",
+      "runId": "e79ee1f8788b",
+      "sha256": "40aec56dc153e05da987082455071ffdbef096c07d961ff1d2911bc1ef1fd6ad",
+      "verification": "PASS"
+    },
+    {
+      "expectedReadingScale": 50000,
+      "passIndicator": "result",
+      "path": "docs/evidence/part3/telemetry-50k.json",
+      "runId": "c087e4e0b35a",
+      "sha256": "7f63e6f8c0353d61d34f41b54515d00a38bb40f68b8009f5f458f269c80115ed",
+      "verification": "PASS"
+    },
+    {
+      "passIndicator": "result",
+      "path": "docs/evidence/part3/mesh-256.json",
+      "runId": "2e13b914a86c",
+      "sha256": "9979560a842020ba221233bc20f8cbf8fcb621ec2a83b29cef0112390e9e5395",
+      "verification": "PASS"
+    },
+    {
+      "passIndicator": "result",
+      "path": "docs/evidence/part3/mesh-1000.json",
+      "runId": "2697db0a1b59",
+      "sha256": "927e6259e1040314210cfba8b2d8bf34a8d3e8192f3852d1f8c1755d48bc2b5f",
+      "verification": "PASS"
+    }
+  ]
+}

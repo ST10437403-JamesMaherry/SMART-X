@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import type { ConsistentTopologyProjection, MeshVertexResponse } from '../../api/topologyApi';
 import { MeshCanvas } from './MeshCanvas';
@@ -78,12 +78,53 @@ export function TopologyWorkspace({
     (node) => node.sensorProfileId?.toLowerCase() === selectedSensorId?.toLowerCase(),
   );
 
+  // P3-11: deterministically focus the topology hash target after this
+  // asynchronously loaded workspace mounts. Native fragment navigation can
+  // scroll to a heading without consistently moving document focus, which is
+  // problematic for keyboard and assistive-technology users in an SPA.
+  useEffect(() => {
+    let focusFrame: number | null = null;
+
+    const focusTopologyHashTarget = () => {
+      if (window.location.hash !== '#topology-workspace-title') {
+        return;
+      }
+
+      if (focusFrame !== null) {
+        window.cancelAnimationFrame(focusFrame);
+      }
+
+      focusFrame = window.requestAnimationFrame(() => {
+        const heading = document.getElementById('topology-workspace-title');
+
+        if (heading instanceof HTMLElement) {
+          heading.focus({ preventScroll: true });
+        }
+
+        focusFrame = null;
+      });
+    };
+
+    focusTopologyHashTarget();
+    window.addEventListener('hashchange', focusTopologyHashTarget);
+
+    return () => {
+      window.removeEventListener('hashchange', focusTopologyHashTarget);
+
+      if (focusFrame !== null) {
+        window.cancelAnimationFrame(focusFrame);
+      }
+    };
+  }, []);
+
   return (
     <section className="topology-workspace" aria-labelledby="topology-workspace-title">
       <div className="topology-workspace__header">
         <div>
           <p className="topology-workspace__eyebrow">NETWORK / EXPLORER</p>
-          <h2 id="topology-workspace-title">Explore the mesh</h2>
+          <h2 id="topology-workspace-title" tabIndex={-1}>
+            Explore the mesh
+          </h2>
           <p>
             Registered devices, configured connections and routing health from graph revision{' '}
             {projection.graphVersion}.
