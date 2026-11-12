@@ -1,14 +1,20 @@
 import { randomUUID } from 'node:crypto';
 
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Locator } from '@playwright/test';
 
 import type { SensorResponse } from '../src/api/sensorsApi';
 import type { MeshTopologyResponse } from '../src/api/topologyApi';
-import type { TopologyInsightsResponse } from '../src/api/topologyInsightsApi';
+import type {
+  TopologyInsightResponse,
+  TopologyInsightsResponse,
+} from '../src/api/topologyInsightsApi';
 import type { OperatorInteractionHistoryResponse } from '../src/api/operatorInteractionsApi';
 
 const apiBaseUrl = 'http://127.0.0.1:5095';
 const insightsPath = `${apiBaseUrl}/api/topology/insights`;
+
+// The API returns up to 16 affected IDs, while the UI deliberately previews only five.
+const affectedPreviewLimit = 5;
 
 type TestNetwork = {
   readonly relay: SensorResponse;
@@ -103,15 +109,51 @@ async function deviceRouteStatus(request: APIRequestContext, deviceId: string): 
   return route.status;
 }
 
-/** Large process-local suites may have >16 disconnected IDs from earlier tests. */
-function returnedDeviceIdsContain(
-  response: TopologyInsightsResponse,
-  kind: string,
-  sensorId: string,
-): boolean {
-  return response.insights.some(
-    (item) => item.kind === kind && item.affectedSensorIds.includes(sensorId),
+/**
+ * Verify the precise bounded subset displayed by the UI, not the wider set
+ * returned by the API. Earlier real-API tests retain registered sensors in
+ * this process, so a newly created leaf is not guaranteed to be among the
+ * first five IDs even when it is present in the API's first sixteen.
+ *
+ * Every displayed identity must be in the authoritative graph at the same
+ * revision and must retain its genuine registered name. This complements the
+ * independent per-device BFS route check performed in the test below.
+ */
+async function expectRegisteredAffectedPreview(
+  panel: Locator,
+  insight: TopologyInsightResponse,
+  graph: MeshTopologyResponse,
+): Promise<void> {
+  expect(insight.evidenceGraphVersion).toBe(graph.graphVersion);
+  expect(insight.affectedSensorIds.length).toBeLessThanOrEqual(16);
+  expect(insight.affectedRegisteredSensorCount).toBe(
+    insight.affectedSensorIds.length + insight.additionalAffectedSensorCount,
   );
+
+  const previewIds = insight.affectedSensorIds.slice(0, affectedPreviewLimit);
+  expect(previewIds.length).toBeGreaterThan(0);
+  const rows = panel.getByTestId('insight-affected-sensor');
+  await expect(rows).toHaveCount(previewIds.length);
+  await expect(panel).toContainText(
+    `Affected registered devices: ${insight.affectedRegisteredSensorCount}`,
+  );
+
+  for (const [index, id] of previewIds.entries()) {
+    const registered = graph.nodes.find(
+      (node) => node.kind === 'Sensor' && node.sensorProfileId?.toLowerCase() === id.toLowerCase(),
+    );
+    expect(registered?.name, `Affected sensor ${id} must exist in the current graph`).toBeTruthy();
+
+    // The order, identity and display name must all come from the real API.
+    await expect(rows.nth(index)).toHaveAttribute('data-sensor-id', id);
+    await expect(rows.nth(index)).toContainText(registered!.name!);
+  }
+
+  if (insight.affectedRegisteredSensorCount > affectedPreviewLimit) {
+    await expect(panel).toContainText(
+      `Showing up to ${affectedPreviewLimit} real device identities here.`,
+    );
+  }
 }
 
 test.describe('P3-10 proactive network insights and evidence separation', () => {
@@ -158,20 +200,14 @@ test.describe('P3-10 proactive network insights and evidence separation', () => 
     await expect(disconnected).toContainText('Rule-derived · Not learned');
     await expect(disconnected).toContainText('CurrentTopologyBfs');
     const actual = await insights(request);
+    const graphEvidence = await topology(request);
+    expect(actual.graphVersion).toBe(changedVersion);
+    expect(graphEvidence.graphVersion).toBe(changedVersion);
     const unreachable = actual.insights.find((item) => item.kind === 'GatewayDisconnected');
     expect(unreachable).toBeDefined();
-    if (returnedDeviceIdsContain(actual, 'GatewayDisconnected', leaf.id)) {
-      await expect(
-        disconnected.locator(
-          `[data-testid="insight-affected-sensor"][data-sensor-id="${leaf.id}"]`,
-        ),
-      ).toContainText(leaf.name);
-    } else {
-      // The API intentionally caps identities at 16; old process-local fixtures
-      // may push this new device outside the returned subset.
-      expect(unreachable!.additionalAffectedSensorCount).toBeGreaterThan(0);
-      await expect(disconnected).toContainText('Affected registered devices');
-    }
+    await expectRegisteredAffectedPreview(disconnected, unreachable!, graphEvidence);
+    // The leaf itself is proven disconnected by the real BFS route endpoint.
+    // The global warning may preview other registered devices from prior tests.
     expect(actual.insights.every((item) => item.isLearned === false)).toBe(true);
     const afterTopology = await interactions(request);
     expect(afterTopology.totalRecorded).toBe(before.totalRecorded);
@@ -183,13 +219,15 @@ test.describe('P3-10 proactive network insights and evidence separation', () => 
     await expect(page.getByText('HTTP snapshot ready')).toBeVisible();
     const operationsPanel = page.getByTestId('topology-insights');
     await expect(
-      operationsPanel.locator('[data-insight-key="topology:gateway-disconnected"]'),
-    ).toContainText('Gateway route unavailable', { timeout: 30_000 });
-    if (returnedDeviceIdsContain(actual, 'GatewayDisconnected', leaf.id)) {
-      await expect(operationsPanel.locator(`[data-sensor-id="${leaf.id}"]`)).toContainText(
-        leaf.name,
-      );
-    }
+      operationsPanel.getByText(`Revision ${changedVersion}`, { exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
+    const operationsDisconnected = operationsPanel.locator(
+      '[data-insight-key="topology:gateway-disconnected"]',
+    );
+    await expect(operationsDisconnected).toContainText('Gateway route unavailable', {
+      timeout: 30_000,
+    });
+    await expectRegisteredAffectedPreview(operationsDisconnected, unreachable!, graphEvidence);
     await expect(page.getByRole('heading', { name: 'Suggested Actions' })).toBeVisible();
     await expect(page.getByTestId('suggested-actions')).toContainText('LEARNED GUIDANCE');
     expect((await interactions(request)).totalRecorded).toBe(before.totalRecorded);
