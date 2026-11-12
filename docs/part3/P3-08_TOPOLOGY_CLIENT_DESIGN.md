@@ -76,12 +76,14 @@ Costs are simulated positive relative weights, not measured Joules or battery
 savings. No link edits, scenario state or command effects are implemented in
 this commit.
 
-## Planned next commits
+## Delivery sequence
 
-- **Commit 3:** Add explicit all-connections/BFS/MST visual overlays, visible
-  failure/unreachable summaries, and API-backed simulation controls.
-- **Commit 4:** Verify routing selection, keyboard, resize, failure/recovery and
-  realtime reconnect with independent Playwright coverage.
+- **Commit 3:** Implemented the all-connections/BFS/MST visual overlays,
+  failure/unreachable summaries and API-backed simulation controls.
+- **Commit 4:** Adds final Playwright regression for keyboard semantics,
+  responsive layout, failover and restoration, disconnected relays, bounded
+  graph/table access, and cross-pillar selection after a missed event.
+  Manual transport-interruption verification is documented separately.
 
 ## Local verification commands
 
@@ -192,5 +194,25 @@ cd ../..
 git diff --check
 ```
 
-Commit 4 will add broader accessibility, mobile/failure/reconnection regression
-and evidence capture. It will not replace the server's MST/BFS calculations.
+## Commit 4 — Final accessibility and routing regression
+
+The final suite is located at:
+
+`src/SmartX.Client/e2e/part3-topology-final-regression.spec.ts`
+
+It validates native keyboard operation, labelled controls and legends, real
+API-driven backup MST rerouting, explicit disconnection after an unavailable
+bridge, recovery to the original route, a 375px viewport without document
+horizontal overflow, a 25-sensor diagram with a paginated full-data table, and
+cross-pillar selection preservation after a missed change while the Topology
+page is unmounted. Assertions use actual backend link IDs, revision updates,
+selected-route costs, and registered IDs rather than fabricated UI data.
+
+Read `docs/part3/P3-08_FINAL_ACCESSIBILITY_VERIFICATION.md` for the acceptance
+matrix, deterministic fixture weights, full local regression commands, genuine
+screenshot checklist, and the **manual** test boundary for a real SignalR
+transport reconnection. Browser tests for re-mounting a hub do not claim to
+force a transport-level reconnect.
+
+This commit deliberately leaves production graph, BFS, Prim and mutation code
+unchanged. The separate P3-09 issue will integrate per-device AVL history.

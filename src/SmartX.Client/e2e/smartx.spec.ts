@@ -147,6 +147,35 @@ test.describe('Smart-X Part 1 regression', () => {
       .filter({ hasText: 'Configuration evidence missing' })
       .filter({ hasText: sensorName });
 
+    /*
+     * The Spotlight intentionally renders only five prioritized issues until
+     * the operator selects "Show all". Earlier tests share the same API and
+     * can leave enough higher-priority issues active to hide this warning.
+     *
+     * Expand the list if necessary while waiting for the exact registered
+     * sensor's issue. This retains the original end-to-end assertion instead
+     * of treating any configuration warning as a passing result.
+     */
+    const showAllIssues = page.getByRole('button', {
+      name: /^Show all \d+$/,
+    });
+
+    await expect
+      .poll(
+        async () => {
+          if (await showAllIssues.isVisible()) {
+            await showAllIssues.click();
+          }
+
+          return configurationIssue.isVisible();
+        },
+        {
+          timeout: 20_000,
+          intervals: [250, 500, 1_000],
+        },
+      )
+      .toBe(true);
+
     await expect(configurationIssue).toBeVisible();
 
     /*
