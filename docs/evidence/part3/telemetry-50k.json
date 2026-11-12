@@ -1,0 +1,165 @@
+{
+  "acceptedTotalAcrossTypes": 50198,
+  "apiOrigin": "http://127.0.0.1:5095",
+  "batchSize": 250,
+  "caveats": [
+    "These are local HTTP end-to-end timings, not isolated AVL microbenchmarks.",
+    "Broad query measures ONE 1000-row page, not end-to-end retrieval of all readings.",
+    "For comparable 10k/50k runs restart the same local API using the same hardware/configuration.",
+    "Timestamp range pagination is keyset-based and not a transactionally isolated multi-request snapshot.",
+    "An actual load result is not an asymptotic complexity proof."
+  ],
+  "environment": {
+    "apiStorage": "process-local in-memory secondary AVL index",
+    "architecture": "arm64",
+    "logicalCpuCount": 10,
+    "platform": "Darwin",
+    "python": "3.14.6"
+  },
+  "indexedChecks": [
+    {
+      "duplicateWindow": {
+        "expectedRows": 3,
+        "pageCount": 2,
+        "pageLimit": 2,
+        "timestampUtc": "2026-10-01T06:56:40.000Z",
+        "typedValues": [
+          34.1875,
+          33.125,
+          33.375
+        ],
+        "verifiedRows": 3
+      },
+      "legacyRecent": {
+        "originalIngestionOrderPreserved": true,
+        "verifiedRecentCount": 5
+      },
+      "sensorId": "15fd1585-3dbb-4064-a24c-0aa484f1b198",
+      "traversal": {
+        "indexedReadings": 50002,
+        "pageLimit": 1000,
+        "pages": 51
+      },
+      "type": "Float"
+    },
+    {
+      "duplicateWindow": {
+        "expectedRows": 3,
+        "pageCount": 2,
+        "pageLimit": 2,
+        "timestampUtc": "2026-10-03T00:00:48.000Z",
+        "typedValues": [
+          -2,
+          -701,
+          -702
+        ],
+        "verifiedRows": 3
+      },
+      "legacyRecent": {
+        "originalIngestionOrderPreserved": true,
+        "verifiedRecentCount": 5
+      },
+      "sensorId": "5ee83f27-cbba-490c-bd9f-e24985a3ed5c",
+      "traversal": {
+        "indexedReadings": 98,
+        "pageLimit": 1000,
+        "pages": 1
+      },
+      "type": "Integer"
+    },
+    {
+      "duplicateWindow": {
+        "expectedRows": 3,
+        "pageCount": 2,
+        "pageLimit": 2,
+        "timestampUtc": "2026-10-04T00:00:48.000Z",
+        "typedValues": [
+          true,
+          false,
+          true
+        ],
+        "verifiedRows": 3
+      },
+      "legacyRecent": {
+        "originalIngestionOrderPreserved": true,
+        "verifiedRecentCount": 5
+      },
+      "sensorId": "50242553-d630-4e11-a127-88849c143c13",
+      "traversal": {
+        "indexedReadings": 98,
+        "pageLimit": 1000,
+        "pages": 1
+      },
+      "type": "Boolean"
+    }
+  ],
+  "ingestion": [
+    {
+      "acceptedReadings": 50002,
+      "baseReadings": 50000,
+      "ingestionRequests": 201,
+      "sensorId": "15fd1585-3dbb-4064-a24c-0aa484f1b198",
+      "type": "Float"
+    },
+    {
+      "acceptedReadings": 98,
+      "baseReadings": 96,
+      "ingestionRequests": 2,
+      "sensorId": "5ee83f27-cbba-490c-bd9f-e24985a3ed5c",
+      "type": "Integer"
+    },
+    {
+      "acceptedReadings": 98,
+      "baseReadings": 96,
+      "ingestionRequests": 2,
+      "sensorId": "50242553-d630-4e11-a127-88849c143c13",
+      "type": "Boolean"
+    }
+  ],
+  "invariants": {
+    "avlInternalStructuralInvariants": "Verified separately by Domain xUnit tests, not exposed over HTTP",
+    "compositeCursorTraversedExactly": true,
+    "descendingArrival": true,
+    "duplicatesAtExistingTimestamp": 2,
+    "invalidReadRequestsRejected": true,
+    "noActuatorCommandsIssued": true,
+    "originalRecentIngestionOrder": true,
+    "typedSeries": [
+      "Float",
+      "Integer",
+      "Boolean"
+    ]
+  },
+  "issue": "P3-11",
+  "measuredAtUtc": "2026-11-12T12:29:31+00:00",
+  "requestedPrimaryDataset": 50000,
+  "result": "pass",
+  "runId": "c087e4e0b35a",
+  "scenario": "real-api-avl-telemetry-benchmark",
+  "secondaryTypedDatasetPerSensor": 96,
+  "timing": {
+    "claimLimitations": "Not isolated AVL operation time; no hard CI latency threshold",
+    "measurementScope": "client-observed GET with HTTP, JSON, server, and network overhead",
+    "scenarios": {
+      "broadPage": {
+        "maxMs": 1.813,
+        "minMs": 1.493,
+        "p50Ms": 1.625,
+        "p95Ms": 1.803,
+        "returnedRowsPerSample": 1000,
+        "samples": 25
+      },
+      "narrow": {
+        "maxMs": 0.757,
+        "minMs": 0.423,
+        "p50Ms": 0.521,
+        "p95Ms": 0.754,
+        "returnedRowsPerSample": 2,
+        "samples": 25
+      }
+    },
+    "warmupsPerScenario": 3
+  },
+  "workerAcceptedDelta": 50198,
+  "workerProcessedDelta": 50198
+}
