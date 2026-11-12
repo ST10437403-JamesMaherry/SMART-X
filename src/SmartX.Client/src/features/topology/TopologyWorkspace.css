@@ -1,0 +1,857 @@
+/*
+ * P3-08 Commit 2 — deliberately restrained, high-contrast network workbench.
+ * No fabricated positioning, shadows, animation or decorative gradients.
+ */
+.topology-workspace {
+  width: 100%;
+  min-width: 0;
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+.topology-workspace__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.topology-workspace__eyebrow,
+.mesh-details__eyebrow {
+  margin: 0 0 0.65rem;
+  color: var(--accent);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+
+.topology-workspace__header h2 {
+  margin: 0;
+  font: 400 clamp(1.65rem, 3vw, 2.5rem) / 1.1 var(--font-display);
+  color: var(--heading);
+  letter-spacing: -0.035em;
+}
+
+.topology-workspace__header p:not(.topology-workspace__eyebrow),
+.topology-workspace__results,
+.topology-workspace__footer,
+.mesh-canvas__instruction,
+.mesh-canvas__footnote {
+  margin: 0.7rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.73rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.topology-workspace__revision {
+  flex: 0 0 auto;
+  padding-top: 1.45rem;
+  color: var(--text);
+  font-size: 0.67rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+.topology-workspace__toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  margin-top: 1.8rem;
+}
+
+.topology-workspace__search {
+  display: grid;
+  gap: 0.55rem;
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.topology-workspace__search label {
+  color: var(--heading);
+  font-size: 0.72rem;
+}
+
+.topology-workspace__search input {
+  width: 100%;
+  min-height: 2.8rem;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  outline-offset: 3px;
+  color: var(--heading);
+  background: var(--surface);
+  font-size: 0.74rem;
+}
+
+.topology-workspace__search input::placeholder {
+  color: #939393;
+}
+
+.topology-workspace__view-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 1px solid var(--border-strong);
+}
+
+.topology-workspace__view {
+  min-height: 2.8rem;
+  padding: 0.65rem 0.9rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.topology-workspace__view + .topology-workspace__view {
+  border-left: 1px solid var(--border-strong);
+}
+
+.topology-workspace__view.is-active {
+  color: var(--background);
+  background: var(--heading);
+}
+
+.topology-workspace__view:hover:not(.is-active) {
+  color: var(--heading);
+  background: var(--surface-hover);
+}
+
+.topology-workspace__content,
+.topology-workspace__explorer {
+  min-width: 0;
+}
+
+.topology-workspace__content {
+  display: grid;
+  gap: 2.4rem;
+  margin-top: 1.4rem;
+}
+
+/* The diagram scrolls internally on mobile; the document never grows wider. */
+.mesh-canvas__instruction {
+  margin-bottom: 0.65rem;
+}
+
+.mesh-canvas__viewport {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  background: #0d0d0d;
+  border: 1px solid var(--border-strong);
+  scrollbar-color: #555 #131313;
+}
+
+.mesh-canvas__viewport:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.mesh-canvas__board {
+  position: relative;
+  width: 960px;
+  height: 520px;
+}
+
+.mesh-canvas__svg {
+  display: block;
+  width: 960px;
+  height: 520px;
+}
+
+.mesh-canvas__axis {
+  stroke: #242424;
+  stroke-width: 1px;
+  stroke-dasharray: 4 9;
+}
+
+.mesh-canvas__edge {
+  stroke: #8a8a8a;
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+
+.mesh-canvas__cost-surface {
+  fill: #151515;
+  stroke: #353535;
+  stroke-width: 0.75px;
+}
+
+.mesh-canvas__cost {
+  fill: #ededed;
+  font: 11px var(--font-interface);
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.mesh-canvas__vertex {
+  fill: #272727;
+  stroke: #999;
+  stroke-width: 1.75px;
+}
+
+.mesh-canvas__vertex--gateway {
+  fill: var(--heading);
+  stroke: var(--heading);
+}
+
+.mesh-canvas__vertex--reachable {
+  fill: #222c3d;
+  stroke: #9db3dc;
+}
+
+.mesh-canvas__vertex--disconnected {
+  fill: #1c1c1c;
+  stroke: #e1e1e1;
+  stroke-dasharray: 3 3;
+}
+
+.mesh-canvas__vertex--unavailable {
+  fill: #111;
+  stroke: #666;
+  stroke-dasharray: 5 3;
+}
+
+.mesh-canvas__vertex--selected {
+  stroke: var(--accent);
+  stroke-width: 3px;
+}
+
+.mesh-canvas__selection-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 2 4;
+}
+
+.mesh-canvas__vertex-label {
+  fill: var(--heading);
+  font: 11px var(--font-interface);
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.mesh-canvas__vertex--gateway + .mesh-canvas__vertex-label {
+  fill: var(--background);
+  font-weight: 700;
+}
+
+.mesh-canvas__node-button {
+  position: absolute;
+  z-index: 1;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  color: transparent;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+
+.mesh-canvas__node-button:hover {
+  border-color: var(--heading);
+}
+
+.mesh-canvas__node-button:focus-visible {
+  border-color: var(--accent);
+  outline: 3px solid var(--heading);
+  outline-offset: 3px;
+}
+
+.mesh-canvas__node-button[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
+.mesh-canvas__visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.mesh-canvas__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.2rem;
+  margin-top: 0.9rem;
+  color: var(--text);
+  font-size: 0.67rem;
+}
+
+.mesh-canvas__legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.mesh-canvas__legend-mark {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 2px solid #999;
+  border-radius: 50%;
+}
+
+.mesh-canvas__legend-mark--gateway {
+  background: var(--heading);
+  border-color: var(--heading);
+}
+
+.mesh-canvas__legend-mark--reachable {
+  background: #222c3d;
+  border-color: #9db3dc;
+}
+
+.mesh-canvas__legend-mark--disconnected {
+  border-color: var(--heading);
+  border-style: dashed;
+}
+
+.mesh-canvas__legend-mark--unavailable {
+  border-color: #777;
+  border-style: dotted;
+}
+
+.mesh-canvas__footnote {
+  margin-top: 0.8rem;
+}
+
+.mesh-details {
+  min-width: 0;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+.mesh-details__heading {
+  margin: 0;
+  color: var(--heading);
+  font: 400 clamp(1.45rem, 3vw, 2rem) / 1.2 var(--font-display);
+  overflow-wrap: anywhere;
+}
+
+.mesh-details__hint,
+.mesh-details__disclaimer,
+.mesh-details__routes p,
+.mesh-details__links p {
+  max-width: 55rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.mesh-details__state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0.8rem 0 1.5rem;
+  color: var(--text);
+  font-size: 0.73rem;
+}
+
+.mesh-status {
+  display: inline-block;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--border-strong);
+  color: var(--heading);
+  font-size: 0.65rem;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.mesh-status--reachable {
+  border-style: solid;
+  border-color: var(--accent);
+}
+
+.mesh-status--disconnected {
+  border-style: dashed;
+}
+
+.mesh-status--unavailable {
+  color: #aaa;
+  border-style: dotted;
+}
+
+.mesh-details__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+
+.mesh-details__facts > div {
+  min-width: 0;
+  padding: 0.9rem 0.9rem 0.9rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mesh-details__facts dt {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.mesh-details__facts dd {
+  margin: 0.45rem 0 0;
+  color: var(--heading);
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
+}
+
+.mesh-details__routes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 1.4rem;
+  margin-top: 1.5rem;
+}
+
+.mesh-details__routes h4,
+.mesh-details__links h4 {
+  margin: 0;
+  color: var(--heading);
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.mesh-details__routes ol {
+  padding-left: 1.2rem;
+  margin: 0 0 0.4rem;
+  color: var(--text);
+  font-size: 0.72rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+
+.mesh-details__links {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+}
+
+.mesh-details__links ul {
+  padding: 0;
+  margin: 0.75rem 0 0;
+  list-style: none;
+}
+
+.mesh-details__links li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.73rem;
+  overflow-wrap: anywhere;
+}
+
+/* A semantic, paginated HTML table is available for every registered node. */
+.mesh-table__scroller {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-strong);
+}
+
+.mesh-table__scroller:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.mesh-table table {
+  width: 100%;
+  min-width: 570px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.mesh-table caption {
+  padding: 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-align: left;
+}
+
+.mesh-table th,
+.mesh-table td {
+  padding: 0.9rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.72rem;
+  vertical-align: middle;
+}
+
+.mesh-table thead th {
+  color: var(--heading);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.mesh-table tr.is-selected {
+  background: #18202a;
+}
+
+.mesh-table__name,
+.mesh-table__identity {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.mesh-table__name {
+  color: var(--heading);
+}
+
+.mesh-table__identity {
+  margin-top: 0.3rem;
+  color: #a0a0a0;
+  font-size: 0.64rem;
+}
+
+.mesh-table__select,
+.mesh-table__pager button {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  color: var(--heading);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.mesh-table__select:hover,
+.mesh-table__pager button:hover:enabled {
+  border-color: var(--accent);
+}
+
+.mesh-table__pager {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  color: var(--text);
+  font-size: 0.72rem;
+}
+
+.mesh-table__pager button:disabled {
+  cursor: not-allowed;
+  color: var(--text-muted);
+  opacity: 0.55;
+}
+
+@media (max-width: 600px) {
+  .topology-workspace__header {
+    flex-wrap: wrap;
+  }
+
+  .topology-workspace__revision {
+    padding-top: 0;
+  }
+
+  .topology-workspace__view-group {
+    width: 100%;
+  }
+
+  .topology-workspace__view {
+    flex: 1 1 0;
+  }
+
+  .mesh-details__facts,
+  .mesh-details__routes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* P3-08 Commit 3: labelled, accessible overlay controls. State is conveyed
+   through text, line width and dash patterns in addition to the accent. */
+.topology-workspace__overlay-modes {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  gap: 0;
+  border: 1px solid var(--border-strong);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.topology-workspace__overlay-modes button {
+  min-height: 2.7rem;
+  padding: 0.65rem 0.9rem;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.7rem;
+  text-align: left;
+}
+
+.topology-workspace__overlay-modes button + button {
+  border-left: 1px solid var(--border-strong);
+}
+
+.topology-workspace__overlay-modes button:hover:not(.is-active) {
+  color: var(--heading);
+  background: var(--surface-hover);
+}
+
+.topology-workspace__overlay-modes button.is-active {
+  color: var(--background);
+  background: var(--heading);
+  font-weight: 700;
+}
+
+.mesh-canvas__overlay-summary {
+  margin: 0.6rem 0 1rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--accent);
+  color: var(--heading);
+  font-size: 0.72rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.mesh-canvas__edge--context {
+  stroke: #4c4c4c;
+  stroke-width: 1px;
+  stroke-dasharray: 3 7;
+  opacity: 0.55;
+}
+
+.mesh-canvas__edge--ineligible {
+  stroke: #999;
+  stroke-width: 1.4px;
+  stroke-dasharray: 5 5;
+  opacity: 0.75;
+}
+
+.mesh-canvas__edge--bfs-route {
+  stroke: var(--accent);
+  stroke-width: 4px;
+  stroke-dasharray: 12 5;
+  opacity: 1;
+}
+
+.mesh-canvas__edge--mst-backbone {
+  stroke: var(--heading);
+  stroke-width: 3.5px;
+  stroke-linecap: square;
+  opacity: 1;
+}
+
+.mesh-canvas__vertex--bfs-path {
+  stroke: var(--accent);
+  stroke-width: 3px;
+}
+
+.mesh-canvas__cost-surface--context,
+.mesh-canvas__cost--context {
+  opacity: 0.65;
+}
+
+.mesh-canvas__line-mark {
+  display: inline-block;
+  width: 1.5rem;
+  height: 0;
+  border-top: 3px solid var(--accent);
+}
+
+.mesh-canvas__line-mark--context {
+  border-top: 2px dashed #777;
+}
+
+.mesh-canvas__line-mark--inactive {
+  border-top: 2px dotted #999;
+}
+
+/* Server-reported mutation feedback remains mounted in TopologyPage while
+   the latest graph and routes are loading after a successful write. */
+.topology-bootstrap__mutation {
+  margin: 0.8rem 0 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border-left: 3px solid var(--success);
+  color: var(--heading);
+  font-size: 0.76rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.topology-bootstrap__mutation--error {
+  border-left-color: var(--danger);
+}
+
+/* Real API-backed link and health controls. Deliberately no mock-local graph
+   state, auto-generated radio links, cards, gradients or float animations. */
+.mesh-simulation {
+  margin-top: 2.5rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+.mesh-simulation__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.25rem;
+}
+
+.mesh-simulation__heading h3 {
+  margin: 0;
+  font: 400 clamp(1.5rem, 3vw, 2rem) / 1.1 var(--font-display);
+  color: var(--heading);
+}
+
+.mesh-simulation__tag {
+  color: var(--heading);
+  font-size: 0.67rem;
+  letter-spacing: 0.05em;
+}
+
+.mesh-simulation__caution,
+.mesh-simulation__hint,
+.mesh-simulation__selection {
+  color: var(--text-muted);
+  font-size: 0.71rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.mesh-simulation__caution {
+  max-width: 60rem;
+  margin: 0.85rem 0 1.6rem;
+}
+
+.mesh-simulation__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.mesh-simulation__form {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.65rem;
+  padding: 1.2rem;
+  background: var(--background);
+}
+
+.mesh-simulation__form h4 {
+  margin: 0 0 0.5rem;
+  color: var(--heading);
+  font-size: 0.77rem;
+  letter-spacing: 0.02em;
+}
+
+.mesh-simulation__form label {
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--heading);
+}
+
+.mesh-simulation__form select,
+.mesh-simulation__form input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.6rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--heading);
+  font-size: 0.7rem;
+}
+
+.mesh-simulation__form button {
+  min-height: 2.65rem;
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--heading);
+  border-radius: 0;
+  color: var(--background);
+  background: var(--heading);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.mesh-simulation__form button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--background);
+}
+
+.mesh-simulation__form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.mesh-simulation__form button.mesh-simulation__remove {
+  border-color: var(--border-strong);
+  color: var(--heading);
+  background: transparent;
+}
+
+.mesh-simulation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.mesh-simulation__actions button {
+  flex: 1 1 8rem;
+}
+
+.mesh-simulation__selection strong {
+  color: var(--heading);
+}
+
+@media (max-width: 900px) {
+  .mesh-simulation__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .topology-workspace__overlay-modes {
+    width: 100%;
+  }
+
+  .topology-workspace__overlay-modes button {
+    flex: 1 1 100%;
+  }
+
+  .topology-workspace__overlay-modes button + button {
+    border-left: 0;
+    border-top: 1px solid var(--border-strong);
+  }
+
+  .mesh-simulation__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.topology-workspace__table-overlay {
+  margin: 0.75rem 0 0;
+  padding-left: 0.8rem;
+  border-left: 2px solid var(--accent);
+  color: var(--heading);
+  font-size: 0.71rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}

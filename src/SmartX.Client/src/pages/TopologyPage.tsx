@@ -1,139 +1,191 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
-import { getApiHealth } from '../api/healthApi';
 import ApplicationShell from '../components/ApplicationShell';
 import PillarNavigation from '../components/PillarNavigation';
+import { TopologyWorkspace, type MeshViewMode } from '../features/topology/TopologyWorkspace';
+import { useTopologyData } from '../features/topology/useTopologyData';
+import type { MeshOverlayMode } from '../features/topology/meshOverlay';
+import { useTopologySimulation } from '../features/topology/useTopologySimulation';
+import '../features/topology/TopologyDataStatus.css';
 
 /**
- * The future mesh API is not yet available in P3-01. We only probe the
- * existing health endpoint, so the page never invents network nodes or routes.
- */
-type GatewayHealthState = 'checking' | 'connected' | 'unavailable';
-
-/**
- * Hosts Smart-X's third architectural pillar while the graph services are
- * introduced in P3-04 through P3-08.
- *
- * The navigation is fully usable now, but network topology data is explicitly
- * unavailable until the real backend APIs exist. This preserves honest UI
- * semantics and avoids suggesting that an empty graph means zero devices.
+ * P3-08 Commit 3 retains the proven P3-08 Commit 1 load/error/selection
+ * contract and mounts the accessible graph and table only after all related
+ * topology projections agree on one authoritative graph revision.
  */
 function TopologyPage() {
-  const [healthState, setHealthState] = useState<GatewayHealthState>('checking');
-  const healthControllerRef = useRef<AbortController | null>(null);
+  // Keep visual controls mounted while useTopologyData refetches on selection.
+  // These are local presentation preferences, not a second sensor store.
+  const [meshSearch, setMeshSearch] = useState('');
+  const [meshView, setMeshView] = useState<MeshViewMode>('diagram');
+  const [meshOverlayMode, setMeshOverlayMode] = useState<MeshOverlayMode>('connections');
+  const [meshPage, setMeshPage] = useState(0);
+  const {
+    phase,
+    projection,
+    errorMessage,
+    selectedSensorId,
+    setSelectedSensorId,
+    realtimeState,
+    refreshTopology,
+  } = useTopologyData();
+  const simulation = useTopologySimulation(refreshTopology);
 
-  /**
-   * Check the real gateway health endpoint. Cancel an older request before
-   * starting another so a slow response cannot overwrite the latest result.
-   */
-  const checkGatewayHealth = useCallback(async (): Promise<void> => {
-    healthControllerRef.current?.abort();
-
-    const controller = new AbortController();
-    healthControllerRef.current = controller;
-
-    try {
-      await getApiHealth(controller.signal);
-
-      if (!controller.signal.aborted) {
-        setHealthState('connected');
-      }
-    } catch {
-      // Aborted requests are expected during navigation and explicit retries.
-      if (!controller.signal.aborted) {
-        setHealthState('unavailable');
-      }
-    } finally {
-      if (healthControllerRef.current === controller) {
-        healthControllerRef.current = null;
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    // Keep the external API effect asynchronous for React's hooks lint rules.
-    const checkTimer = window.setTimeout(() => {
-      void checkGatewayHealth();
-    }, 0);
-
-    return () => {
-      window.clearTimeout(checkTimer);
-      healthControllerRef.current?.abort();
-    };
-  }, [checkGatewayHealth]);
-
-  /**
-   * Allow an operator to retry the health probe without losing route state.
-   */
-  function handleRetry(): void {
-    setHealthState('checking');
-    void checkGatewayHealth();
-  }
+  const sensors = projection?.topology.nodes.filter((node) => node.kind === 'Sensor') ?? [];
+  const selected = selectedSensorId
+    ? sensors.find((node) => node.sensorProfileId?.toLowerCase() === selectedSensorId.toLowerCase())
+    : undefined;
+  const selectedRoute = projection?.selectedRoute;
+  const selectionIsMissing = selectedSensorId !== null && selected === undefined;
 
   return (
     <ApplicationShell>
       <section className="page-intro module-heading" aria-labelledby="page-title">
-        <p className="eyebrow">PART 3 / WORKSPACE</p>
-
+        <p className="eyebrow">PART 3 / LIVE TOPOLOGY</p>
         <h1 className="page-title" id="page-title">
           Network Topology
           <br />
           &amp; Mesh Routing
         </h1>
-
         <p className="page-description">
-          Inspect gateway connectivity, trace device paths and evaluate mesh routing when the
-          network model is connected.
+          Explore registered sensors, gateway reachability and minimum-cost mesh backbones. All
+          links and routing results come from Smart-X; positions are not physical locations.
         </p>
       </section>
 
       <PillarNavigation />
 
-      <section
-        className={`system-status system-status--${healthState}`}
-        aria-labelledby="topology-status-heading"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        {healthState === 'checking' && (
-          <>
-            <p className="status-label">Gateway status</p>
-            <h2 className="status-title" id="topology-status-heading">
-              Checking connection
-            </h2>
-            <p className="status-message">
-              Checking the Smart-X API before loading the mesh workspace.
-            </p>
-          </>
+      <section className="topology-bootstrap" aria-labelledby="topology-data-heading">
+        <h2 className="topology-bootstrap__heading" id="topology-data-heading">
+          Live mesh topology
+        </h2>
+
+        {simulation.feedback !== null && (
+          <p
+            className={`topology-bootstrap__mutation topology-bootstrap__mutation--${simulation.feedback.kind}`}
+            role={simulation.feedback.kind === 'error' ? 'alert' : 'status'}
+            data-testid="topology-simulation-feedback"
+          >
+            {simulation.feedback.message}
+          </p>
         )}
 
-        {healthState === 'connected' && (
-          <>
-            <p className="status-label">API connected / Topology pending</p>
-            <h2 className="status-title" id="topology-status-heading">
-              Mesh data is not available yet
-            </h2>
-            <p className="status-message">
-              The gateway is reachable. Device links, network traversal and minimum-spanning-tree
-              routes will appear here when the real topology API is implemented. No simulated
-              network graph is displayed before those services exist.
+        <div aria-live="polite" aria-atomic="true">
+          {phase === 'loading' && (
+            <p className="topology-bootstrap__meta" role="status">
+              Loading the authoritative topology and checking graph revisions…
             </p>
-          </>
-        )}
+          )}
 
-        {healthState === 'unavailable' && (
+          {phase === 'error' && (
+            <div role="alert">
+              <p className="topology-bootstrap__meta">The current topology could not be loaded.</p>
+              <p className="topology-bootstrap__note">{errorMessage}</p>
+              <button className="text-button" type="button" onClick={refreshTopology}>
+                Retry topology request
+              </button>
+            </div>
+          )}
+        </div>
+
+        {phase === 'ready' && projection !== null && (
           <>
-            <p className="status-label">Gateway unavailable</p>
-            <h2 className="status-title" id="topology-status-heading">
-              The Smart-X API could not be reached
-            </h2>
-            <p className="status-message">
-              Start the API and check again. Network topology data cannot be loaded while the
-              gateway is disconnected.
+            <p className="topology-bootstrap__meta">
+              Graph revision {projection.graphVersion} · Realtime channel: {realtimeState}
             </p>
-            <button className="text-button" type="button" onClick={handleRetry}>
-              Check again
-            </button>
+
+            <dl className="topology-bootstrap__stats" aria-label="Authoritative mesh summary">
+              <div className="topology-bootstrap__stat">
+                <dt>Registered sensors</dt>
+                <dd>{projection.reachability.registeredSensorCount}</dd>
+              </div>
+              <div className="topology-bootstrap__stat">
+                <dt>Configured links</dt>
+                <dd>{projection.topology.linkCount}</dd>
+              </div>
+              <div className="topology-bootstrap__stat">
+                <dt>Gateway reachable</dt>
+                <dd>{projection.reachability.reachableSensorCount}</dd>
+              </div>
+              <div className="topology-bootstrap__stat">
+                <dt>Disconnected</dt>
+                <dd>{projection.reachability.disconnectedSensorCount}</dd>
+              </div>
+              <div className="topology-bootstrap__stat">
+                <dt>Unavailable</dt>
+                <dd>{projection.reachability.unavailableSensorCount}</dd>
+              </div>
+              <div className="topology-bootstrap__stat">
+                <dt>MST backbone cost</dt>
+                <dd>{projection.mst.totalSimulatedEnergyCost.toFixed(2)}</dd>
+              </div>
+            </dl>
+
+            {sensors.length === 0 && (
+              <p className="topology-bootstrap__note">
+                No registered devices yet. Register sensors in the ingestion pillar, then create
+                explicit simulated links; the dashboard does not invent connections.
+              </p>
+            )}
+
+            <div className="topology-bootstrap__controls">
+              <div className="topology-bootstrap__field">
+                <label htmlFor="topology-selected-sensor">Select a registered sensor</label>
+                <select
+                  id="topology-selected-sensor"
+                  value={selectedSensorId ?? ''}
+                  onChange={(event) => setSelectedSensorId(event.target.value || null)}
+                >
+                  <option value="">No sensor selected</option>
+                  {selectionIsMissing && (
+                    <option value={selectedSensorId ?? ''}>
+                      Previously selected sensor is not in this mesh
+                    </option>
+                  )}
+                  {sensors.map((node) => (
+                    <option key={node.key} value={node.sensorProfileId ?? ''}>
+                      {node.name} — {node.deviceIdentifier}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button className="text-button" type="button" onClick={refreshTopology}>
+                Refresh topology
+              </button>
+            </div>
+
+            {selectionIsMissing && (
+              <p className="topology-bootstrap__selected">
+                Your selected sensor is no longer part of the current registered mesh. The
+                cross-pillar selection has been preserved.
+              </p>
+            )}
+
+            {selected !== undefined && selectedRoute !== undefined && selectedRoute !== null && (
+              <p className="topology-bootstrap__selected" role="status">
+                {selected.name}: {selected.status} · Gateway route: {selectedRoute.status} · BFS
+                hops: {selectedRoute.bfs.hopCount ?? 'not available'} · MST tree route cost:{' '}
+                {selectedRoute.mst.accumulatedSimulatedEnergyCost?.toFixed(2) ?? 'not available'}
+              </p>
+            )}
+
+            <TopologyWorkspace
+              projection={projection}
+              selectedSensorId={selectedSensorId}
+              onSelectSensor={setSelectedSensorId}
+              search={meshSearch}
+              onSearchChange={(value) => {
+                setMeshSearch(value);
+                setMeshPage(0);
+              }}
+              view={meshView}
+              onViewChange={setMeshView}
+              overlayMode={meshOverlayMode}
+              onOverlayModeChange={setMeshOverlayMode}
+              simulation={simulation}
+              requestedPage={meshPage}
+              onPageChange={setMeshPage}
+            />
           </>
         )}
       </section>
