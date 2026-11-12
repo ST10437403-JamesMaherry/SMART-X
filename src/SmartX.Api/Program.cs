@@ -148,6 +148,10 @@ builder.Services.AddScoped<MeshTraversalService>();
 // Prim algorithms without keeping a second topology or route cache.
 builder.Services.AddScoped<MeshTopologyService>();
 
+// P3-10: one version-aware, read-only advisory projection across requests.
+// It reuses the graph store and existing BFS and never trains or actuates.
+builder.Services.AddSingleton<TopologyInsightService>();
+
 // P3-07 Commit 2: one scoped simulation write facade over the SAME store.
 // Mutations are gated per environment; Docker Production requires an
 // explicit opt-in and never opens physical network-control operations.
