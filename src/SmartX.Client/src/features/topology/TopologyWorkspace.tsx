@@ -2,6 +2,9 @@ import { useMemo } from 'react';
 
 import type { ConsistentTopologyProjection, MeshVertexResponse } from '../../api/topologyApi';
 import { MeshCanvas } from './MeshCanvas';
+import { describeMeshOverlay, type MeshOverlayMode } from './meshOverlay';
+import { TopologySimulationControls } from './TopologySimulationControls';
+import type { TopologySimulationActions } from './useTopologySimulation';
 import {
   buildMeshDiagram,
   getMeshConnection,
@@ -20,6 +23,9 @@ interface TopologyWorkspaceProps {
   readonly onSelectSensor: (sensorId: string | null) => void;
   readonly search: string;
   readonly onSearchChange: (value: string) => void;
+  readonly overlayMode: MeshOverlayMode;
+  readonly onOverlayModeChange: (value: MeshOverlayMode) => void;
+  readonly simulation: TopologySimulationActions;
   readonly view: MeshViewMode;
   readonly onViewChange: (value: MeshViewMode) => void;
   readonly requestedPage: number;
@@ -39,6 +45,9 @@ export function TopologyWorkspace({
   search,
   onSearchChange,
   view,
+  overlayMode,
+  onOverlayModeChange,
+  simulation,
   onViewChange,
   requestedPage,
   onPageChange,
@@ -54,6 +63,11 @@ export function TopologyWorkspace({
   const layout = useMemo(
     () => buildMeshDiagram(projection, matches, selectedSensorId),
     [projection, matches, selectedSensorId],
+  );
+
+  const overlay = useMemo(
+    () => describeMeshOverlay(projection, selectedSensorId, overlayMode),
+    [projection, selectedSensorId, overlayMode],
   );
 
   const totalPages = Math.max(1, Math.ceil(matches.length / TABLE_PAGE_SIZE));
@@ -117,6 +131,43 @@ export function TopologyWorkspace({
         </div>
       </div>
 
+      <div
+        className="topology-workspace__overlay-modes"
+        role="group"
+        aria-label="Network connection overlay"
+      >
+        <button
+          type="button"
+          aria-pressed={overlayMode === 'connections'}
+          className={overlayMode === 'connections' ? 'is-active' : undefined}
+          onClick={() => onOverlayModeChange('connections')}
+        >
+          All configured connections
+        </button>
+        <button
+          type="button"
+          aria-pressed={overlayMode === 'bfs'}
+          className={overlayMode === 'bfs' ? 'is-active' : undefined}
+          onClick={() => onOverlayModeChange('bfs')}
+        >
+          BFS / Fewest-hop route
+        </button>
+        <button
+          type="button"
+          aria-pressed={overlayMode === 'mst'}
+          className={overlayMode === 'mst' ? 'is-active' : undefined}
+          onClick={() => onOverlayModeChange('mst')}
+        >
+          Prim / Minimum-cost backbone
+        </button>
+      </div>
+
+      {view === 'table' && (
+        <p className="topology-workspace__table-overlay" role="status">
+          {overlay.explanation} Switch to Graph view to inspect highlighted links.
+        </p>
+      )}
+
       <p className="topology-workspace__results" role="status">
         {matches.length} of {sensors.length} registered sensors match your search.
         {selectedSensor && ` Selected: ${selectedSensor.name ?? selectedSensor.deviceIdentifier}.`}
@@ -127,6 +178,7 @@ export function TopologyWorkspace({
           {view === 'diagram' ? (
             <MeshCanvas
               layout={layout}
+              overlay={overlay}
               selectedSensorId={selectedSensorId}
               onSelectSensor={(id) => onSelectSensor(id)}
             />
@@ -222,10 +274,17 @@ export function TopologyWorkspace({
       </div>
 
       <p className="topology-workspace__footer">
-        This logical diagram uses stable positions, never a physical floor plan. Graph paths and MST
-        highlighting are introduced in the next commit; this view currently shows all configured
-        connections between visible nodes only.
+        This is a deterministic logical layout, never a physical floor plan. The selected overlay
+        comes from the API: BFS shows a fewest-hop sensor path; Prim shows the minimum-total-cost
+        backbone. Faded lines are configured connections outside that selection, not newly
+        discovered radio paths.
       </p>
+
+      <TopologySimulationControls
+        projection={projection}
+        selectedSensorId={selectedSensorId}
+        actions={simulation}
+      />
     </section>
   );
 }

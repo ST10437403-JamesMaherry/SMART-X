@@ -1,5 +1,5 @@
 import { ApiError } from './apiTypes';
-import { getJson } from './apiClient';
+import { getJson, postJson, request, requestJson } from './apiClient';
 import type {
   IdentifierKind,
   SensorCategory,
@@ -223,4 +223,45 @@ export async function loadConsistentTopology(
   throw new Error(
     'The mesh changed during the topology request. Refresh to retrieve a consistent graph revision.',
   );
+}
+
+/** P3-07 simulation-write contract; these actions never control physical radios. */
+export interface CreateMeshLinkRequest {
+  readonly nodeAKey: string;
+  readonly nodeBKey: string;
+  readonly simulatedEnergyCost: number;
+}
+
+export interface UpdateMeshLinkCostRequest {
+  readonly simulatedEnergyCost: number;
+}
+
+/** The API issues the link identity and validates the undirected pair. */
+export function createMeshLink(
+  body: CreateMeshLinkRequest,
+  signal?: AbortSignal,
+): Promise<MeshLinkResponse> {
+  return postJson<MeshLinkResponse, CreateMeshLinkRequest>('/api/topology/links', body, signal);
+}
+
+/** Successful equal-cost updates are idempotent on the server. */
+export function updateMeshLinkCost(
+  linkId: string,
+  cost: number,
+  signal?: AbortSignal,
+): Promise<MeshLinkResponse> {
+  return requestJson<MeshLinkResponse>(`/api/topology/links/${encodeURIComponent(linkId)}/cost`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ simulatedEnergyCost: cost } satisfies UpdateMeshLinkCostRequest),
+    signal,
+  });
+}
+
+/** A 204 response intentionally contains no JSON body. */
+export async function removeMeshLink(linkId: string, signal?: AbortSignal): Promise<void> {
+  await request(`/api/topology/links/${encodeURIComponent(linkId)}`, {
+    method: 'DELETE',
+    signal,
+  });
 }

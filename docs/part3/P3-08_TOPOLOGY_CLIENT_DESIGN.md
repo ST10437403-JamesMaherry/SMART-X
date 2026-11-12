@@ -106,3 +106,91 @@ selected details, search by the actual physical identifier, table navigation,
 keyboard selection, 375px width and the 25-node diagram bound. A green outcome
 must be recorded from a **local execution**; this document makes no claim that
 these new tests have already passed.
+
+## Commit 3 — Server-backed overlays and simulation operations
+
+The overlay buttons show **all configured connections**, a **selected sensor's
+BFS fewest-hop path**, or **Prim's gateway-rooted minimum-total-cost backbone**.
+They are not three client-side routing algorithms. `meshOverlay.ts` consumes the
+version-consistent server projections from Commit 1:
+
+- In **All configured connections** mode, every visible configured link is
+  displayed. Dashed links adjacent to unavailable sensors are not represented
+  as currently forwarding links. The backend preserves these configured links.
+- In **BFS** mode, the exact ordered `selectedRoute.bfs.pathToGateway` is mapped
+  to *existing undirected link IDs* in that same graph revision. If no sensor
+  is selected or its status is `Unavailable`/`Disconnected`, no route is
+  highlighted and a text explanation is displayed. This mapping is not BFS.
+- In **Prim** mode, only `mst.selectedEdges[].linkId` entries actually present
+  in the same topology snapshot are highlighted. The total displayed cost is
+  the server's total **backbone** cost, not a Dijkstra path cost. A separate
+  selected-device details panel still exposes its individual MST tree route.
+
+Other configured links remain faint for context in BFS/Prim modes, while
+links touching unavailable endpoints are also explicitly dashed; strokes,
+line dashes, button labels, `aria-pressed`, and a readable status paragraph
+communicate what is selected without relying on color alone. A 25-sensor
+maximum still applies. Highlights whose endpoints are outside the diagram are
+counted as omitted in text, not drawn as invented connections. The complete
+paginated semantic table remains available for larger networks.
+
+### Simulation controls and failure communication
+
+`TopologySimulationControls.tsx` exposes only **real API writes**:
+
+| Action | Authoritative HTTP operation |
+| --- | --- |
+| Create a weighted undirected link | `POST /api/topology/links` |
+| Change a selected link's relative cost | `PATCH /api/topology/links/{id}/cost` |
+| Remove a configured link | `DELETE /api/topology/links/{id}` |
+| Change selected registered sensor's simulated health | `PATCH /api/sensors/{id}/status` |
+
+The browser performs basic positive-finite-cost, missing-endpoint and self-link
+checks, but backend validation remains authoritative for identity, link
+uniqueness, decommissioned sensors, and the **simulation-mode access policy**.
+Production link writes are disabled by default unless explicitly opted in on
+the server. This client is a teaching/demo interface, not a public
+unauthenticated configuration console.
+
+`useTopologySimulation.ts` holds pending state and operation feedback **above**
+the conditional ready workspace. A confirmed HTTP mutation triggers a refetch
+of topology, BFS, MST and selected route from the same graph revision.
+Rejected or unconfirmed writes show an actionable error and are never
+optimistically inserted into the visualization. The selection and overlay
+mode persist across this refetch; existing SignalR invalidations and reconnect
+refreshes continue to use the same source-of-truth loader.
+
+The simulation changes **process-local logical topology and health**, not
+physical IoT equipment or measured radio energy usage. A link's relative cost
+is a configured positive finite simulation weight.
+
+### Commit 3 verification
+
+New Playwright suite:
+
+`e2e/part3-topology-overlays.spec.ts`
+
+It uses real backend sensor registration, status changes, topology snapshots and
+link mutations. Assertions distinguish a **one-hop BFS route** from a
+**two-hop Prim tree route** in the same graph; verify the exact edge IDs
+highlighted; exercise link creation, cost update and deletion through the
+interface; verify Offline/Online recovery without losing the selected sensor;
+and reject a self-link without creating a fake edge.
+
+The tests should be run locally using the existing managed API/Vite Playwright
+configuration. No browser-run result is asserted by this document.
+
+```bash
+cd src/SmartX.Client
+npm run lint
+npm run format:check
+npm run build
+CI=true npm run test:e2e -- --grep 'P3-08 real API mesh routing overlays and simulation controls' --retries=0
+CI=true npm run test:e2e -- --grep 'P3-08 accessible interactive mesh visualization' --retries=0
+CI=true npm run test:e2e -- --grep 'Part 3 live topology API foundation' --retries=0
+cd ../..
+git diff --check
+```
+
+Commit 4 will add broader accessibility, mobile/failure/reconnection regression
+and evidence capture. It will not replace the server's MST/BFS calculations.

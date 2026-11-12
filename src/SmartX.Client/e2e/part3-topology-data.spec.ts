@@ -83,9 +83,17 @@ test.describe('Part 3 live topology API foundation', () => {
       },
     });
     expect(registration.status()).toBe(201);
+    const sensor = (await registration.json()) as SensorResponse;
 
     await page.getByRole('button', { name: 'Refresh topology' }).click();
-    await expect(page.getByRole('option', { name: new RegExp(name) })).toHaveCount(1);
+
+    // Simulation controls also list registered devices in their endpoint
+    // dropdowns. Scope this check to the cross-pillar sensor selector so
+    // adding legitimate simulation controls cannot create false failures.
+    const selector = page.getByLabel('Select a registered sensor');
+    const option = selector.locator(`option[value="${sensor.id}"]`);
+    await expect(option).toHaveCount(1);
+    await expect(option).toContainText(name);
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

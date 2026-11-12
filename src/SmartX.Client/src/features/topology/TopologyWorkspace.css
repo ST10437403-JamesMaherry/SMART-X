@@ -573,3 +573,285 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* P3-08 Commit 3: labelled, accessible overlay controls. State is conveyed
+   through text, line width and dash patterns in addition to the accent. */
+.topology-workspace__overlay-modes {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  gap: 0;
+  border: 1px solid var(--border-strong);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.topology-workspace__overlay-modes button {
+  min-height: 2.7rem;
+  padding: 0.65rem 0.9rem;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.7rem;
+  text-align: left;
+}
+
+.topology-workspace__overlay-modes button + button {
+  border-left: 1px solid var(--border-strong);
+}
+
+.topology-workspace__overlay-modes button:hover:not(.is-active) {
+  color: var(--heading);
+  background: var(--surface-hover);
+}
+
+.topology-workspace__overlay-modes button.is-active {
+  color: var(--background);
+  background: var(--heading);
+  font-weight: 700;
+}
+
+.mesh-canvas__overlay-summary {
+  margin: 0.6rem 0 1rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--accent);
+  color: var(--heading);
+  font-size: 0.72rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.mesh-canvas__edge--context {
+  stroke: #4c4c4c;
+  stroke-width: 1px;
+  stroke-dasharray: 3 7;
+  opacity: 0.55;
+}
+
+.mesh-canvas__edge--ineligible {
+  stroke: #999;
+  stroke-width: 1.4px;
+  stroke-dasharray: 5 5;
+  opacity: 0.75;
+}
+
+.mesh-canvas__edge--bfs-route {
+  stroke: var(--accent);
+  stroke-width: 4px;
+  stroke-dasharray: 12 5;
+  opacity: 1;
+}
+
+.mesh-canvas__edge--mst-backbone {
+  stroke: var(--heading);
+  stroke-width: 3.5px;
+  stroke-linecap: square;
+  opacity: 1;
+}
+
+.mesh-canvas__vertex--bfs-path {
+  stroke: var(--accent);
+  stroke-width: 3px;
+}
+
+.mesh-canvas__cost-surface--context,
+.mesh-canvas__cost--context {
+  opacity: 0.65;
+}
+
+.mesh-canvas__line-mark {
+  display: inline-block;
+  width: 1.5rem;
+  height: 0;
+  border-top: 3px solid var(--accent);
+}
+
+.mesh-canvas__line-mark--context {
+  border-top: 2px dashed #777;
+}
+
+.mesh-canvas__line-mark--inactive {
+  border-top: 2px dotted #999;
+}
+
+/* Server-reported mutation feedback remains mounted in TopologyPage while
+   the latest graph and routes are loading after a successful write. */
+.topology-bootstrap__mutation {
+  margin: 0.8rem 0 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border-left: 3px solid var(--success);
+  color: var(--heading);
+  font-size: 0.76rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.topology-bootstrap__mutation--error {
+  border-left-color: var(--danger);
+}
+
+/* Real API-backed link and health controls. Deliberately no mock-local graph
+   state, auto-generated radio links, cards, gradients or float animations. */
+.mesh-simulation {
+  margin-top: 2.5rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+.mesh-simulation__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.25rem;
+}
+
+.mesh-simulation__heading h3 {
+  margin: 0;
+  font: 400 clamp(1.5rem, 3vw, 2rem) / 1.1 var(--font-display);
+  color: var(--heading);
+}
+
+.mesh-simulation__tag {
+  color: var(--heading);
+  font-size: 0.67rem;
+  letter-spacing: 0.05em;
+}
+
+.mesh-simulation__caution,
+.mesh-simulation__hint,
+.mesh-simulation__selection {
+  color: var(--text-muted);
+  font-size: 0.71rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.mesh-simulation__caution {
+  max-width: 60rem;
+  margin: 0.85rem 0 1.6rem;
+}
+
+.mesh-simulation__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.mesh-simulation__form {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.65rem;
+  padding: 1.2rem;
+  background: var(--background);
+}
+
+.mesh-simulation__form h4 {
+  margin: 0 0 0.5rem;
+  color: var(--heading);
+  font-size: 0.77rem;
+  letter-spacing: 0.02em;
+}
+
+.mesh-simulation__form label {
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--heading);
+}
+
+.mesh-simulation__form select,
+.mesh-simulation__form input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.6rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--heading);
+  font-size: 0.7rem;
+}
+
+.mesh-simulation__form button {
+  min-height: 2.65rem;
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--heading);
+  border-radius: 0;
+  color: var(--background);
+  background: var(--heading);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.mesh-simulation__form button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--background);
+}
+
+.mesh-simulation__form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.mesh-simulation__form button.mesh-simulation__remove {
+  border-color: var(--border-strong);
+  color: var(--heading);
+  background: transparent;
+}
+
+.mesh-simulation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.mesh-simulation__actions button {
+  flex: 1 1 8rem;
+}
+
+.mesh-simulation__selection strong {
+  color: var(--heading);
+}
+
+@media (max-width: 900px) {
+  .mesh-simulation__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .topology-workspace__overlay-modes {
+    width: 100%;
+  }
+
+  .topology-workspace__overlay-modes button {
+    flex: 1 1 100%;
+  }
+
+  .topology-workspace__overlay-modes button + button {
+    border-left: 0;
+    border-top: 1px solid var(--border-strong);
+  }
+
+  .mesh-simulation__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.topology-workspace__table-overlay {
+  margin: 0.75rem 0 0;
+  padding-left: 0.8rem;
+  border-left: 2px solid var(--accent);
+  color: var(--heading);
+  font-size: 0.71rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}

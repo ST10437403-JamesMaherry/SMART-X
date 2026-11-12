@@ -1,26 +1,36 @@
 import type { MeshDiagramLayout } from './meshLayout';
 import { MESH_DIAGRAM_HEIGHT, MESH_DIAGRAM_WIDTH, sameMeshKey } from './meshLayout';
+import type { MeshOverlayDescription } from './meshOverlay';
 
 interface MeshCanvasProps {
   readonly layout: MeshDiagramLayout;
+  readonly overlay: MeshOverlayDescription;
   readonly selectedSensorId: string | null;
   readonly onSelectSensor: (sensorId: string) => void;
 }
 
 /**
- * A fixed, scrollable logical SVG graph. The node hit targets are native HTML
- * buttons layered over the SVG circles, providing genuine Tab/Enter/Space
- * interaction and clear focus rings without relying on SVG keyboard quirks.
- * Only actual API edges between currently visible vertices are drawn.
+ * Draws the actual graph revision and its requested overlay, without deriving
+ * graph routes from the coordinates. Native buttons over each sensor preserve
+ * keyboard/Space/Enter support. The text/table alternative is always present.
  */
-export function MeshCanvas({ layout, selectedSensorId, onSelectSensor }: MeshCanvasProps) {
+export function MeshCanvas({ layout, overlay, selectedSensorId, onSelectSensor }: MeshCanvasProps) {
   const points = new Map(layout.nodes.map((point) => [point.node.key.toLowerCase(), point]));
+  const currentPath = new Set(overlay.selectedPathKeys.map((key) => key.toLowerCase()));
+  const visibleHighlighted = layout.links.filter((link) =>
+    overlay.highlightedLinkIds.has(link.id),
+  ).length;
 
   return (
     <section className="mesh-canvas" aria-label="Logical mesh graph">
       <p className="mesh-canvas__instruction" id="mesh-canvas-instruction">
         Logical layout, not physical sensor positions. Select a numbered node to inspect it. On
         narrow screens, scroll inside the diagram; the table view provides a text alternative.
+      </p>
+      <p className="mesh-canvas__overlay-summary" role="status" aria-live="polite">
+        {overlay.explanation}
+        {overlay.highlightedLinkIds.size > visibleHighlighted &&
+          ` ${overlay.highlightedLinkIds.size - visibleHighlighted} highlighted links are outside the bounded diagram.`}
       </p>
       <div
         className="mesh-canvas__viewport"
@@ -45,8 +55,27 @@ export function MeshCanvas({ layout, selectedSensorId, onSelectSensor }: MeshCan
               if (!first || !second) {
                 return null;
               }
+
+              // Configured links can remain in storage after a sensor goes
+              // Offline. A configured line is NOT proof of forwarding ability.
+              const ineligible =
+                !first.node.isForwardingEligible || !second.node.isForwardingEligible;
+              const highlighted = overlay.highlightedLinkIds.has(link.id);
+              const edgeState =
+                overlay.mode === 'connections'
+                  ? ineligible
+                    ? 'ineligible'
+                    : 'configured'
+                  : highlighted
+                    ? overlay.mode === 'bfs'
+                      ? 'bfs-route'
+                      : 'mst-backbone'
+                    : ineligible
+                      ? 'ineligible'
+                      : 'context';
               const centerX = (first.x + second.x) / 2;
               const centerY = (first.y + second.y) / 2;
+
               return (
                 <g key={link.id}>
                   <line
@@ -54,9 +83,10 @@ export function MeshCanvas({ layout, selectedSensorId, onSelectSensor }: MeshCan
                     y1={first.y}
                     x2={second.x}
                     y2={second.y}
-                    className="mesh-canvas__edge"
+                    className={`mesh-canvas__edge mesh-canvas__edge--${edgeState}`}
                     data-testid="mesh-diagram-edge"
                     data-link-id={link.id}
+                    data-overlay-state={edgeState}
                   />
                   <rect
                     x={centerX - 20}
@@ -64,9 +94,13 @@ export function MeshCanvas({ layout, selectedSensorId, onSelectSensor }: MeshCan
                     width="40"
                     height="18"
                     rx="1"
-                    className="mesh-canvas__cost-surface"
+                    className={`mesh-canvas__cost-surface${edgeState === 'context' ? ' mesh-canvas__cost-surface--context' : ''}`}
                   />
-                  <text x={centerX} y={centerY} className="mesh-canvas__cost">
+                  <text
+                    x={centerX}
+                    y={centerY}
+                    className={`mesh-canvas__cost${edgeState === 'context' ? ' mesh-canvas__cost--context' : ''}`}
+                  >
                     {link.simulatedEnergyCost.toFixed(2)}
                   </text>
                 </g>
@@ -77,13 +111,15 @@ export function MeshCanvas({ layout, selectedSensorId, onSelectSensor }: MeshCan
                 selectedSensorId !== null &&
                 point.node.sensorProfileId !== null &&
                 point.node.sensorProfileId.toLowerCase() === selectedSensorId.toLowerCase();
+              const isOnBfsPath =
+                overlay.mode === 'bfs' && currentPath.has(point.node.key.toLowerCase());
               return (
                 <g key={point.node.key}>
                   <circle
                     cx={point.x}
                     cy={point.y}
                     r={isSelected ? 24 : 20}
-                    className={`mesh-canvas__vertex mesh-canvas__vertex--${point.connection.toLowerCase()}${isSelected ? ' mesh-canvas__vertex--selected' : ''}`}
+                    className={`mesh-canvas__vertex mesh-canvas__vertex--${point.connection.toLowerCase()}${isSelected ? ' mesh-canvas__vertex--selected' : ''}${isOnBfsPath ? ' mesh-canvas__vertex--bfs-path' : ''}`}
                   />
                   <text x={point.x} y={point.y + 4} className="mesh-canvas__vertex-label">
                     {point.label}
@@ -156,6 +192,32 @@ export function MeshCanvas({ layout, selectedSensorId, onSelectSensor }: MeshCan
             aria-hidden="true"
           />
           Unavailable
+        </span>
+      </div>
+      <div
+        className="mesh-canvas__legend mesh-canvas__legend--routes"
+        aria-label="Line style legend"
+      >
+        <span>
+          <i
+            className="mesh-canvas__line-mark mesh-canvas__line-mark--selected"
+            aria-hidden="true"
+          />
+          Emphasized API route/tree
+        </span>
+        <span>
+          <i
+            className="mesh-canvas__line-mark mesh-canvas__line-mark--context"
+            aria-hidden="true"
+          />
+          Other configured link
+        </span>
+        <span>
+          <i
+            className="mesh-canvas__line-mark mesh-canvas__line-mark--inactive"
+            aria-hidden="true"
+          />
+          Unavailable endpoint
         </span>
       </div>
       <p className="mesh-canvas__footnote" aria-live="polite">

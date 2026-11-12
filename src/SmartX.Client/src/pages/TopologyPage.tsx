@@ -4,10 +4,12 @@ import ApplicationShell from '../components/ApplicationShell';
 import PillarNavigation from '../components/PillarNavigation';
 import { TopologyWorkspace, type MeshViewMode } from '../features/topology/TopologyWorkspace';
 import { useTopologyData } from '../features/topology/useTopologyData';
+import type { MeshOverlayMode } from '../features/topology/meshOverlay';
+import { useTopologySimulation } from '../features/topology/useTopologySimulation';
 import '../features/topology/TopologyDataStatus.css';
 
 /**
- * P3-08 Commit 2 retains the proven P3-08 Commit 1 load/error/selection
+ * P3-08 Commit 3 retains the proven P3-08 Commit 1 load/error/selection
  * contract and mounts the accessible graph and table only after all related
  * topology projections agree on one authoritative graph revision.
  */
@@ -16,6 +18,7 @@ function TopologyPage() {
   // These are local presentation preferences, not a second sensor store.
   const [meshSearch, setMeshSearch] = useState('');
   const [meshView, setMeshView] = useState<MeshViewMode>('diagram');
+  const [meshOverlayMode, setMeshOverlayMode] = useState<MeshOverlayMode>('connections');
   const [meshPage, setMeshPage] = useState(0);
   const {
     phase,
@@ -26,6 +29,7 @@ function TopologyPage() {
     realtimeState,
     refreshTopology,
   } = useTopologyData();
+  const simulation = useTopologySimulation(refreshTopology);
 
   const sensors = projection?.topology.nodes.filter((node) => node.kind === 'Sensor') ?? [];
   const selected = selectedSensorId
@@ -55,6 +59,16 @@ function TopologyPage() {
         <h2 className="topology-bootstrap__heading" id="topology-data-heading">
           Live mesh topology
         </h2>
+
+        {simulation.feedback !== null && (
+          <p
+            className={`topology-bootstrap__mutation topology-bootstrap__mutation--${simulation.feedback.kind}`}
+            role={simulation.feedback.kind === 'error' ? 'alert' : 'status'}
+            data-testid="topology-simulation-feedback"
+          >
+            {simulation.feedback.message}
+          </p>
+        )}
 
         <div aria-live="polite" aria-atomic="true">
           {phase === 'loading' && (
@@ -166,6 +180,9 @@ function TopologyPage() {
               }}
               view={meshView}
               onViewChange={setMeshView}
+              overlayMode={meshOverlayMode}
+              onOverlayModeChange={setMeshOverlayMode}
+              simulation={simulation}
               requestedPage={meshPage}
               onPageChange={setMeshPage}
             />
