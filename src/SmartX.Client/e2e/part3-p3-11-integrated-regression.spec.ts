@@ -130,7 +130,9 @@ test.describe('P3-11 integrated three-pillar regression', () => {
 
     await moduleNavigation(page).getByRole('link', { name: pillars[2].name }).click();
     await expect(page).toHaveURL(/\/topology$/);
-    await expect(page.getByRole('alert')).toContainText('The current topology could not be loaded.');
+    await expect(page.getByRole('alert')).toContainText(
+      'The current topology could not be loaded.',
+    );
     await expect(page.getByRole('button', { name: 'Retry topology request' })).toBeVisible();
 
     const documentStart = await page.evaluate(() => performance.timeOrigin);
@@ -163,9 +165,10 @@ test.describe('P3-11 integrated three-pillar regression', () => {
       await page.keyboard.press('Enter');
 
       await expect(page).toHaveURL(new RegExp(`${pillar.path}$`));
-      await expect(
-        moduleNavigation(page).getByRole('link', { name: pillar.name }),
-      ).toHaveAttribute('aria-current', 'page');
+      await expect(moduleNavigation(page).getByRole('link', { name: pillar.name })).toHaveAttribute(
+        'aria-current',
+        'page',
+      );
       await expect(page.getByRole('heading', { level: 1 })).toContainText(pillar.heading);
 
       const horizontalOverflow = await page.evaluate(() => {
