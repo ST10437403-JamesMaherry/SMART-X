@@ -3,6 +3,7 @@ import type {
   MeshDeviceRouteResponse,
   MeshVertexResponse,
 } from '../../api/topologyApi';
+import { SelectedSensorLinks } from '../../components/SelectedSensorLinks';
 import { getMeshConnection, sameMeshKey } from './meshLayout';
 
 interface TopologyNodeDetailsProps {
@@ -171,6 +172,10 @@ export function TopologyNodeDetails({ projection, selectedSensorId }: TopologyNo
           </ul>
         )}
       </div>
+      <SelectedSensorLinks
+        source="topology"
+        sensorName={sensor.name ?? sensor.deviceIdentifier ?? sensor.key}
+      />
       <p className="mesh-details__disclaimer">
         Costs are simulated relative weights, not measured energy. A Prim backbone minimizes total
         selected network cost, not every individual weighted route.

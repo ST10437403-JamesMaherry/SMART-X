@@ -53,3 +53,15 @@ Then run the complete client suite and backend regressions before committing. Th
 - `src/SmartX.Client/src/pages/TopologyPage.tsx`
 - `src/SmartX.Client/e2e/part3-topology-avl-history.spec.ts`
 - `docs/part3/P3-09_AVL_HISTORY_DESIGN.md`
+
+
+## Commit 2 — Shared workflow navigation and safe draft retention
+
+`SelectedSensorLinks` now offers real anchor destinations between the three pillars, with one
+`WorkspaceStateProvider.selectedSensorId` remaining authoritative. `PillarDeepLinkFocus`
+focuses asynchronously mounted target sections on shortcut navigation and browser Back/Forward.
+History form inputs are bounded, per-sensor safe drafts in the workspace provider; AVL rows and
+cursors are **not** retained across route unmounts or device changes.
+
+For the full identity, accessibility, and automated verification contracts, see
+`docs/part3/P3-09_CROSS_PILLAR_WORKFLOWS.md`.

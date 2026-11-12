@@ -11,6 +11,7 @@ import {
   type TelemetryRangePageResponse,
   type TelemetryRangeQuery,
 } from '../../api/telemetryRangeApi';
+import { useWorkspaceState, type TopologyHistoryDraft } from '../../state/workspaceState';
 import './TopologySensorHistory.css';
 
 interface TopologySensorHistoryProps {
@@ -19,6 +20,8 @@ interface TopologySensorHistoryProps {
   readonly deviceIdentifier: string | null;
   readonly telemetryDataType: TelemetryDataType | null;
 }
+
+const MAX_SAVED_HISTORY_DRAFTS = 32;
 
 type HistoryLoadState =
   | { readonly phase: 'idle' | 'loading'; readonly page: null; readonly error: null }
@@ -72,11 +75,14 @@ export function TopologySensorHistory({
   deviceIdentifier,
   telemetryDataType,
 }: TopologySensorHistoryProps) {
-  const [fromLocal, setFromLocal] = useState(() =>
-    toLocalInputValue(new Date(Date.now() - 24 * 60 * 60 * 1000)),
-  );
-  const [toLocal, setToLocal] = useState(() => toLocalInputValue(new Date()));
-  const [pageSize, setPageSize] = useState<number>(25);
+  const { topologyHistoryDrafts, setTopologyHistoryDrafts } = useWorkspaceState();
+  const [defaultDraft] = useState<TopologyHistoryDraft>(() => ({
+    fromLocal: toLocalInputValue(new Date(Date.now() - 24 * 60 * 60 * 1000)),
+    toLocal: toLocalInputValue(new Date()),
+    pageSize: 25,
+  }));
+  const draftId = sensorProfileId?.toLowerCase() ?? null;
+  const draft = (draftId ? topologyHistoryDrafts[draftId] : undefined) ?? defaultDraft;
   const [query, setQuery] = useState<TelemetryRangeQuery | null>(null);
   const [cursors, setCursors] = useState<readonly (TelemetryRangeCursor | null)[]>([null]);
   const [load, setLoad] = useState<HistoryLoadState>({
@@ -117,6 +123,24 @@ export function TopologySensorHistory({
     return () => controller.abort();
   }, [query, cursors, sensorProfileId]);
 
+  /**
+   * Save only one device's safe form inputs, not AVL records or pagination.
+   * Keep the latest 32 edited sensors to avoid unbounded provider growth in
+   * large simulated meshes. Updates do not write to localStorage or the API.
+   */
+  function updateDraft(patch: Partial<TopologyHistoryDraft>): void {
+    if (draftId === null) return;
+    setTopologyHistoryDrafts((current) => {
+      const otherDrafts = Object.entries(current)
+        .filter(([id]) => id !== draftId)
+        .slice(-(MAX_SAVED_HISTORY_DRAFTS - 1));
+      const next: Record<string, TopologyHistoryDraft> = Object.fromEntries(otherDrafts);
+      next[draftId] = { ...(current[draftId] ?? draft), ...patch };
+      return next;
+    });
+    invalidateResults();
+  }
+
   // Editing the draft makes any prior result semantically stale. Cancel the
   // old query before its response can be presented under newly edited bounds.
   function invalidateResults(): void {
@@ -130,10 +154,10 @@ export function TopologySensorHistory({
     if (sensorProfileId === null) return;
 
     try {
-      const bounds = localRangeToUtc(fromLocal, toLocal);
+      const bounds = localRangeToUtc(draft.fromLocal, draft.toLocal);
       setCursors([null]);
       setLoad({ phase: 'loading', page: null, error: null });
-      setQuery({ ...bounds, limit: pageSize });
+      setQuery({ ...bounds, limit: draft.pageSize });
     } catch (error: unknown) {
       setQuery(null);
       setLoad({
@@ -206,11 +230,8 @@ export function TopologySensorHistory({
               <input
                 type="datetime-local"
                 required
-                value={fromLocal}
-                onChange={(event) => {
-                  setFromLocal(event.target.value);
-                  invalidateResults();
-                }}
+                value={draft.fromLocal}
+                onChange={(event) => updateDraft({ fromLocal: event.target.value })}
               />
             </label>
             <label>
@@ -218,21 +239,15 @@ export function TopologySensorHistory({
               <input
                 type="datetime-local"
                 required
-                value={toLocal}
-                onChange={(event) => {
-                  setToLocal(event.target.value);
-                  invalidateResults();
-                }}
+                value={draft.toLocal}
+                onChange={(event) => updateDraft({ toLocal: event.target.value })}
               />
             </label>
             <label>
               Readings per page
               <select
-                value={pageSize}
-                onChange={(event) => {
-                  setPageSize(Number(event.target.value));
-                  invalidateResults();
-                }}
+                value={draft.pageSize}
+                onChange={(event) => updateDraft({ pageSize: Number(event.target.value) })}
               >
                 {TOPOLOGY_HISTORY_PAGE_SIZES.map((size) => (
                   <option key={size} value={size}>
