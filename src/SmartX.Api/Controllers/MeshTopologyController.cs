@@ -17,18 +17,22 @@ namespace SmartX.Api.Controllers;
 public sealed class MeshTopologyController : ControllerBase
 {
     private readonly MeshTopologyService _topologyService;
+    private readonly TopologyInsightService _insightService;
     private readonly MeshLinkSimulationService _simulationService;
     private readonly MeshSimulationAccessPolicy _simulationAccess;
     private readonly MeshTopologyRealtimePublisher _topologyChanges;
 
     public MeshTopologyController(
         MeshTopologyService topologyService,
+        TopologyInsightService insightService,
         MeshLinkSimulationService simulationService,
         MeshSimulationAccessPolicy simulationAccess,
         MeshTopologyRealtimePublisher topologyChanges)
     {
         _topologyService = topologyService
             ?? throw new ArgumentNullException(nameof(topologyService));
+        _insightService = insightService
+            ?? throw new ArgumentNullException(nameof(insightService));
         _simulationService = simulationService
             ?? throw new ArgumentNullException(nameof(simulationService));
         _simulationAccess = simulationAccess
@@ -95,6 +99,27 @@ public sealed class MeshTopologyController : ControllerBase
     {
         MeshDeviceRouteResponse response = await _topologyService
             .GetDeviceRouteAsync(id, cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Current, bounded, rule-derived operational insights from one mesh
+    /// graph revision and the existing BFS classifier. No search or model
+    /// training is required, and GET never performs any simulation writes
+    /// or actuator commands. A recovery notice is time-limited.
+    /// </summary>
+    [HttpGet("insights")]
+    [ProducesResponseType<TopologyInsightsResponse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<TopologyInsightsResponse>> GetInsights(
+        CancellationToken cancellationToken)
+    {
+        // A warning may resolve at any moment; do not cache stale advice
+        // at HTTP proxy/browser boundaries. The application caches the
+        // BFS projection by authoritative graph version instead.
+        Response.Headers["Cache-Control"] = "no-store";
+
+        TopologyInsightsResponse response = await _insightService
+            .GetCurrentAsync(cancellationToken);
         return Ok(response);
     }
 
