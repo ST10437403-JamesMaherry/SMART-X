@@ -4,6 +4,7 @@ import ApplicationShell from '../components/ApplicationShell';
 import PillarNavigation from '../components/PillarNavigation';
 import { TopologyWorkspace, type MeshViewMode } from '../features/topology/TopologyWorkspace';
 import { TopologySensorHistory } from '../features/topology/TopologySensorHistory';
+import { TopologyInsights } from '../features/topology/TopologyInsights';
 import { useTopologyData } from '../features/topology/useTopologyData';
 import type { MeshOverlayMode } from '../features/topology/meshOverlay';
 import { useTopologySimulation } from '../features/topology/useTopologySimulation';
@@ -169,6 +170,15 @@ function TopologyPage() {
                 {selectedRoute.mst.accumulatedSimulatedEnergyCost?.toFixed(2) ?? 'not available'}
               </p>
             )}
+
+            {/* Rule-derived facts use this exact versioned graph, never a
+                browser-synthesised route or historical training record. */}
+            <TopologyInsights
+              surface="topology"
+              refreshToken={projection.graphVersion}
+              expectedGraphVersion={projection.graphVersion}
+              nodes={projection.topology.nodes}
+            />
 
             <TopologyWorkspace
               projection={projection}

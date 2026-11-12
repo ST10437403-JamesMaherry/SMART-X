@@ -57,3 +57,16 @@ Replace `Pending` only with verifiable command output, CI links, test artifacts,
 - `docs/part3/P3-10_TOPOLOGY_INSIGHTS_API.md` — provenance, limits, semantics, safety and reproduction.
 
 **Verification pending:** Run the targeted .NET filters and full solution suite; record actual outcomes. No claim of live browser visibility or improved Part 2 marks is made until Commits 3 and 4 are verified.
+
+
+## Commit 3: accessible explanation and authentic operator evidence
+
+**Implemented (not yet independently verified):**
+
+- `src/SmartX.Client/src/features/topology/TopologyInsights.tsx` and `src/api/topologyInsightsApi.ts`: render bounded current BFS/status conditions with graph version, origin, observed timestamps, real affected sensor IDs, recommended next checks and recovery expiry. No invented prediction confidence or physical network data.
+- `src/SmartX.Client/src/features/realtime/RealtimeWorkspace.tsx`: show current topology warnings in Operations using its existing hub connection, with only topology-related invalidations triggering new insight evaluations.
+- `src/SmartX.Client/src/features/realtime/RecentOperatorSearches.tsx`: display real persisted search submissions and small frequency ranking from the bounded interaction endpoint, without pretending this is a trained actuator suggestion.
+- `src/SmartX.Client/src/features/realtime/SuggestedActions.tsx`: preserve historical evidence-based command review, Undo and prior E2E selectors; clarify these are learned episodes rather than live mesh rules.
+- `docs/part3/P3-10_EXPLAINABLE_INSIGHTS_UI.md`: implementation and safety rationale.
+
+**Verification pending:** locally run ESLint, Prettier, build and browser tests after Commit 4. These improvements do not demonstrate the unknown reason for the previous 18/30 mark or imply it was changed.
