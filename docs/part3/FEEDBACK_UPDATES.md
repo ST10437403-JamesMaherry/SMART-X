@@ -70,3 +70,14 @@ Replace `Pending` only with verifiable command output, CI links, test artifacts,
 - `docs/part3/P3-10_EXPLAINABLE_INSIGHTS_UI.md`: implementation and safety rationale.
 
 **Verification pending:** locally run ESLint, Prettier, build and browser tests after Commit 4. These improvements do not demonstrate the unknown reason for the previous 18/30 mark or imply it was changed.
+
+
+## Commit 4: browser-based proactive and genuinely learned evidence
+
+**Implemented:**
+
+- `src/SmartX.Client/e2e/part3-proactive-network-insights.spec.ts` — actual registered sensors, real link/status writes, first-visit warning without a search, affected UUID and source, stable graph-revision projection and warning keys, genuine recovery, 375px viewport, safe network-error retry, read-only interaction invariants and bounded search evidence.
+- Existing `src/SmartX.Client/e2e/part2-suggested-actions-journey.spec.ts` is the separate, original real-API evidence for three validated alert/search/accepted-command training episodes, fourth alert, human command confirmation and Undo. Do not fabricate an extra training story.
+- `docs/part3/P3-10_FINAL_PROACTIVE_VERIFICATION.md` gives reproducible commands and an evidence matrix.
+
+**Status:** Pending local lint/build/test results and CI check. Replace these words with the actual printed totals and PR/commit IDs after validation. The original Part 2 result was **18/30**, and its detailed marker comments remain unavailable.
