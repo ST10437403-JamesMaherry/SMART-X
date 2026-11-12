@@ -10,7 +10,7 @@ import type { SensorResponse } from '../src/api/sensorsApi';
  * intentionally exercise the shipped React client, not mocked components.
  */
 const apiBaseUrl = 'http://127.0.0.1:5095';
-const healthEndpoint = `${apiBaseUrl}/api/health`;
+const topologyEndpoint = `${apiBaseUrl}/api/topology`;
 
 /**
  * The same semantic navigation is present on all four client routes.
@@ -260,15 +260,17 @@ test.describe('P3-01 integrated three-pillar navigation', () => {
     expect(await recordedInteractionCount(request)).toBe(interactionsBefore);
   });
 
-  test('topology honestly reports a healthy API without inventing mesh data', async ({ page }) => {
+  test('topology shows real API projections without inventing mesh connections', async ({
+    page,
+  }) => {
     await page.goto('/topology');
 
-    // Until P3-07 introduces real topology endpoints, health is the only read.
-    await expect(
-      page.getByRole('heading', { name: 'Mesh data is not available yet' }),
-    ).toBeVisible();
-    await expect(page.getByText(/No simulated network graph is displayed/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Check again' })).toHaveCount(0);
+    // P3-08 now consumes the actual graph, BFS and MST endpoints instead of
+    // keeping the old P3-01 health-only placeholder on screen.
+    await expect(page.getByRole('heading', { name: 'Live mesh topology' })).toBeVisible();
+    await expect(page.getByText(/Graph revision \d+/)).toBeVisible();
+    await expect(page.locator('.topology-bootstrap__stats')).toContainText('Configured links');
+    await expect(page.locator('.topology-bootstrap__stats')).toContainText('Gateway reachable');
     await expect(
       moduleNavigation(page).getByRole('link', { name: pillars[2].name }),
     ).toHaveAttribute('aria-current', 'page');
@@ -277,26 +279,25 @@ test.describe('P3-01 integrated three-pillar navigation', () => {
   test('topology API outage displays an actionable retry and recovers without navigation', async ({
     page,
   }) => {
-    // Only intercept browser requests. The real .NET API remains available to
-    // the rest of the suite; no shared backend state or server is modified.
-    await page.route(healthEndpoint, async (route) => {
+    // Only intercept the browser's topology GET. Other tests continue to use
+    // the real isolated ASP.NET Core API without shared server mutation.
+    await page.route(topologyEndpoint, async (route) => {
       await route.abort('failed');
     });
 
     await page.goto('/topology');
-    await expect(
-      page.getByRole('heading', { name: 'The Smart-X API could not be reached' }),
-    ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Check again' })).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(
+      'The current topology could not be loaded.',
+    );
+    await expect(page.getByRole('button', { name: 'Retry topology request' })).toBeVisible();
+    await expect(page.locator('.topology-bootstrap__stats')).toHaveCount(0);
 
     const documentStart = await page.evaluate(() => performance.timeOrigin);
-    await page.unroute(healthEndpoint);
-    await page.getByRole('button', { name: 'Check again' }).click();
+    await page.unroute(topologyEndpoint);
+    await page.getByRole('button', { name: 'Retry topology request' }).click();
 
-    await expect(
-      page.getByRole('heading', { name: 'Mesh data is not available yet' }),
-    ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Check again' })).toHaveCount(0);
+    await expect(page.getByText(/Graph revision \d+/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Retry topology request' })).toHaveCount(0);
     await expect(page).toHaveURL(/\/topology$/);
     expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentStart);
   });
@@ -306,9 +307,8 @@ test.describe('P3-01 integrated three-pillar navigation', () => {
   }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/topology');
-    await expect(
-      page.getByRole('heading', { name: 'Mesh data is not available yet' }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Live mesh topology' })).toBeVisible();
+    await expect(page.getByText(/Graph revision \d+/)).toBeVisible();
 
     const widths = [1440, 768, 390, 320] as const;
     for (const width of widths) {

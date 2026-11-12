@@ -1,0 +1,108 @@
+/*
+ * P3-08 Commit 1: concise, honest source-of-truth status until the interactive
+ * graph and accessible table arrive in Commit 2. No fake network illustration.
+ */
+.topology-bootstrap {
+  width: 100%;
+  max-width: 64rem;
+  margin-top: clamp(2.5rem, 6vw, 4.25rem);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+.topology-bootstrap__heading {
+  margin: 0;
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  font-weight: 400;
+}
+
+.topology-bootstrap__meta,
+.topology-bootstrap__note,
+.topology-bootstrap__selected {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.topology-bootstrap__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 1.5rem 0 0;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+
+.topology-bootstrap__stat {
+  min-width: 0;
+  padding: 1rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.topology-bootstrap__stat dt {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.topology-bootstrap__stat dd {
+  margin: 0.6rem 0 0;
+  color: var(--heading);
+  font-size: clamp(1.05rem, 2.5vw, 1.6rem);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.topology-bootstrap__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.8rem 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.topology-bootstrap__field {
+  display: grid;
+  gap: 0.55rem;
+  flex: 1 1 15rem;
+  min-width: 0;
+}
+
+.topology-bootstrap__field label {
+  color: var(--heading);
+  font-size: 0.75rem;
+}
+
+.topology-bootstrap__field select {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 0.55rem;
+  color: var(--heading);
+  background: var(--surface);
+}
+
+.topology-bootstrap__controls .text-button {
+  margin-top: 0;
+}
+
+.topology-bootstrap__selected {
+  margin-top: 1.4rem;
+  color: var(--text);
+}
+
+@media (max-width: 560px) {
+  .topology-bootstrap__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .topology-bootstrap__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
