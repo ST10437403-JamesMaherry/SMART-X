@@ -1,0 +1,232 @@
+/*
+ * P3-09 — The AVL history is an editorial continuation of the mesh workbench,
+ * not a decorative card. Borders, whitespace and semantic tables communicate
+ * structure while the shared Smart-X theme supplies accessible contrast.
+ */
+.topology-history {
+  width: 100%;
+  max-width: 64rem;
+  min-width: 0;
+  margin-top: clamp(3rem, 6vw, 5rem);
+  border-top: 1px solid var(--border-strong);
+  padding-top: 1.55rem;
+}
+
+.topology-history__heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.topology-history__eyebrow {
+  margin: 0 0 0.7rem;
+  color: var(--accent);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+
+.topology-history h2 {
+  margin: 0;
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 3vw, 2.55rem);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+
+.topology-history__index-label {
+  padding-top: 0.55rem;
+  color: var(--text-muted);
+  font-size: 0.64rem;
+  letter-spacing: 0.07em;
+}
+
+.topology-history__intro,
+.topology-history__notice,
+.topology-history__footnote {
+  max-width: 55rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.85;
+}
+
+.topology-history__intro {
+  margin: 1rem 0 0;
+}
+
+.topology-history__notice {
+  margin: 1.5rem 0;
+}
+
+.topology-history__notice--error {
+  color: var(--danger);
+}
+
+.topology-history__identity {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1.6rem 0 0;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+
+.topology-history__identity > div {
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.topology-history__identity dt {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+}
+
+.topology-history__identity dd {
+  margin: 0.55rem 0 0;
+  color: var(--heading);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.topology-history__filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(8rem, 0.6fr) auto;
+  align-items: end;
+  gap: 0.8rem;
+  margin: 1.5rem 0 0;
+}
+
+.topology-history__filters label {
+  display: grid;
+  min-width: 0;
+  gap: 0.6rem;
+  color: var(--heading);
+  font-size: 0.71rem;
+}
+
+.topology-history__filters input,
+.topology-history__filters select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 0.65rem 0.75rem;
+  color: var(--heading);
+  background: var(--surface);
+  color-scheme: dark;
+  font-size: 0.73rem;
+}
+
+.topology-history__filters button,
+.topology-history__pagination button {
+  min-height: 2.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 0.7rem 0.95rem;
+  color: var(--heading);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+
+.topology-history__filters button {
+  border-color: var(--accent);
+}
+
+.topology-history__filters button:disabled,
+.topology-history__pagination button:disabled {
+  color: var(--text-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.topology-history__filters button:not(:disabled):hover,
+.topology-history__pagination button:not(:disabled):hover {
+  background: var(--surface-hover);
+}
+
+.topology-history__page-heading {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  margin: 1.8rem 0 0.75rem;
+  color: var(--heading);
+  font-size: 0.71rem;
+  line-height: 1.7;
+}
+
+.topology-history__table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border-top: 1px solid var(--border-strong);
+  scrollbar-color: var(--border-strong) var(--background);
+}
+
+.topology-history__table {
+  width: 100%;
+  min-width: 37rem;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.72rem;
+}
+
+.topology-history__table caption {
+  padding: 0.8rem 0;
+  color: var(--text-muted);
+  text-align: left;
+  font-size: 0.7rem;
+}
+
+.topology-history__table th,
+.topology-history__table td {
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.topology-history__table th {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.topology-history__value {
+  color: var(--heading);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.topology-history__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.1rem 0 0;
+}
+
+.topology-history__footnote {
+  margin: 1.2rem 0 0;
+}
+
+@media (max-width: 850px) {
+  .topology-history__filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .topology-history__identity,
+  .topology-history__filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .topology-history__index-label {
+    display: none;
+  }
+}
