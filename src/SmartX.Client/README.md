@@ -1,73 +1,74 @@
-# React + TypeScript + Vite
+# Smart-X Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript frontend for the Smart-X PROG7312 IoT ecosystem.
 
-Currently, two official plugins are available:
+The client is not a standalone mock. Its three pillars call the real ASP.NET Core API and use SignalR only as an invalidation channel before re-reading authoritative HTTP state.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Routes
 
-## React Compiler
+| Route        | Pillar                               |
+| ------------ | ------------------------------------ |
+| `/`          | Smart-X gateway                      |
+| `/ingestion` | Sensor Data Ingestion and Telemetry  |
+| `/realtime`  | Real-Time Command Stream and History |
+| `/topology`  | Network Topology and Mesh Routing    |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Route constants live in `src/routing/routes.ts`. Cross-pillar selected-device and safe draft state is retained by the shared workspace state provider.
 
-## Expanding the ESLint configuration
+## Requirements
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+The post-P3-11 snapshot was tested with Node.js `v24.18.0` and npm `11.16.0`.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Install the locked dependencies from this directory:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+```bash
+npm ci
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x';
-import reactDom from 'eslint-plugin-react-dom';
+Start the ASP.NET Core API first from the repository root:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+```bash
+dotnet dev-certs https --trust
+export Attachments__EncryptionKeyBase64="$(openssl rand -base64 32)"
+dotnet run --project src/SmartX.Api --launch-profile https
 ```
+
+The Vite client defaults to `https://localhost:7095`, matching `src/SmartX.Client/.env.example`. The API profile also exposes `http://localhost:5203` for direct local scripts.
+
+Then, from `src/SmartX.Client`:
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:5173`.
+
+## Quality gates
+
+```bash
+npm ci
+npm audit --audit-level=high
+npm run lint
+npm run format:check
+npm run build
+npm run test:e2e
+```
+
+Available npm scripts are defined in `package.json`:
+
+- `npm run dev` — Vite development server.
+- `npm run build` — TypeScript project build followed by Vite production build.
+- `npm run lint` — ESLint.
+- `npm run format` — write Prettier formatting.
+- `npm run format:check` — verify Prettier formatting.
+- `npm run test:e2e` — Playwright Chromium regression.
+
+Playwright starts isolated .NET and Vite servers according to `playwright.config.ts`. The P3-11 final run recorded 99 passing browser tests, one intentional opt-in load test skip, and no failures.
+
+## Production boundary
+
+In Docker, the built static client is served by the unprivileged Nginx image. Nginx is the single browser-facing service and proxies `/api/` and `/hubs/` to the private API container.
+
+See the repository root [`README.md`](../../README.md) for Docker setup, API examples, Part 3 algorithms, evidence and rubric traceability.
