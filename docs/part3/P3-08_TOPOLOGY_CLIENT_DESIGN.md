@@ -1,108 +1,108 @@
 # P3-08 — Accessible Interactive Mesh Dashboard
 
-**Issue:** `[P3-08] Build the accessible interactive mesh dashboard`
+## Source of truth and issue scope
 
-**Branch:** `feature/part3-topology-dashboard`
+P3-08 presents the real P3-07 adjacency graph, BFS reachability and Prim minimum
+spanning tree (MST) through React + TypeScript. All registered identities,
+statuses, weighted links and routes originate in the API. The client does not
+register synthetic devices, derive radio coverage from positions or create
+unconfigured edges.
 
-**Commit 1:** `feat(client): add typed topology APIs and live refresh hooks`
+The API data loader (`useTopologyData` + `loadConsistentTopology`) fetches graph,
+reachability, MST, and selected-route projections, and publishes them only when
+graph revisions agree. The application-wide `WorkspaceStateProvider` owns the
+selected sensor; switching pillars does not create a second selection store.
 
-## Objective and scope
+## Commit 1 — Typed API client and refresh state
 
-Connect the third React pillar to the **actual** P3-07 read-only graph, BFS, Prim
-and selected-device endpoints. This commit implements the source-of-truth data
-layer and a minimal functional status/selection surface. The logical SVG graph,
-node table, route overlays and simulation controls are reserved for subsequent
-P3-08 commits; do not claim those features are present yet.
+- `src/SmartX.Client/src/api/topologyApi.ts` contains typed GET contracts.
+- `src/SmartX.Client/src/features/topology/useTopologyData.ts` cancels obsolete
+  requests, retries inconsistent revisions, and refetches after relevant
+  SignalR invalidation or reconnection.
+- `src/SmartX.Client/src/pages/TopologyPage.tsx` preserves the existing
+  three-pillar navigation and shows authoritative summary, loading and errors.
+- Existing P3-01 navigation browser tests remain part of the acceptance gate.
 
-## Exact server contracts
+## Commit 2 — Logical SVG diagram and accessible table
 
-| Client function | Backend endpoint | Response | Source of truth |
-| --- | --- | --- | --- |
-| `getMeshTopology()` | `GET /api/topology` | `MeshTopologyResponse` | P3-04 synchronized adjacency store plus actual sensor registry |
-| `getMeshReachability()` | `GET /api/topology/reachability` | `MeshReachabilityResponse` | P3-05 BFS |
-| `getMeshMinimumSpanningTree()` | `GET /api/topology/mst` | `MeshMinimumSpanningTreeResponse` | P3-06 Prim |
-| `getMeshDeviceRoute(id)` | `GET /api/topology/devices/{id}/route` | `MeshDeviceRouteResponse` | One graph revision for BFS and Prim selected routes |
+Files:
 
-TypeScript fields match the .NET records under `SmartX.Contracts.Topology`.
-GUIDs, canonical gateway/sensor keys and link IDs are preserved unchanged.
-Relative simulated edge weights **are not physical joule or battery data**.
+- `src/SmartX.Client/src/features/topology/meshLayout.ts` — deterministic,
+  bounded positions and exact filtered-link membership.
+- `src/SmartX.Client/src/features/topology/MeshCanvas.tsx` — SVG vertices,
+  configured edges and actual simulated link weights; native HTML buttons
+  layered over visible sensor glyphs for keyboard interaction.
+- `src/SmartX.Client/src/features/topology/TopologyWorkspace.tsx` — name,
+  identifier, MAC, UUID and category search, Graph/Table view controls,
+  a semantic paginated table, and shared sensor selection.
+- `src/SmartX.Client/src/features/topology/TopologyNodeDetails.tsx` — real
+  identity/status/zone, BFS hop count and ordered route steps, MST membership,
+  selected-tree accumulated route cost and configured neighbor weights.
+- `src/SmartX.Client/src/features/topology/TopologyWorkspace.css` — near-black,
+  high-contrast responsive layout with visible focus states and internal
+  diagram scrolling instead of page-level overflow.
 
-## Why revision consistency matters
+### Rendering bounds
 
-The four GETs are separate HTTP requests. If a sensor goes Offline or a link
-is removed between them, the server can legitimately return different graph
-revisions. Client code must **not** put those projections on screen together.
+The diagram intentionally draws at most **25 registered sensors plus the
+logical gateway** per viewport. Vertices are ordered by authoritative BFS hop
+level and canonical key, then assigned fixed grid positions. This is a
+readability/layout technique, not a second routing algorithm; no edges are
+inferred from apparent proximity. When the displayed subset omits a device,
+the diagram explicitly states the number omitted and draws **only** configured
+links whose endpoints are both visible.
 
-`loadConsistentTopology()` performs the following:
+The accessible HTML table is paginated at **20 matching sensors per page**.
+Search filters genuine registrations and the active selection remains visible
+in the diagram when it matches the query. The text alternative and selection
+controls remain available on mobile. At widths around 375px, any horizontal
+scrolling is contained within the diagram/table regions, not the document.
 
-1. Fetch topology, reachability and MST concurrently.
-2. Require matching `graphVersion` and `gatewayKey` for all three results.
-3. Fetch the selected registered sensor's route, if selected, and require that
-   response to match the same graph revision and sensor ID.
-4. Retry at most three times on inconsistent revisions or a disappearing
-   selected registration; otherwise display a clear recoverable error.
-5. Publish all accepted results as **one React state update**. No partial
-   response or fabricated link/path is exposed to the view.
+### Connectivity is explicit, not color-only
 
-`useTopologyData()` also cancels superseded requests with `AbortController`
-and checks a monotonically increasing request generation. A selection change
-or SignalR invalidation immediately hides stale results until a consistent
-replacement arrives.
+Node status is supplied as text. `Reachable` means forwarding eligible and
+connected to the gateway in the authoritative BFS projection; `Disconnected`
+means eligible but without a gateway path; `Unavailable` indicates an
+ineligible operational status. Different line styles and explicit labels
+supplement color. The logical gateway is not a physical location on a map.
 
-## Realtime and stable cross-pillar selection
+The selected device panel displays two distinct route concepts:
 
-The existing `useTopologyRealtime()` subscribes to the existing
-`/hubs/realtime` SignalR endpoint. It emits refetch requests after topology
-and sensor lifecycle messages and after reconnect; ordinary telemetry events
-do not cause redundant whole-graph refreshes. **HTTP remains authoritative.**
+- **BFS:** fewest-hop sensor-to-gateway path.
+- **Prim:** route over the minimum-total-cost selected tree and its accumulated
+  relative cost. The MST does **not** promise the individually least-cost path.
 
-Selection uses `useWorkspaceState().selectedSensorId`, which is already owned
-by the provider above `/ingestion`, `/realtime` and `/topology`. Refreshes
-never reset that selection. If the selected sensor is no longer registered,
-the UI reports the missing selection without clearing operator context.
+Costs are simulated positive relative weights, not measured Joules or battery
+savings. No link edits, scenario state or command effects are implemented in
+this commit.
 
-## Initial UI behaviour — Commit 1
+## Planned next commits
 
-- Network failure: explicit error plus keyboard-operable Retry button.
-- Pending revision check: accessible loading status and no stale graph summary.
-- Successful result: real registered-device count, configured-link count,
-  BFS reachable/disconnected/unavailable counts and MST total backbone cost.
-- Empty mesh: explicit guidance to register sensors and configure links.
-- Native sensor picker: real names and physical identifiers; selection
-  survives navigation and refetches matching BFS/Prim route information.
-- Manual Refresh: refetches the complete consistent projection without
-  reloading the document.
-- Narrow screens: summary grid collapses; no client-created network map.
+- **Commit 3:** Add explicit all-connections/BFS/MST visual overlays, visible
+  failure/unreachable summaries, and API-backed simulation controls.
+- **Commit 4:** Verify routing selection, keyboard, resize, failure/recovery and
+  realtime reconnect with independent Playwright coverage.
 
-## Validation and evidence
+## Local verification commands
 
-Run from `src/SmartX.Client`:
+From the repository root:
 
 ```bash
+cd src/SmartX.Client
 npm ci
 npm run lint
 npm run format:check
 npm run build
+CI=true npm run test:e2e -- --grep "P3-08 accessible interactive mesh visualization" --retries=0
 CI=true npm run test:e2e -- --grep "Part 3 live topology API foundation" --retries=0
+CI=true npm run test:e2e -- --grep "P3-01 integrated three-pillar navigation" --retries=0
+cd ../..
+git diff --check
 ```
 
-The focused Playwright tests run against the **actual isolated .NET API** and
-Vite server, register unique sensor records, verify authoritative results,
-retain selection through cross-pillar navigation and check a 375px viewport.
-Two explicit browser fault-injection tests exercise inconsistent graph versions
-and network failures. The older P3-01 navigation regression is updated to
-expect real topology data instead of the removed health-only placeholder.
-
-No screenshot or successful local browser result is asserted by this document
-until these commands have actually passed.
-
-## Remaining P3-08 commits
-
-2. `feat(client): render accessible mesh vertices edges and node details`
-   — deterministic bounded SVG, accessible node/edge table and search.
-3. `feat(client): visualize BFS routes MST backbone and failures`
-   — explicitly labelled modes, derived overlays and guarded real simulation
-   controls, with live unavailable/disconnected state.
-4. `test(e2e): verify responsive network traversal and rerouting UI`
-   — full real-API Playwright browser validation, keyboard, mobile, reconnect
-   and failure/recovery evidence.
+The Playwright tests exercise real registration, online status and link-create
+HTTP requests against the isolated .NET host. They verify configured edges,
+selected details, search by the actual physical identifier, table navigation,
+keyboard selection, 375px width and the 25-node diagram bound. A green outcome
+must be recorded from a **local execution**; this document makes no claim that
+these new tests have already passed.

@@ -1,14 +1,22 @@
+import { useState } from 'react';
+
 import ApplicationShell from '../components/ApplicationShell';
 import PillarNavigation from '../components/PillarNavigation';
+import { TopologyWorkspace, type MeshViewMode } from '../features/topology/TopologyWorkspace';
 import { useTopologyData } from '../features/topology/useTopologyData';
 import '../features/topology/TopologyDataStatus.css';
 
 /**
- * P3-08 Commit 1 replaces the P3-01 health-only placeholder with real,
- * revision-consistent topology data. Commit 2 adds the accessible SVG/list
- * workspace; no client-generated vertices or routes are shown here.
+ * P3-08 Commit 2 retains the proven P3-08 Commit 1 load/error/selection
+ * contract and mounts the accessible graph and table only after all related
+ * topology projections agree on one authoritative graph revision.
  */
 function TopologyPage() {
+  // Keep visual controls mounted while useTopologyData refetches on selection.
+  // These are local presentation preferences, not a second sensor store.
+  const [meshSearch, setMeshSearch] = useState('');
+  const [meshView, setMeshView] = useState<MeshViewMode>('diagram');
+  const [meshPage, setMeshPage] = useState(0);
   const {
     phase,
     projection,
@@ -147,11 +155,20 @@ function TopologyPage() {
               </p>
             )}
 
-            <p className="topology-bootstrap__note">
-              Relative link weights are simulated, not physical energy measurements. Detailed mesh
-              visualization, route modes and keyboard-accessible node tables follow in the next
-              dashboard commit.
-            </p>
+            <TopologyWorkspace
+              projection={projection}
+              selectedSensorId={selectedSensorId}
+              onSelectSensor={setSelectedSensorId}
+              search={meshSearch}
+              onSearchChange={(value) => {
+                setMeshSearch(value);
+                setMeshPage(0);
+              }}
+              view={meshView}
+              onViewChange={setMeshView}
+              requestedPage={meshPage}
+              onPageChange={setMeshPage}
+            />
           </>
         )}
       </section>
