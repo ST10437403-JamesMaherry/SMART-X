@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartX.Api.Dashboard;
 using SmartX.Api.ExceptionHandling;
 using SmartX.Api.Realtime;
+using SmartX.Api.Topology;
 using SmartX.Application.Attachments;
 using SmartX.Application.Commands;
 using SmartX.Application.Dashboard;
@@ -11,6 +12,7 @@ using SmartX.Application.Realtime;
 using SmartX.Application.Recommendations;
 using SmartX.Application.Sensors;
 using SmartX.Application.Telemetry;
+using SmartX.Application.Topology;
 using SmartX.Domain.Dashboard;
 using SmartX.Infrastructure.Attachments;
 using SmartX.Infrastructure.Commands;
@@ -19,6 +21,7 @@ using SmartX.Infrastructure.Realtime;
 using SmartX.Infrastructure.Recommendations;
 using SmartX.Infrastructure.Sensors;
 using SmartX.Infrastructure.Telemetry;
+using SmartX.Infrastructure.Topology;
 
 const string clientCorsPolicyName = "SmartXClient";
 
@@ -125,6 +128,39 @@ builder.Services.AddSingleton<
 builder.Services.AddScoped<SensorRegistrationService>();
 
 builder.Services.AddScoped<SensorManagementService>();
+
+// -------------------------------------------------------------------------
+// P3-04 simulated IoT mesh graph
+// -------------------------------------------------------------------------
+
+// One shared adjacency-list store uses the authoritative singleton sensor
+// repository for registered vertices and current operational health. Links
+// are added only by explicit simulation operations; no radio link is inferred.
+builder.Services.AddSingleton<
+    IMeshTopologyStore,
+    InMemoryMeshTopologyStore>();
+
+// P3-05 BFS is a stateless read service. Each call requests a fresh immutable
+// graph revision; it does not cache routes across status or link changes.
+builder.Services.AddScoped<MeshTraversalService>();
+
+// P3-07 read-only typed API facade. It reuses the existing graph, BFS and
+// Prim algorithms without keeping a second topology or route cache.
+builder.Services.AddScoped<MeshTopologyService>();
+
+// P3-10: one version-aware, read-only advisory projection across requests.
+// It reuses the graph store and existing BFS and never trains or actuates.
+builder.Services.AddSingleton<TopologyInsightService>();
+
+// P3-07 Commit 2: one scoped simulation write facade over the SAME store.
+// Mutations are gated per environment; Docker Production requires an
+// explicit opt-in and never opens physical network-control operations.
+builder.Services.AddScoped<MeshLinkSimulationService>();
+builder.Services.AddSingleton<MeshSimulationAccessPolicy>();
+
+// Commit 3: best-effort topology invalidations reuse the established
+// RealtimeChanged event on /hubs/realtime; no second SignalR hub or graph store.
+builder.Services.AddScoped<MeshTopologyRealtimePublisher>();
 
 // -------------------------------------------------------------------------
 // P2-05 chronological operational history

@@ -1,0 +1,281 @@
+{
+  "afterAllGatewayLinksRemoved": {
+    "disconnectedComponentSizes": [
+      1000
+    ],
+    "disconnectedSensorCount": 1000,
+    "graphVersion": 2005,
+    "independentKruskal": {
+      "reachableNodeCountIncludingGateway": 1,
+      "selectedEdgeCount": 0,
+      "totalSimulatedEnergyCost": 0.0
+    },
+    "linkCount": 1001,
+    "mstSelectedEdgeCount": 0,
+    "mstTotalSimulatedEnergyCost": 0,
+    "nodeCount": 1001,
+    "reachableSensorCount": 0,
+    "registeredSensorCount": 1000,
+    "selectedDeviceRoute": {
+      "bfs": {
+        "hopCount": null,
+        "pathToGateway": [],
+        "status": "Disconnected"
+      },
+      "graphVersion": 2005,
+      "mst": {
+        "accumulatedSimulatedEnergyCost": null,
+        "hopCount": null,
+        "pathToGateway": [],
+        "selectedLinkIdsToGateway": [],
+        "status": "Disconnected"
+      },
+      "sensorProfileId": "6d29c547-87ed-4278-856d-e879ee0c686f",
+      "status": "Disconnected"
+    },
+    "unavailableSensorCount": 0
+  },
+  "afterIslandBridge": {
+    "disconnectedComponentSizes": [],
+    "disconnectedSensorCount": 0,
+    "graphVersion": 2003,
+    "independentKruskal": {
+      "reachableNodeCountIncludingGateway": 1001,
+      "selectedEdgeCount": 1000,
+      "totalSimulatedEnergyCost": 1004.0
+    },
+    "linkCount": 1003,
+    "mstSelectedEdgeCount": 1000,
+    "mstTotalSimulatedEnergyCost": 1004,
+    "nodeCount": 1001,
+    "reachableSensorCount": 1000,
+    "registeredSensorCount": 1000,
+    "selectedDeviceRoute": {
+      "bfs": {
+        "hopCount": 1,
+        "pathToGateway": [
+          "sensor/6d29c547-87ed-4278-856d-e879ee0c686f",
+          "gateway"
+        ],
+        "status": "Reachable"
+      },
+      "graphVersion": 2003,
+      "mst": {
+        "accumulatedSimulatedEnergyCost": 1,
+        "hopCount": 1,
+        "pathToGateway": [
+          "sensor/6d29c547-87ed-4278-856d-e879ee0c686f",
+          "gateway"
+        ],
+        "selectedLinkIdsToGateway": [
+          "b5f10502-4f7f-4f17-91bd-a63492cd0175"
+        ],
+        "status": "Reachable"
+      },
+      "sensorProfileId": "6d29c547-87ed-4278-856d-e879ee0c686f",
+      "status": "Reachable"
+    },
+    "unavailableSensorCount": 0
+  },
+  "afterPrimaryGatewayRemoval": {
+    "disconnectedComponentSizes": [],
+    "disconnectedSensorCount": 0,
+    "graphVersion": 2004,
+    "independentKruskal": {
+      "reachableNodeCountIncludingGateway": 1001,
+      "selectedEdgeCount": 1000,
+      "totalSimulatedEnergyCost": 1011.0
+    },
+    "linkCount": 1002,
+    "mstSelectedEdgeCount": 1000,
+    "mstTotalSimulatedEnergyCost": 1011,
+    "nodeCount": 1001,
+    "reachableSensorCount": 1000,
+    "registeredSensorCount": 1000,
+    "selectedDeviceRoute": {
+      "bfs": {
+        "hopCount": 2,
+        "pathToGateway": [
+          "sensor/6d29c547-87ed-4278-856d-e879ee0c686f",
+          "sensor/c708e6e4-0797-490e-8409-2171eb344f4e",
+          "gateway"
+        ],
+        "status": "Reachable"
+      },
+      "graphVersion": 2004,
+      "mst": {
+        "accumulatedSimulatedEnergyCost": 9,
+        "hopCount": 2,
+        "pathToGateway": [
+          "sensor/6d29c547-87ed-4278-856d-e879ee0c686f",
+          "sensor/c708e6e4-0797-490e-8409-2171eb344f4e",
+          "gateway"
+        ],
+        "selectedLinkIdsToGateway": [
+          "0a72fc82-01e3-45c9-851d-e5724045c6b9",
+          "fd723736-7eed-4ffd-85e0-43af3f13598a"
+        ],
+        "status": "Reachable"
+      },
+      "sensorProfileId": "6d29c547-87ed-4278-856d-e879ee0c686f",
+      "status": "Reachable"
+    },
+    "unavailableSensorCount": 0
+  },
+  "afterPrimaryGatewayRestoration": {
+    "disconnectedComponentSizes": [],
+    "disconnectedSensorCount": 0,
+    "graphVersion": 2006,
+    "independentKruskal": {
+      "reachableNodeCountIncludingGateway": 1001,
+      "selectedEdgeCount": 1000,
+      "totalSimulatedEnergyCost": 1004.0
+    },
+    "linkCount": 1002,
+    "mstSelectedEdgeCount": 1000,
+    "mstTotalSimulatedEnergyCost": 1004,
+    "nodeCount": 1001,
+    "reachableSensorCount": 1000,
+    "registeredSensorCount": 1000,
+    "selectedDeviceRoute": {
+      "bfs": {
+        "hopCount": 1,
+        "pathToGateway": [
+          "sensor/6d29c547-87ed-4278-856d-e879ee0c686f",
+          "gateway"
+        ],
+        "status": "Reachable"
+      },
+      "graphVersion": 2006,
+      "mst": {
+        "accumulatedSimulatedEnergyCost": 1,
+        "hopCount": 1,
+        "pathToGateway": [
+          "sensor/6d29c547-87ed-4278-856d-e879ee0c686f",
+          "gateway"
+        ],
+        "selectedLinkIdsToGateway": [
+          "e3515e0f-1043-45db-89c6-2a51632e8423"
+        ],
+        "status": "Reachable"
+      },
+      "sensorProfileId": "6d29c547-87ed-4278-856d-e879ee0c686f",
+      "status": "Reachable"
+    },
+    "unavailableSensorCount": 0
+  },
+  "baseUrl": "http://127.0.0.1:5095",
+  "completedAtUtc": "2026-11-12T13:06:22.284Z",
+  "environment": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "pythonVersion": "3.14.6"
+  },
+  "fixture": {
+    "backupGatewayCost": 8.0,
+    "backupGatewayLinkIdRemoved": "fd723736-7eed-4ffd-85e0-43af3f13598a",
+    "bridgeCost": 5.0,
+    "bridgeLinkId": "717eb8b0-f637-4d3d-9f6f-a9c0f887353f",
+    "connectedSensorCountBeforeBridge": 900,
+    "disconnectedIslandSensorCountBeforeBridge": 100,
+    "expectedBridgedMstCost": 1004.0,
+    "expectedInitialMstCost": 900.0,
+    "primaryGatewayCost": 1.0,
+    "primaryGatewayLinkIdRemoved": "b5f10502-4f7f-4f17-91bd-a63492cd0175",
+    "requestedSensorCount": 1000,
+    "restoredPrimaryGatewayLinkId": "e3515e0f-1043-45db-89c6-2a51632e8423"
+  },
+  "initialDisconnectedIsland": {
+    "disconnectedComponentSizes": [
+      100
+    ],
+    "disconnectedSensorCount": 100,
+    "graphVersion": 2002,
+    "independentKruskal": {
+      "reachableNodeCountIncludingGateway": 901,
+      "selectedEdgeCount": 900,
+      "totalSimulatedEnergyCost": 900.0
+    },
+    "linkCount": 1002,
+    "mstSelectedEdgeCount": 900,
+    "mstTotalSimulatedEnergyCost": 900,
+    "nodeCount": 1001,
+    "reachableSensorCount": 900,
+    "registeredSensorCount": 1000,
+    "selectedDeviceRoute": {
+      "bfs": {
+        "hopCount": 1,
+        "pathToGateway": [
+          "sensor/6d29c547-87ed-4278-856d-e879ee0c686f",
+          "gateway"
+        ],
+        "status": "Reachable"
+      },
+      "graphVersion": 2002,
+      "mst": {
+        "accumulatedSimulatedEnergyCost": 1,
+        "hopCount": 1,
+        "pathToGateway": [
+          "sensor/6d29c547-87ed-4278-856d-e879ee0c686f",
+          "gateway"
+        ],
+        "selectedLinkIdsToGateway": [
+          "b5f10502-4f7f-4f17-91bd-a63492cd0175"
+        ],
+        "status": "Reachable"
+      },
+      "sensorProfileId": "6d29c547-87ed-4278-856d-e879ee0c686f",
+      "status": "Reachable"
+    },
+    "unavailableSensorCount": 0
+  },
+  "invalidRequestChecks": {
+    "duplicateLinkStatus": 400,
+    "emptySensorRouteStatus": 400,
+    "graphVersionUnchanged": true,
+    "invalidCostStatus": 400,
+    "linkCountUnchanged": true,
+    "unknownSensorRouteStatus": 404
+  },
+  "notes": [
+    "All sensors, statuses and links were created through the real Smart-X HTTP API.",
+    "BFS hop counts were independently recomputed from the authoritative topology snapshot.",
+    "The production Prim MST total was independently cross-checked with Kruskal's algorithm.",
+    "The disconnected island was genuine configured graph state; no route was fabricated.",
+    "Gateway-link removal exercised backup rerouting, complete disconnection and restoration.",
+    "Read timings exclude setup and are observed p50/p95 evidence, not CI latency thresholds.",
+    "The simulated mesh is process-local; each evidence size requires a freshly restarted API."
+  ],
+  "readTimings": {
+    "minimumSpanningTree": {
+      "maxMs": 17.734,
+      "medianMs": 6.407,
+      "minMs": 5.842,
+      "p95Ms": 17.734,
+      "samples": 11
+    },
+    "reachabilityBfs": {
+      "maxMs": 5.49,
+      "medianMs": 3.409,
+      "minMs": 3.265,
+      "p95Ms": 5.49,
+      "samples": 11
+    },
+    "selectedDeviceRoute": {
+      "maxMs": 10.003,
+      "medianMs": 6.202,
+      "minMs": 5.289,
+      "p95Ms": 10.003,
+      "samples": 11
+    },
+    "topology": {
+      "maxMs": 6.422,
+      "medianMs": 5.118,
+      "minMs": 4.703,
+      "p95Ms": 6.422,
+      "samples": 11
+    }
+  },
+  "result": "PASS",
+  "runId": "2697db0a1b59",
+  "startedAtUtc": "2026-11-12T13:06:19.611Z"
+}

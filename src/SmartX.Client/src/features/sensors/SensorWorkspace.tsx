@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getApiErrorMessage } from '../../api/apiTypes';
 import { getSensors, type SensorResponse } from '../../api/sensorsApi';
 import IngestionSectionNavigation from '../../components/IngestionSectionNavigation';
+import { SelectedSensorLinks } from '../../components/SelectedSensorLinks';
 import { useWorkspaceState } from '../../state/workspaceState';
 import AttachmentWorkspace from '../attachments/AttachmentWorkspace';
 import AdaptiveAnomalySpotlight from '../dashboard/AdaptiveAnomalySpotlight';
@@ -211,6 +212,10 @@ function SensorWorkspace() {
             }}
           />
         </div>
+
+        {isRegistryReady && selectedSensor && (
+          <SelectedSensorLinks source="ingestion" sensorName={selectedSensor.name} />
+        )}
       </section>
 
       {isRegistryReady && (

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { getApiErrorMessage } from '../../api/apiTypes';
+import { SelectedSensorLinks } from '../../components/SelectedSensorLinks';
 import { recordOperatorView } from '../../api/operatorInteractionsApi';
 import {
   getRealtimeActiveConditions,
@@ -12,12 +13,16 @@ import {
   type TelemetryDispatchResponse,
 } from '../../api/realtimeApi';
 import type { TelemetryReadingResponse } from '../../api/telemetryApi';
+import type { RealtimeChangedResponse } from '../../api/realtimeApi';
 import { routes } from '../../routing/routes';
+import { TopologyInsights } from '../topology/TopologyInsights';
+import { shouldRefreshTopology } from '../topology/useTopologyRealtime';
 import { useWorkspaceState } from '../../state/workspaceState';
 import DeviceSearch from './DeviceSearch';
 import RealtimeCommandPanel from './RealtimeCommandPanel';
 import RealtimeHistoryPanel from './RealtimeHistoryPanel';
 import RealtimeSimulator from './RealtimeSimulator';
+import { RecentOperatorSearches } from './RecentOperatorSearches';
 import SuggestedActions from './SuggestedActions';
 import { useRealtimeStream, type RealtimeConnectionState } from './useRealtimeStream';
 import './RealtimeWorkspace.css';
@@ -100,6 +105,8 @@ function RealtimeWorkspace() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [operatorViewError, setOperatorViewError] = useState<string | null>(null);
+  const [insightRefreshToken, setInsightRefreshToken] = useState(0);
+  const [searchEvidenceRefreshToken, setSearchEvidenceRefreshToken] = useState(0);
 
   const requestRef = useRef<AbortController | null>(null);
   const requestNumberRef = useRef(0);
@@ -170,7 +177,21 @@ function RealtimeWorkspace() {
 
   // The hook retries initial SignalR failures, handles reconnects, and
   // invokes scheduleRefresh after connection/reconnection and new events.
-  const connectionState = useRealtimeStream(scheduleRefresh);
+  const onInvalidated = useCallback(
+    (change?: RealtimeChangedResponse): void => {
+      scheduleRefresh();
+      // The same hub is already open for Operations. Do not create a second
+      // SignalR subscription or reload BFS on ordinary telemetry dispatches.
+      if (shouldRefreshTopology(change)) {
+        setInsightRefreshToken((value) => value + 1);
+      }
+      if (change === undefined || change.reason === 'OperatorInteractionRecorded') {
+        setSearchEvidenceRefreshToken((value) => value + 1);
+      }
+    },
+    [scheduleRefresh],
+  );
+  const connectionState = useRealtimeStream(onInvalidated);
 
   useEffect(() => {
     const initialTimer = window.setTimeout(() => void refreshSnapshot(), 0);
@@ -318,6 +339,8 @@ function RealtimeWorkspace() {
             </p>
           )}
 
+          <TopologyInsights surface="operations" refreshToken={insightRefreshToken} />
+
           <DeviceSearch
             refreshToken={refreshToken}
             activeConditions={conditions?.activeConditions ?? []}
@@ -331,6 +354,8 @@ function RealtimeWorkspace() {
               {operatorViewError}
             </p>
           )}
+
+          <RecentOperatorSearches refreshToken={searchEvidenceRefreshToken} />
 
           {/* The prediction GET remains read-only. Only an explicitly confirmed
               suggestion calls the same command API as manual relay controls.
@@ -407,6 +432,7 @@ function RealtimeWorkspace() {
                       </div>
                     )}
                   </dl>
+                  <SelectedSensorLinks source="realtime" sensorName={selectedDevice.name} />
                   <p className="realtime-explainer">
                     Latest processed telemetry is separate from latest accepted traffic, operational
                     sensor status and simulated commanded relay state.

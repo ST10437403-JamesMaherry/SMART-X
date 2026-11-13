@@ -1,0 +1,91 @@
+/* P3-10 bounded, transparent search-history evidence; no synthetic trend score. */
+.operator-searches {
+  min-width: 0;
+  padding: 1.4rem 0;
+  margin-top: 2rem;
+  border-top: 1px solid var(--border-strong);
+}
+.operator-searches__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1.5rem;
+}
+.operator-searches__header > div {
+  max-width: 47rem;
+}
+.operator-searches__header h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 400;
+  color: var(--heading);
+}
+.operator-searches__summary,
+.operator-searches__empty,
+.operator-searches__note,
+.operator-searches__error {
+  margin: 1rem 0;
+  color: var(--text-muted);
+  line-height: 1.8;
+  font-size: 0.73rem;
+}
+.operator-searches__error {
+  color: var(--danger);
+}
+.operator-searches__list,
+.operator-searches__trends {
+  padding: 0;
+  margin: 1rem 0 0;
+  list-style: none;
+}
+.operator-searches__list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.45rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+.operator-searches__list li > span {
+  color: var(--text-muted);
+}
+.operator-searches__list li strong {
+  color: var(--heading);
+  font-weight: 500;
+}
+.operator-searches__sequence {
+  font-size: 0.65rem;
+}
+.operator-searches__trends-title {
+  color: var(--text);
+  margin-top: 1.4rem;
+  font-size: 0.72rem;
+}
+.operator-searches__trends li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.7rem 0;
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+.operator-searches__trends li > span:last-child {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.operator-searches__note {
+  border-top: 1px solid var(--border);
+  padding-top: 0.8rem;
+}
+@media (max-width: 720px) {
+  .operator-searches__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .operator-searches__trends li {
+    flex-wrap: wrap;
+  }
+}

@@ -65,6 +65,41 @@ async function expectNoDocumentHorizontalOverflow(page: Page): Promise<void> {
   expect(measured.documentWidth).toBeLessThanOrEqual(measured.viewportWidth + 2);
 }
 
+/**
+ * Measure both columns in ONE browser execution context.
+ *
+ * P3-10 introduced independently loading network insights and operator-search
+ * evidence above the operations grid. Their legitimate HTTP completions can
+ * expand the page between two separate Playwright boundingBox() awaits, giving
+ * two coordinates from different layout frames and a false desktop failure.
+ *
+ * Reading both DOMRects synchronously tests the real responsive invariant:
+ * both operational panels must form one desktop row (or separate tablet rows)
+ * at the SAME instant. This does not mock data or relax the alignment checks.
+ */
+async function measureOperationalColumns(page: Page) {
+  return page
+    .locator('.realtime-columns')
+    .first()
+    .evaluate((grid) => {
+      const sections = grid.querySelectorAll(':scope > .realtime-section');
+      const leftSection = sections.item(0);
+      const rightSection = sections.item(1);
+
+      if (sections.length !== 2 || !leftSection || !rightSection) {
+        throw new Error('Expected exactly two real operational sections in the grid.');
+      }
+
+      const left = leftSection.getBoundingClientRect();
+      const right = rightSection.getBoundingClientRect();
+      return {
+        display: window.getComputedStyle(grid).display,
+        left: { x: left.x, y: left.y, width: left.width, height: left.height },
+        right: { x: right.x, y: right.y, width: right.width, height: right.height },
+      };
+    });
+}
+
 test.describe('P2-07 responsive and accessible live workspace', () => {
   test('desktop shows the two real operational columns alongside each other', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -72,12 +107,13 @@ test.describe('P2-07 responsive and accessible live workspace', () => {
 
     const columns = page.locator('.realtime-columns').first().locator(':scope > .realtime-section');
     await expect(columns).toHaveCount(2);
-    const left = await columns.nth(0).boundingBox();
-    const right = await columns.nth(1).boundingBox();
-    expect(left).not.toBeNull();
-    expect(right).not.toBeNull();
-    expect(right!.x).toBeGreaterThan(left!.x + left!.width);
-    expect(Math.abs(right!.y - left!.y)).toBeLessThan(2);
+
+    // Atomic DOM geometry: asynchronous evidence above this grid cannot cause
+    // an artificial vertical offset between independently awaited coordinates.
+    const { display, left, right } = await measureOperationalColumns(page);
+    expect(display).toBe('grid');
+    expect(right.x).toBeGreaterThan(left.x + left.width);
+    expect(Math.abs(right.y - left.y)).toBeLessThan(2);
 
     await expect(page.getByRole('heading', { name: 'Dispatch lanes' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'IoT traffic simulator' })).toBeVisible();
@@ -91,11 +127,13 @@ test.describe('P2-07 responsive and accessible live workspace', () => {
     await openConsole(page);
 
     const columns = page.locator('.realtime-columns').first().locator(':scope > .realtime-section');
-    const first = await columns.nth(0).boundingBox();
-    const second = await columns.nth(1).boundingBox();
-    expect(first).not.toBeNull();
-    expect(second).not.toBeNull();
-    expect(second!.y).toBeGreaterThan(first!.y + first!.height);
+    await expect(columns).toHaveCount(2);
+
+    // Also capture tablet positions in one layout frame: the content above
+    // these sections can update independently while live HTTP requests resolve.
+    const { display, left, right } = await measureOperationalColumns(page);
+    expect(display).toBe('grid');
+    expect(right.y).toBeGreaterThan(left.y + left.height);
 
     const cards = page.locator('.realtime-scenario-grid > .realtime-scenario');
     const cardA = await cards.nth(0).boundingBox();
