@@ -12,9 +12,9 @@ All sensor traffic, commands and mesh links are **simulated through the real HTT
 
 **Project:** James Maherry · ST10437403 · PROG7312
 
-**Part 1 demonstration video:** https://youtu.be/hgDRpwixais  
-**Part 2 demonstration video:** https://youtu.be/wcMg61C-804  
-**Part 3 demonstration video:** **[PLACEHOLDER — add the final Part 3 YouTube URL before submission]**
+**Part 1 demonstration video:** https://youtu.be/hgDRpwixais
+**Part 2 demonstration video:** https://youtu.be/wcMg61C-804
+**Part 3 demonstration video:** https://youtu.be/FQcwbRTv1uQ
 
 [Part 3 architecture and data structures](docs/part3/ARCHITECTURE_AND_DATA_STRUCTURES.md) · [Part 3 rubric matrix](docs/part3/ASSESSMENT_RUBRIC_MATRIX.md) · [Part 3 evidence index](docs/evidence/part3/README.md) · [Feedback ledger](docs/part3/FEEDBACK_UPDATES.md)
 
