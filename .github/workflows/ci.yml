@@ -138,7 +138,7 @@ jobs:
         working-directory: src/SmartX.Client
         run: npm ci
 
-      # Install only Chromium because the Part 1 smoke suite requires browser
+      # Install only Chromium because the browser regression suite requires browser
       # regression coverage rather than a full cross-browser compatibility lab.
       - name: Install Playwright Chromium
         working-directory: src/SmartX.Client
@@ -197,7 +197,7 @@ jobs:
         run: docker compose config --quiet
 
       # Build both final production images through the same Compose definition
-      # that lecturers and developers use locally.
+      # used for local deployment.
       - name: Build Smart-X production images
         run: docker compose build
 
