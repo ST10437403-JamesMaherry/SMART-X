@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 
 import { routes } from '../routing/routes';
 import { PillarDeepLinkFocus } from './PillarDeepLinkFocus';
@@ -32,6 +32,12 @@ function ApplicationShell({ children }: ApplicationShellProps) {
           <Link className="wordmark" to={routes.home} aria-label="Smart-X home">
             SMART-X
           </Link>
+          <nav className="header-links" aria-label="Main navigation">
+            <NavLink to={routes.simulation}>Simulation Lab</NavLink>
+            <NavLink to={routes.ingestion}>Sensors</NavLink>
+            <NavLink to={routes.realtime}>Operations</NavLink>
+            <NavLink to={routes.topology}>Topology</NavLink>
+          </nav>
         </header>
 
         <main id="main-content" className="page-content">
