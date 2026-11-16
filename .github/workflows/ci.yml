@@ -99,6 +99,11 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Temporary formatting diagnostics
+        run: |
+          npx prettier --write e2e/simulation-telemetry-trace.spec.ts src/features/simulation/TelemetryTrace.tsx
+          git diff -- e2e/simulation-telemetry-trace.spec.ts src/features/simulation/TelemetryTrace.tsx
+
       - name: Check frontend formatting
         run: npm run format:check
 
