@@ -82,9 +82,12 @@ async function findDemoProbe(signal: AbortSignal): Promise<SensorResponse> {
   }
 
   const expected = new Set(demoIdentifiers.map((id) => id.toLowerCase()));
+  const registryIdentifiers = new Set(
+    registry.map((sensor) => sensor.deviceIdentifier.toLowerCase()),
+  );
   if (
     registry.length !== expected.size ||
-    new Set(registry.map((sensor) => sensor.deviceIdentifier.toLowerCase())).size !== expected.size ||
+    registryIdentifiers.size !== expected.size ||
     !registry.every(
       (sensor) =>
         expected.has(sensor.deviceIdentifier.toLowerCase()) &&
@@ -153,7 +156,8 @@ async function awaitProcessing(
     });
   }
   throw new TelemetryTraceError(
-    'The API accepted the reading, but no matching worker-history completion arrived within 15 seconds. Check Operations before retrying.',
+    'The API accepted the reading, but no matching worker-history completion arrived within 15 seconds. ' +
+      'Check Operations before retrying.',
   );
 }
 
@@ -178,7 +182,8 @@ export async function runTelemetryTrace(
     processing.ordinaryDispatchPaused
   ) {
     throw new TelemetryTraceError(
-      'The telemetry worker is unavailable or ordinary dispatch is paused. Inspect Operations first.',
+      'The telemetry worker is unavailable or ordinary dispatch is paused. ' +
+        'Inspect Operations first.',
     );
   }
 
