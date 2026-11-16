@@ -139,7 +139,9 @@ test.describe('P2-07 responsive and accessible live workspace', () => {
     // boundingBox() calls can straddle live HTTP updates above this section,
     // producing a false vertical difference on an otherwise valid grid.
     const cards = page.locator('.realtime-scenario-grid > .realtime-scenario');
-    await expect(cards).toHaveCount(3);
+    // The simulator provides five real scenarios; only their first row is
+    // compared here for the tablet two-column layout invariant.
+    await expect(cards).toHaveCount(5);
     const [cardA, cardB] = await cards.evaluateAll((elements) =>
       elements.slice(0, 2).map((element) => {
         const bounds = element.getBoundingClientRect();
