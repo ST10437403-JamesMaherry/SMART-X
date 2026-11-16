@@ -42,8 +42,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
 
       # HTTPS redirection is deliberately disabled only inside the private
-      # Docker network. Normal local execution keeps it enabled by default for normal local
-      # ASP.NET Core execution.
+      # Docker network. Standalone local development enables HTTPS redirection
+      # by default.
       HttpsRedirection__Enabled: "false"
 
       # Local-only logic lab: topology simulation stays inside loopback-bound
@@ -53,7 +53,6 @@ services:
       # Store encrypted payload and metadata files on the persistent Docker
       # volume rather than inside the replaceable container filesystem.
       Attachments__StoragePath: /data/attachments
-
 
     # The API is discoverable by the client container but is deliberately not
     # published directly to the host machine.
@@ -132,6 +131,7 @@ volumes:
   #
   # `docker compose down --volumes` deliberately deletes it.
   smartx-attachments:
+
   # Local AES key must survive container recreation and compose down.
   smartx-local-keys:
 
