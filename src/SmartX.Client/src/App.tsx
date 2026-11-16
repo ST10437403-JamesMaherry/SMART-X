@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import GatewayHomePage from './pages/GatewayHomePage';
+import SimulationPage from './pages/SimulationPage';
 import IngestionPage from './pages/IngestionPage';
 import RealtimePage from './pages/RealtimePage';
 import TopologyPage from './pages/TopologyPage';
@@ -18,6 +19,8 @@ function App() {
     <WorkspaceStateProvider>
       <Routes>
         <Route path={routes.home} element={<GatewayHomePage />} />
+
+        <Route path={routes.simulation} element={<SimulationPage />} />
 
         <Route path={routes.ingestion} element={<IngestionPage />} />
 

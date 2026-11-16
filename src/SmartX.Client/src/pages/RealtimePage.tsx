@@ -12,7 +12,7 @@ function RealtimePage() {
   return (
     <ApplicationShell>
       <section className="page-intro module-heading" aria-labelledby="page-title">
-        <p className="eyebrow">PART 2 / ACTIVE</p>
+        <p className="eyebrow">WORKBENCH / LIVE OPERATIONS</p>
         <h1 className="page-title" id="page-title">
           Real-Time
           <br />

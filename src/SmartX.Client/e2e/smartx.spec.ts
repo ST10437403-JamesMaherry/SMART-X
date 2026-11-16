@@ -395,10 +395,11 @@ test.describe('Smart-X Part 1 regression', () => {
       exact: true,
     });
 
-    const sensorsLink = page.getByRole('link', {
-      name: 'Sensors',
-      exact: true,
-    });
+    // The global header also has a Sensors link. Scope this keyboard-order
+    // assertion to the ingestion workspace navigation that follows Spotlight.
+    const sensorsLink = page
+      .getByRole('navigation', { name: 'Ingestion workspace sections' })
+      .getByRole('link', { name: 'Sensors', exact: true });
 
     await spotlightLink.focus();
 

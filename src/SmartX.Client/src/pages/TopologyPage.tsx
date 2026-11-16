@@ -43,7 +43,7 @@ function TopologyPage() {
   return (
     <ApplicationShell>
       <section className="page-intro module-heading" aria-labelledby="page-title">
-        <p className="eyebrow">PART 3 / LIVE TOPOLOGY</p>
+        <p className="eyebrow">WORKBENCH / MESH ANALYSIS</p>
         <h1 className="page-title" id="page-title">
           Network Topology
           <br />
