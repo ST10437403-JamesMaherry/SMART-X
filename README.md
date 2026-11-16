@@ -94,7 +94,12 @@ The browser controls call existing, validated Smart-X APIs. No separate simulati
 1. **Choose a scenario:** healthy mesh, primary relay failure, gateway partition or recovery.
 2. **Inspect the network:** view the server-provided logical graph and switch between all configured links, a selected sensor's BFS fewest-hop route and the Prim minimum-cost backbone.
 3. **Compare outcomes:** see the API-confirmed numbers of reachable, disconnected and unavailable devices before and after the action, plus the Prim total-cost change.
-4. **Explore the workbenches:** move into Sensor Ingestion, Real-Time Operations or Topology for additional controls and investigations.
+4. **Trace one telemetry reading:** load the **Healthy network** scenario, then submit baseline (20), small change (20.1) and spike (80) Float readings for the West-zone moisture probe. The lab confirms HTTP acceptance, waits for the exact per-device worker-history event and then displays the server's current TelemetrySpike/RepeatedFailure conditions.
+5. **Explore the workbenches:** move into Sensor Ingestion, Real-Time Operations or Topology for additional controls and investigations.
+
+The Telemetry Trace refuses to write when the expected six-sensor greenhouse fixture is absent or altered. It never generates a fake worker result or silently recreates operator data. The anomaly outcome depends on actual historical readings; repeated or out-of-order examples may not produce the same classification. If processing exceeds 15 seconds, check **Operations** before retrying—HTTP acceptance may already have occurred.
+
+**Model boundary:** The logical mesh graph does **not** carry the submitted telemetry packets. Telemetry travels over HTTP directly to the API even if a simulated mesh link fails. The walkthrough explicitly separates these two software layers rather than implying physical wireless behavior.
 
 The scenarios use the same six greenhouse fixture sensors and seven weighted logical edges as the backend integration suite. They safely **reuse existing matching demo devices**, reject unrelated sensors and unexpected mesh links, and do not wipe operator telemetry or attachment data. To start from a fresh **in-memory** workspace, use `docker compose restart api`. All relative link weights are simulated costs, not measured energy, RF quality or latency.
 
