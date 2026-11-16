@@ -89,7 +89,7 @@ If port 8080 is taken, use `SMARTX_HTTP_PORT=9090 docker compose up -d --build` 
 
 The **Simulation Lab** is the recommended entry point for exploring Smart-X without learning the three technical workbenches first. With Docker running, open **http://localhost:8080/simulation** (or select **Simulation Lab** from the homepage).
 
-The browser controls call existing, validated Smart-X APIs. No separate simulation service, provider key, remote database or Python installation is required for the dashboard.
+The browser controls call existing, validated Smart-X APIs. No separate simulation service, provider key, remote database or Python installation is required for the dashboard. The guided view refreshes one consistent graph revision before displaying its BFS and Prim results.
 
 1. **Choose a scenario:** healthy mesh, primary relay failure, gateway partition or recovery.
 2. **Inspect the network:** view the server-provided logical graph and switch between all configured links, a selected sensor's BFS fewest-hop route and the Prim minimum-cost backbone.
