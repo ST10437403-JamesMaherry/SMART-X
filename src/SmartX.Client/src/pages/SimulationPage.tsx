@@ -11,6 +11,7 @@ import { useTopologyData } from '../features/topology/useTopologyData';
 import {
   applyScenario,
   matchScenario,
+  ScenarioSafetyError,
   scenarios,
   type ScenarioDefinition,
   type ScenarioId,
@@ -111,7 +112,7 @@ export default function SimulationPage() {
     } catch (error: unknown) {
       setFeedback({
         kind: 'error',
-        message: `${getApiErrorMessage(error, 'The scenario could not be completed.')} Some writes may already have happened. Refresh the network before retrying; there is no automatic rollback.`,
+        message: `${error instanceof ScenarioSafetyError ? error.message : getApiErrorMessage(error, error instanceof Error ? error.message : 'The scenario could not be completed.')} Some writes may already have happened. Refresh the network before retrying; there is no automatic rollback.`,
       });
       refreshTopology();
     } finally {
