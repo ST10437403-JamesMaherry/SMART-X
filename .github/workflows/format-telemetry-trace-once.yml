@@ -1,0 +1,50 @@
+name: One-shot formatting for telemetry trace
+on:
+  push:
+    branches:
+      - feat/simulation-telemetry-trace
+    paths:
+      - .github/workflows/format-telemetry-trace-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/simulation-telemetry-trace
+          persist-credentials: true
+      - name: Install Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: src/SmartX.Client/package-lock.json
+      - name: Install formatter
+        working-directory: src/SmartX.Client
+        run: npm ci
+      - name: Format trace files
+        working-directory: src/SmartX.Client
+        run: |
+          npx prettier --write \
+            src/features/simulation/telemetryTrace.ts \
+            src/features/simulation/TelemetryTrace.tsx \
+            src/features/simulation/TelemetryTrace.css \
+            src/pages/SimulationPage.tsx \
+            e2e/simulation-telemetry-trace.spec.ts
+      - name: Commit formatted code and delete one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/SmartX.Client/src/features/simulation/telemetryTrace.ts \
+            src/SmartX.Client/src/features/simulation/TelemetryTrace.tsx \
+            src/SmartX.Client/src/features/simulation/TelemetryTrace.css \
+            src/SmartX.Client/src/pages/SimulationPage.tsx \
+            src/SmartX.Client/e2e/simulation-telemetry-trace.spec.ts
+          git rm .github/workflows/format-telemetry-trace-once.yml
+          git commit -m "style: format telemetry trace with locked Prettier"
+          git push origin HEAD:feat/simulation-telemetry-trace
