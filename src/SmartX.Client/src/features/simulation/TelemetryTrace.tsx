@@ -34,13 +34,12 @@ export default function TelemetryTrace({
   const [lastStep, setLastStep] = useState<TraceStep | null>(null);
   const active = useRef<AbortController | null>(null);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    return () => {
       active.current?.abort();
       active.current = null;
-    },
-    [],
-  );
+    };
+  }, []);
 
   async function run(step: TraceStep): Promise<void> {
     if (active.current || !enabled || scenarioBusy) return;
@@ -133,14 +132,18 @@ export default function TelemetryTrace({
       )}
 
       {(phase !== 'idle' || accepted !== null) && (
-        <div className="telemetry-trace__results" aria-live="polite" data-testid="telemetry-trace-results">
+        <div
+          className="telemetry-trace__results"
+          aria-live="polite"
+          data-testid="telemetry-trace-results"
+        >
           <h3>Trace result</h3>
           <ol className="telemetry-trace__stages">
             <li>
               <strong>01 / API acceptance</strong>
               <p>
                 {accepted
-                  ? `Confirmed: server accepted Float ${accepted.floatValue} at ${accepted.capturedAtUtc}.`
+                  ? `Confirmed: Float ${accepted.floatValue} accepted at ${accepted.capturedAtUtc}.`
                   : phase === 'checking'
                     ? 'Checking fixture safety and submitting the reading…'
                     : 'No confirmed HTTP receipt.'}
@@ -150,9 +153,9 @@ export default function TelemetryTrace({
               <strong>02 / Background worker</strong>
               <p>
                 {result
-                  ? `Confirmed: ${result.processed.kind} via ${result.processed.processingLane ?? 'unknown'} lane; server severity ${result.processed.severity ?? 'not supplied'}.`
+                  ? `Confirmed: ${result.processed.kind}; lane: ${result.processed.processingLane ?? 'unknown'}; severity: ${result.processed.severity ?? 'not supplied'}.`
                   : accepted
-                    ? 'HTTP accepted; waiting for the exact reading in the real per-device worker history…'
+                    ? 'Accepted; waiting for the matching per-device worker-history event…'
                     : 'Waiting for an accepted packet.'}
               </p>
             </li>
@@ -163,8 +166,8 @@ export default function TelemetryTrace({
                   <ul>
                     {result.conditions.map((condition) => (
                       <li key={condition.id}>
-                        {condition.type}: {condition.severity} · {condition.state} ·
-                        {' '}occurrences {condition.occurrenceCount}
+                        {condition.type}: {condition.severity} · {condition.state} · occurrences{' '}
+                        {condition.occurrenceCount}
                       </li>
                     ))}
                   </ul>
@@ -184,7 +187,8 @@ export default function TelemetryTrace({
           {error && (
             <p role="alert" className="telemetry-trace__error">
               {error}
-              {accepted && ' The reading was accepted; inspect Operations before sending it again.'}
+              {accepted &&
+                ' The reading was accepted; inspect Operations before sending it again.'}
             </p>
           )}
         </div>
