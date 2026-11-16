@@ -170,29 +170,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # -----------------------------------------------------------------------
-      # CI-only runtime configuration
-      # -----------------------------------------------------------------------
-      #
-      # Smart-X intentionally requires a 32-byte AES-256-GCM attachment key.
-      # CI does not need a permanent deployment secret, so a new disposable key
-      # is generated for every workflow run.
-      #
-      # The value is written directly to the GitHub Actions environment file
-      # and is never committed to the repository or printed by this workflow.
-      - name: Generate isolated Docker test configuration
-        shell: bash
-        run: |
-          {
-            echo "SMARTX_HTTP_PORT=18080"
-            echo "SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64=$(openssl rand -base64 32)"
-          } >> "$GITHUB_ENV"
+      # Local Compose generates its own random key inside a dedicated volume;
+      # CI only overrides the host-facing port to avoid runner conflicts.
+      - name: Configure CI local port
+        run: echo "SMARTX_HTTP_PORT=18080" >> "$GITHUB_ENV"
 
       # Validate variable substitution and Compose syntax before performing the
       # substantially more expensive container image builds.
       #
-      # --quiet is deliberate because normal `docker compose config` output
-      # would include the resolved attachment encryption key.
+      # --quiet avoids printing the full deployment configuration in CI logs.
       - name: Validate Docker Compose configuration
         run: docker compose config --quiet
 
