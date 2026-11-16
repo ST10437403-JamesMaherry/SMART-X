@@ -1,10 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Simulation Lab telemetry trace', () => {
-  test('blocks telemetry writes in an unrelated workspace', async ({
-    page,
-    request,
-  }) => {
+  test('blocks telemetry writes in an unrelated workspace', async ({ page, request }) => {
     // Tests share an in-memory API instance. A deliberately unrelated sensor
     // proves that this new dashboard cannot submit readings into the wrong lab.
     const identifier = `trace-guard-${Date.now()}-${Math.random().toString(36).slice(2)}`;
