@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import ApplicationShell from '../components/ApplicationShell';
@@ -127,12 +127,7 @@ export default function SimulationPage() {
   const diagram = projection ? buildMeshDiagram(projection, sensors, selectedSensorId) : null;
   const overlay = projection ? describeMeshOverlay(projection, selectedSensorId, overlayMode) : null;
 
-  // When a selected route changes, the authoritative hook fetches a matching
-  // route; no independent selection state is introduced here.
-  useEffect(() => {
-    if (phase === 'error') setComparison(null);
-  }, [phase]);
-
+  // A selected route is fetched by the authoritative topology hook.
   return (
     <ApplicationShell>
       <section className="simulation-intro" aria-labelledby="page-title">
