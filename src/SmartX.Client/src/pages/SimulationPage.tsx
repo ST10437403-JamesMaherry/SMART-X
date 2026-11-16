@@ -5,6 +5,7 @@ import ApplicationShell from '../components/ApplicationShell';
 import { getApiErrorMessage } from '../api/apiTypes';
 import { loadConsistentTopology, type ConsistentTopologyProjection } from '../api/topologyApi';
 import { MeshCanvas } from '../features/topology/MeshCanvas';
+import TelemetryTrace from '../features/simulation/TelemetryTrace';
 import { buildMeshDiagram, sortMeshSensors } from '../features/topology/meshLayout';
 import { describeMeshOverlay, type MeshOverlayMode } from '../features/topology/meshOverlay';
 import { useTopologyData } from '../features/topology/useTopologyData';
@@ -73,6 +74,7 @@ export default function SimulationPage() {
     realtimeState,
   } = useTopologyData();
   const [overlayMode, setOverlayMode] = useState<MeshOverlayMode>('connections');
+  const [traceBusy, setTraceBusy] = useState(false);
   const [pending, setPending] = useState<ScenarioId | null>(null);
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(
     null,
@@ -82,7 +84,7 @@ export default function SimulationPage() {
 
   const runScenario = useCallback(
     async (id: ScenarioId) => {
-      if (busy.current) return;
+      if (busy.current || traceBusy) return;
       busy.current = true;
       setPending(id);
       setFeedback(null);
@@ -128,7 +130,7 @@ export default function SimulationPage() {
         setPending(null);
       }
     },
-    [refreshTopology],
+    [refreshTopology, traceBusy],
   );
 
   const active = projection === null ? null : matchScenario(projection);
@@ -157,7 +159,8 @@ export default function SimulationPage() {
           <span>01 · Choose a scenario</span>
           <span>02 · Inspect the network</span>
           <span>03 · Compare the result</span>
-          <span>04 · Explore deeper</span>
+          <span>04 · Trace telemetry</span>
+          <span>05 · Explore deeper</span>
         </div>
       </section>
 
@@ -181,7 +184,7 @@ export default function SimulationPage() {
               <p>{scenario.description}</p>
               <button
                 type="button"
-                disabled={pending !== null || phase !== 'ready'}
+                disabled={pending !== null || traceBusy || phase !== 'ready'}
                 onClick={() => void runScenario(scenario.id)}
                 aria-label={`Run ${scenario.title}`}
               >
@@ -410,10 +413,16 @@ export default function SimulationPage() {
         )}
       </section>
 
+      <TelemetryTrace
+        enabled={phase === 'ready' && (active?.id === 'healthy' || active?.id === 'recovered')}
+        scenarioBusy={pending !== null || phase !== 'ready'}
+        onBusyChange={setTraceBusy}
+      />
+
       <section className="simulation-section simulation-next" aria-labelledby="next-heading">
         <div className="simulation-section__heading">
           <div>
-            <p className="simulation-kicker">STEP 04 / DEEPER WORKBENCHES</p>
+            <p className="simulation-kicker">STEP 05 / DEEPER WORKBENCHES</p>
             <h2 id="next-heading">Follow the data through Smart-X</h2>
             <p>
               The Simulation Lab is a guided starting point. Each workbench exposes a different
