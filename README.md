@@ -1,10 +1,10 @@
 # Smart-X
 
-**A simulated IoT operations platform for telemetry ingestion, real-time device operations, and resilient mesh-network analysis.**
+**A local-first IoT logic lab for telemetry ingestion, real-time operations, and resilient mesh-network algorithms.**
 
 Smart-X brings device registration, typed telemetry, operational events, topology analysis, and human-reviewed remediation into a single React and ASP.NET Core application. It is a software simulation: device traffic, relay commands, and network links use real HTTP endpoints but do **not** operate physical hardware or perform RF measurements.
 
-> **Project status:** actively evolving from a local simulation into a secure, observable, cloud-deployable platform. The current runtime is intentionally single-instance and primarily in-memory. See [current limitations](#current-limitations) before treating it as production software.
+> **Local-first by design:** Smart-X runs without cloud accounts, third-party APIs, external databases, paid services, or user-supplied API keys. Runtime state is intentionally single-instance and primarily in-memory. It is not a production-ready network controller.
 
 ## Capabilities
 
@@ -47,33 +47,54 @@ The backend separates transport contracts, domain models, use-case orchestration
 
 ### Prerequisites
 
-- .NET SDK 10
-- Node.js 24 and npm
-- Docker with Compose (for containerized deployment)
-- Python 3 (optional, for verification tools)
+- **Docker Desktop** (or Docker Engine) with the Compose plugin for the one-command workflow.
+- .NET SDK 10, Node.js 24 and Python 3 are **not required** when running through Docker. Install them only for local development, tests or verification scripts.
 
-### Run with Docker Compose
+### One-command Docker startup
 
-From the repository root, create a local, Git-ignored environment file with a fresh encryption key:
+From the repository root:
 
 ```bash
-printf 'SMARTX_HTTP_PORT=8080\nSMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64=%s\nSMARTX_TOPOLOGY_SIMULATION_ENABLED=false\n' \
-  "$(openssl rand -base64 32)" > .env
-
-docker compose config --quiet
 docker compose up -d --build
 ```
 
-Open **http://localhost:8080**. Useful health checks:
+Open **http://localhost:8080**. No `.env` file, encryption key, API key, hosted database or account is required. Docker builds and starts both the ASP.NET Core API and the React/Nginx client. The API is only accessible through the Nginx proxy and the browser-facing port is bound to **127.0.0.1**, not your LAN or public network.
+
+The API creates a **fresh random 256-bit AES attachment key on its first Docker start**, saves it in the private `smartx-local-keys` named volume and reuses it after restarts. Attachment ciphertext is stored independently in `smartx-attachments`. Neither key nor encrypted attachments are committed to Git. This is a local development convenience; it is **not a production secret-management solution**.
+
+Check the running services:
 
 ```bash
+docker compose ps
 curl -fsS http://localhost:8080/healthz
 curl -fsS http://localhost:8080/api/health
 ```
 
-The API is reachable through Nginx on the private Compose network rather than being published to the host directly. To stop services without deleting the encrypted attachment volume, run `docker compose down`.
+**What can you explore?** Register simulated sensors, submit typed telemetry and inspect anomalies; interact with the command queue and reversible simulated commands; create weighted mesh links; investigate gateway reachability with BFS, minimum spanning trees with Prim and historical queries using an AVL index. The Compose environment enables topology simulation automatically, and this is safe **only because it is restricted to your own machine**. Do not publish its ports, use a tunnel, or put it behind an internet-facing proxy without implementing authentication and authorization.
 
-The topology modification endpoints are disabled in the Docker production configuration by default. For **trusted local demonstrations only**, set `SMARTX_TOPOLOGY_SIMULATION_ENABLED=true` in your ignored `.env` file before starting containers. Do **not** expose an unauthenticated, simulation-enabled instance to the public internet.
+**Useful lifecycle commands:**
+
+```bash
+docker compose logs -f
+docker compose down              # Stop; retain encrypted attachments and key
+docker compose up -d --build     # Rebuild/restart with the same key
+docker compose down --volumes    # Destructive full reset, including key and attachments
+```
+
+Deleting the key volume without the attachment volume will make previously encrypted attachments unreadable. For a full fresh start, delete **both** together using `docker compose down --volumes`.
+
+If port 8080 is taken, use `SMARTX_HTTP_PORT=9090 docker compose up -d --build` and browse to `http://localhost:9090`. An optional [`.env.example`](.env.example) documents this port override. Compose intentionally publishes the frontend on loopback only. The API uses a private Docker network, and ordinary device/telemetry/topology state resets when the API process restarts.
+
+### External services and credentials
+
+| Dependency | Required? | Explanation |
+| --- | --- | --- |
+| Third-party API keys / LLM provider | **No** | Suggestions and topology insights are deterministic local logic, not calls to hosted AI APIs. |
+| AWS/Azure/GCP account | **No** | No cloud deployment is needed. |
+| Firebase, OAuth provider or hosted identity | **No** | There is currently no login or role-based authorization. |
+| Remote database | **No** | Most operational state is held in memory. |
+| Manually created attachment encryption key | **No for Docker** | A private key is generated and persisted automatically by the Docker entrypoint. |
+| Docker image/package registries | **Yes, for initial build** | Docker builds use public .NET/Node/Nginx base images and restore NuGet/npm dependencies; the app itself makes no third-party API calls. |
 
 ### Run the backend and frontend separately
 
@@ -115,8 +136,8 @@ The last recorded verification of the original system ran **1,106 backend tests*
 
 - Browser traffic reaches the API through Nginx; the API container is not directly host-published.
 - API and frontend containers run as non-root users with no-new-privileges configuration.
-- Sensor attachments undergo signature/size validation and encrypted-at-rest storage; the encryption key is supplied at runtime.
-- Production topology mutations are opt-in, but **there is currently no user authentication or per-user authorization**.
+- Sensor attachments undergo signature/size validation and encrypted-at-rest storage; local Docker generates and persists its random encryption key on first startup.
+- Docker Compose enables topology mutations for local experiments and binds the frontend to loopback, but **there is currently no user authentication or per-user authorization**.
 - Suggested actions require explicit operator review and server-side eligibility checks; network insights never execute commands on their own.
 - GitHub Actions verifies source quality, dependency audits, test suites, container health and reverse-proxy boundaries.
 
@@ -133,7 +154,7 @@ The last recorded verification of the original system ran **1,106 backend tests*
 
 ## Engineering direction
 
-The next milestones focus on **portfolio-grade cloud and security engineering** rather than expanding the simulator for its own sake: durable PostgreSQL-backed state, authentication and authorization, automated security scanning, OpenTelemetry-based observability, reproducible infrastructure-as-code, and a free/local cloud-compatible deployment path. Each improvement should have tests, threat and failure considerations, and reproducible evidence.
+The next milestones focus on **testable logic, algorithms and platform engineering** rather than adding paid integrations: reproducible simulation fixtures, structured load testing, deterministic anomaly policies, expanded topology failure scenarios, automated security scanning, and local-only observability. Persistence and authentication can be added later if they serve a clear, tested requirement. Each improvement should have tests, threat and failure considerations, and reproducible evidence.
 
 ## Project structure
 
@@ -150,6 +171,7 @@ scripts/                  Reproducible local verification utilities
 docs/                     Technical architecture, security and verification references
 .github/workflows/        Continuous integration
 compose.yaml              Local container deployment
+docker/local-api-entrypoint.sh  First-run local encryption key bootstrap
 ```
 
 ## Attribution

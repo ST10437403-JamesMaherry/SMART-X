@@ -57,17 +57,22 @@ WORKDIR /app
 # built-in .NET "app" account.
 USER root
 
-# curl is used exclusively by the container health check.
+# curl is used by the container health check. OpenSSL generates the local
+# per-installation encryption key without a third-party key service.
 #
 # /data/attachments is intentionally separate from the application binaries.
 # Docker Compose will later mount a persistent named volume at this path.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl openssl \
     && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /data/attachments \
-    && chown -R app:app /data/attachments
+    && mkdir -p /data/attachments /data/keys \
+    && chown -R app:app /data/attachments /data/keys
 
 COPY --from=build --chown=app:app /app/publish ./
+
+# Generate/reuse a private local key in a dedicated Docker volume before the
+# API starts. This script never emits the key to logs or commits it to source.
+COPY --chmod=755 docker/local-api-entrypoint.sh /usr/local/bin/smartx-start
 
 # Smart-X listens on an internal unencrypted HTTP endpoint inside the Docker
 # network. The frontend reverse proxy acts as the external application
@@ -79,7 +84,7 @@ ENV ASPNETCORE_URLS=http://+:8080 \
 EXPOSE 8080
 
 # Document the location designed for persistent encrypted attachment data.
-VOLUME ["/data/attachments"]
+VOLUME ["/data/attachments", "/data/keys"]
 
 # Application code does not require root privileges.
 USER app
@@ -89,4 +94,4 @@ USER app
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
     CMD curl --fail --silent --show-error http://127.0.0.1:8080/api/health || exit 1
 
-ENTRYPOINT ["dotnet", "SmartX.Api.dll"]
+ENTRYPOINT ["/usr/local/bin/smartx-start"]
