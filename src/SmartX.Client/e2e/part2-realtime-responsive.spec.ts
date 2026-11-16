@@ -135,13 +135,21 @@ test.describe('P2-07 responsive and accessible live workspace', () => {
     expect(display).toBe('grid');
     expect(right.y).toBeGreaterThan(left.y + left.height);
 
+    // Read both card positions in a single browser layout frame. Independent
+    // boundingBox() calls can straddle live HTTP updates above this section,
+    // producing a false vertical difference on an otherwise valid grid.
     const cards = page.locator('.realtime-scenario-grid > .realtime-scenario');
-    const cardA = await cards.nth(0).boundingBox();
-    const cardB = await cards.nth(1).boundingBox();
-    expect(cardA).not.toBeNull();
-    expect(cardB).not.toBeNull();
-    expect(cardB!.x).toBeGreaterThan(cardA!.x);
-    expect(Math.abs(cardB!.y - cardA!.y)).toBeLessThan(2);
+    await expect(cards).toHaveCount(3);
+    const [cardA, cardB] = await cards.evaluateAll((elements) =>
+      elements.slice(0, 2).map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return { x: bounds.x, y: bounds.y };
+      }),
+    );
+    expect(cardA).toBeDefined();
+    expect(cardB).toBeDefined();
+    expect(cardB.x).toBeGreaterThan(cardA.x);
+    expect(Math.abs(cardB.y - cardA.y)).toBeLessThan(2);
     await expectNoDocumentHorizontalOverflow(page);
   });
 
