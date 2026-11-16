@@ -85,6 +85,32 @@ Deleting the key volume without the attachment volume will make previously encry
 
 If port 8080 is taken, use `SMARTX_HTTP_PORT=9090 docker compose up -d --build` and browse to `http://localhost:9090`. An optional [`.env.example`](.env.example) documents this port override. Compose intentionally publishes the frontend on loopback only. The API uses a private Docker network, and ordinary device/telemetry/topology state resets when the API process restarts.
 
+### Reproducible mesh experiments
+
+The repository includes an optional **Python 3 standard-library** scenario runner that connects to the same local HTTP API as the web UI. It needs no pip packages, tokens or external services. First start Docker using `docker compose up -d --build`, then run these commands from the repository root:
+
+```bash
+python3 scripts/load_mesh_scenario.py healthy
+python3 scripts/load_mesh_scenario.py relay-failure
+python3 scripts/load_mesh_scenario.py island
+python3 scripts/load_mesh_scenario.py recovered
+```
+
+Open **http://localhost:8080/topology** between commands to inspect graph links, gateway reachability, the Prim backbone and the consequences of a failed primary relay.
+
+| Scenario | Reachable sensors | Disconnected | Unavailable | Prim total cost |
+| --- | ---: | ---: | ---: | ---: |
+| `healthy` | 6 | 0 | 0 | 5.75 |
+| `relay-failure` | 4 | 1 | 1 | 8.25 |
+| `island` | 0 | 5 | 1 | 0 |
+| `recovered` | 6 | 0 | 0 | 5.75 |
+
+These outcomes are derived from the existing greenhouse HTTP integration tests. The runner checks the current API responses against the expected graph facts and exits nonzero on a mismatch. All link weights are **simulated relative costs**, not measured physical energy.
+
+**Workspace safety:** The runner refuses non-demo sensors and unexpected mesh links. It updates only its six named fixture devices and seven known edges, does not clear telemetry or operator history, and does not restart containers. Re-running a scenario is safe on the matching fixture; it does not register duplicate devices. To discard the **in-memory** demo workspace, restart the API container: `docker compose restart api`. To discard encrypted attachments and the encryption key as well, use the destructive volume reset documented above.
+
+If you configured a nondefault host port, pass `--url http://localhost:9090` to the script. Remote API targets are intentionally rejected.
+
 ### External services and credentials
 
 | Dependency | Required? | Explanation |
