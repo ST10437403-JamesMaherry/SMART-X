@@ -85,6 +85,21 @@ Deleting the key volume without the attachment volume will make previously encry
 
 If port 8080 is taken, use `SMARTX_HTTP_PORT=9090 docker compose up -d --build` and browse to `http://localhost:9090`. An optional [`.env.example`](.env.example) documents this port override. Compose intentionally publishes the frontend on loopback only. The API uses a private Docker network, and ordinary device/telemetry/topology state resets when the API process restarts.
 
+### Guided Simulation Lab
+
+The **Simulation Lab** is the recommended entry point for exploring Smart-X without learning the three technical workbenches first. With Docker running, open **http://localhost:8080/simulation** (or select **Simulation Lab** from the homepage).
+
+The browser controls call existing, validated Smart-X APIs. No separate simulation service, provider key, remote database or Python installation is required for the dashboard.
+
+1. **Choose a scenario:** healthy mesh, primary relay failure, gateway partition or recovery.
+2. **Inspect the network:** view the server-provided logical graph and switch between all configured links, a selected sensor's BFS fewest-hop route and the Prim minimum-cost backbone.
+3. **Compare outcomes:** see the API-confirmed numbers of reachable, disconnected and unavailable devices before and after the action, plus the Prim total-cost change.
+4. **Explore the workbenches:** move into Sensor Ingestion, Real-Time Operations or Topology for additional controls and investigations.
+
+The scenarios use the same six greenhouse fixture sensors and seven weighted logical edges as the backend integration suite. They safely **reuse existing matching demo devices**, reject unrelated sensors and unexpected mesh links, and do not wipe operator telemetry or attachment data. To start from a fresh **in-memory** workspace, use `docker compose restart api`. All relative link weights are simulated costs, not measured energy, RF quality or latency.
+
+**Note:** A run can partially apply if interrupted or if concurrent operators modify the graph. The dashboard reports errors instead of inventing a successful result; refresh the graph and inspect it before retrying. This is a local-only experience and should not be published without authentication and authorization.
+
 ### Reproducible mesh experiments
 
 The repository includes an optional **Python 3 standard-library** scenario runner that connects to the same local HTTP API as the web UI. It needs no pip packages, tokens or external services. First start Docker using `docker compose up -d --build`, then run these commands from the repository root:
