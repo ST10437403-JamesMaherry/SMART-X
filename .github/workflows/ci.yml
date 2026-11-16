@@ -172,6 +172,9 @@ jobs:
 
       # Local Compose generates its own random key inside a dedicated volume;
       # CI only overrides the host-facing port to avoid runner conflicts.
+      - name: Verify local key bootstrap behavior
+        run: sh scripts/test_local_docker_bootstrap.sh
+
       - name: Configure CI local port
         run: echo "SMARTX_HTTP_PORT=18080" >> "$GITHUB_ENV"
 
