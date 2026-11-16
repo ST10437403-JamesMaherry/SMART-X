@@ -32,7 +32,12 @@ const devices: readonly DeviceDefinition[] = [
   { id: 'moisture', name: 'West-zone moisture probe', category: 'Environmental', suffix: 'A3' },
   { id: 'repeater', name: 'Central greenhouse repeater', category: 'Actuator', suffix: 'A4' },
   { id: 'nutrient', name: 'East-zone nutrient probe', category: 'Environmental', suffix: 'A5' },
-  { id: 'vulnerable', name: 'Single-bridge moisture probe', category: 'Environmental', suffix: 'A6' },
+  {
+    id: 'vulnerable',
+    name: 'Single-bridge moisture probe',
+    category: 'Environmental',
+    suffix: 'A6',
+  },
 ];
 
 type FixtureId = (typeof devices)[number]['id'] | 'gateway';
@@ -66,24 +71,48 @@ export interface ScenarioDefinition {
 
 export const scenarios: readonly ScenarioDefinition[] = [
   {
-    id: 'healthy', title: '01 / Healthy network',
-    description: 'All six sensors are online. Compare the backup connection with the minimum-cost backbone.',
-    reachable: 6, disconnected: 0, unavailable: 0, mstCost: 5.75, links: 7,
+    id: 'healthy',
+    title: '01 / Healthy network',
+    description:
+      'All six sensors are online. Compare the backup connection with the minimum-cost backbone.',
+    reachable: 6,
+    disconnected: 0,
+    unavailable: 0,
+    mstCost: 5.75,
+    links: 7,
   },
   {
-    id: 'relay-failure', title: '02 / Primary relay fails',
-    description: 'Take the primary relay offline. Four devices use the backup; one leaf becomes disconnected.',
-    reachable: 4, disconnected: 1, unavailable: 1, mstCost: 8.25, links: 7,
+    id: 'relay-failure',
+    title: '02 / Primary relay fails',
+    description:
+      'Take the primary relay offline. Four devices use the backup; one leaf becomes disconnected.',
+    reachable: 4,
+    disconnected: 1,
+    unavailable: 1,
+    mstCost: 8.25,
+    links: 7,
   },
   {
-    id: 'island', title: '03 / Gateway partition',
-    description: 'Keep the primary offline and remove the gateway backup link to isolate the sensor network.',
-    reachable: 0, disconnected: 5, unavailable: 1, mstCost: 0, links: 6,
+    id: 'island',
+    title: '03 / Gateway partition',
+    description:
+      'Keep the primary offline and remove the gateway backup link to isolate the sensor network.',
+    reachable: 0,
+    disconnected: 5,
+    unavailable: 1,
+    mstCost: 0,
+    links: 6,
   },
   {
-    id: 'recovered', title: '04 / Recover network',
-    description: 'Restore the primary relay and backup link. The original reachable set and backbone cost return.',
-    reachable: 6, disconnected: 0, unavailable: 0, mstCost: 5.75, links: 7,
+    id: 'recovered',
+    title: '04 / Recover network',
+    description:
+      'Restore the primary relay and backup link. The original reachable set and backbone cost return.',
+    reachable: 6,
+    disconnected: 0,
+    unavailable: 0,
+    mstCost: 5.75,
+    links: 7,
   },
 ];
 
@@ -160,8 +189,12 @@ async function inspectWorkspace(): Promise<FixtureInspection> {
 
   // Check all registered fixture sensors are actually present in the graph.
   for (const sensor of existing.values()) {
-    if (!graph.nodes.some((node) => node.sensorProfileId?.toLowerCase() === sensor.id.toLowerCase())) {
-      throw new ScenarioSafetyError('Sensor registry and mesh graph disagree. Retry after refresh.');
+    if (
+      !graph.nodes.some((node) => node.sensorProfileId?.toLowerCase() === sensor.id.toLowerCase())
+    ) {
+      throw new ScenarioSafetyError(
+        'Sensor registry and mesh graph disagree. Retry after refresh.',
+      );
     }
   }
 
@@ -195,7 +228,9 @@ async function ensureSensors(sensors: Map<string, SensorResponse>): Promise<void
 }
 
 async function ensureHealth(
-  sensors: Map<string, SensorResponse>, label: string, status: 'Online' | 'Offline',
+  sensors: Map<string, SensorResponse>,
+  label: string,
+  status: 'Online' | 'Offline',
 ): Promise<void> {
   const record = sensors.get(label);
   if (!record) throw new Error(`Missing fixture sensor: ${label}`);
@@ -214,8 +249,10 @@ async function reconcileLinks(
   );
   const desired = new Map(
     edges
-      .filter((edge) =>
-        scenario !== 'island' || pairKey(edge.first, edge.second) !== pairKey('gateway', 'backup'),
+      .filter(
+        (edge) =>
+          scenario !== 'island' ||
+          pairKey(edge.first, edge.second) !== pairKey('gateway', 'backup'),
       )
       .map((edge) => [pairKey(key(edge.first, sensors), key(edge.second, sensors)), edge]),
   );
@@ -270,36 +307,65 @@ export async function applyScenario(id: ScenarioId): Promise<void> {
   }
 }
 
-export function matchScenario(
-  projection: {
-    readonly topology: { readonly nodes: readonly { readonly deviceIdentifier: string | null; readonly status: string | null }[]; readonly linkCount: number };
-    readonly reachability: { readonly registeredSensorCount: number; readonly reachableSensorCount: number; readonly disconnectedSensorCount: number; readonly unavailableSensorCount: number };
-    readonly mst: { readonly totalSimulatedEnergyCost: number };
-  },
-): ScenarioDefinition | null {
+export function matchScenario(projection: {
+  readonly topology: {
+    readonly nodes: readonly {
+      readonly deviceIdentifier: string | null;
+      readonly status: string | null;
+    }[];
+    readonly linkCount: number;
+  };
+  readonly reachability: {
+    readonly registeredSensorCount: number;
+    readonly reachableSensorCount: number;
+    readonly disconnectedSensorCount: number;
+    readonly unavailableSensorCount: number;
+  };
+  readonly mst: { readonly totalSimulatedEnergyCost: number };
+}): ScenarioDefinition | null {
   if (projection.reachability.registeredSensorCount !== devices.length) return null;
-  if (!devices.every((device) => projection.topology.nodes.some(
-    (node) => node.deviceIdentifier?.toLowerCase() === fixtureIdentifier(device).toLowerCase()
-      && node.status === (device.id === 'primary' ? 'Online' : 'Online'),
-  ))) {
+  if (
+    !devices.every((device) =>
+      projection.topology.nodes.some(
+        (node) =>
+          node.deviceIdentifier?.toLowerCase() === fixtureIdentifier(device).toLowerCase() &&
+          node.status === (device.id === 'primary' ? 'Online' : 'Online'),
+      ),
+    )
+  ) {
     // Failure scenarios are recognized separately below.
     const primary = devices[0];
-    if (!devices.every((device) => projection.topology.nodes.some(
-      (node) => node.deviceIdentifier?.toLowerCase() === fixtureIdentifier(device).toLowerCase()
-        && node.status === (device.id === primary.id ? 'Offline' : 'Online'),
-    ))) return null;
+    if (
+      !devices.every((device) =>
+        projection.topology.nodes.some(
+          (node) =>
+            node.deviceIdentifier?.toLowerCase() === fixtureIdentifier(device).toLowerCase() &&
+            node.status === (device.id === primary.id ? 'Offline' : 'Online'),
+        ),
+      )
+    )
+      return null;
   }
 
-  return scenarios.find((scenario) =>
-    scenario.links === projection.topology.linkCount &&
-    scenario.reachable === projection.reachability.reachableSensorCount &&
-    scenario.disconnected === projection.reachability.disconnectedSensorCount &&
-    scenario.unavailable === projection.reachability.unavailableSensorCount &&
-    Math.abs(scenario.mstCost - projection.mst.totalSimulatedEnergyCost) < 0.000001 &&
-    ((scenario.id === 'healthy' || scenario.id === 'recovered')
-      ? projection.topology.nodes.some((node) => node.deviceIdentifier?.toLowerCase()
-        === fixtureIdentifier(devices[0]).toLowerCase() && node.status === 'Online')
-      : projection.topology.nodes.some((node) => node.deviceIdentifier?.toLowerCase()
-        === fixtureIdentifier(devices[0]).toLowerCase() && node.status === 'Offline'))
-  ) ?? null;
+  return (
+    scenarios.find(
+      (scenario) =>
+        scenario.links === projection.topology.linkCount &&
+        scenario.reachable === projection.reachability.reachableSensorCount &&
+        scenario.disconnected === projection.reachability.disconnectedSensorCount &&
+        scenario.unavailable === projection.reachability.unavailableSensorCount &&
+        Math.abs(scenario.mstCost - projection.mst.totalSimulatedEnergyCost) < 0.000001 &&
+        (scenario.id === 'healthy' || scenario.id === 'recovered'
+          ? projection.topology.nodes.some(
+              (node) =>
+                node.deviceIdentifier?.toLowerCase() ===
+                  fixtureIdentifier(devices[0]).toLowerCase() && node.status === 'Online',
+            )
+          : projection.topology.nodes.some(
+              (node) =>
+                node.deviceIdentifier?.toLowerCase() ===
+                  fixtureIdentifier(devices[0]).toLowerCase() && node.status === 'Offline',
+            )),
+    ) ?? null
+  );
 }

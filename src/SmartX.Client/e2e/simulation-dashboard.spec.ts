@@ -7,7 +7,7 @@ test.describe('guided Simulation Lab', () => {
     await page.getByRole('link', { name: /Open the guided simulation/ }).click();
     await expect(page).toHaveURL(/\/simulation$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Simulation Lab' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: "Choose what happens" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Choose what happens' })).toBeVisible();
   });
 
   test('presents four scenarios and authoritative empty-state metrics', async ({ page }) => {
@@ -16,10 +16,14 @@ test.describe('guided Simulation Lab', () => {
     await expect(page.getByRole('button', { name: /Run 02 \/ Primary relay fails/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Run 03 \/ Gateway partition/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Run 04 \/ Recover network/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: "What's happening in the network?" })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: "What's happening in the network?" }),
+    ).toBeVisible();
     await expect(page.getByRole('group', { name: 'Graph overlay mode' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'What changed?' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Follow the data through Smart-X' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Follow the data through Smart-X' }),
+    ).toBeVisible();
   });
 
   test('refuses to modify a workspace with an unrelated real sensor', async ({ page, request }) => {
