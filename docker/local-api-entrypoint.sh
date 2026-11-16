@@ -35,4 +35,20 @@ if [ -z "${Attachments__EncryptionKeyBase64:-}" ]; then
   export Attachments__EncryptionKeyBase64
 fi
 
+
+# Refuse malformed or missing keys immediately instead of failing only when a
+# user eventually uploads a file. Never expose the decoded material to logs.
+if ! printf '%s' "$Attachments__EncryptionKeyBase64" |
+  openssl base64 -d -A > /dev/null 2>&1; then
+  echo "Smart-X: the local attachment key is not valid Base64." >&2
+  exit 1
+fi
+key_bytes="$(printf '%s' "$Attachments__EncryptionKeyBase64" |
+  openssl base64 -d -A 2>/dev/null |
+  wc -c | tr -d ' ')"
+if [ "$key_bytes" != "32" ]; then
+  echo "Smart-X: the attachment key must decode to exactly 32 bytes." >&2
+  exit 1
+fi
+
 exec dotnet SmartX.Api.dll
