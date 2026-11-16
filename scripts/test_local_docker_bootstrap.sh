@@ -37,9 +37,16 @@ env -u Attachments__EncryptionKeyBase64 sh "$temp_dir/start.sh"
 cmp -s "$temp_dir/original" "$SMARTX_TEST_CAPTURE"
 
 # Optional override must not overwrite the key in the persistent volume.
-Attachments__EncryptionKeyBase64="temporary-test-override" sh "$temp_dir/start.sh"
-[ "$(cat "$SMARTX_TEST_CAPTURE")" = "temporary-test-override" ]
+override_key="$(openssl rand -base64 32)"
+Attachments__EncryptionKeyBase64="$override_key" sh "$temp_dir/start.sh"
+[ "$(cat "$SMARTX_TEST_CAPTURE")" = "$override_key" ]
 [ "$(cat "$key_file")" = "$(cat "$temp_dir/original")" ]
+
+# Malformed operator overrides must fail before the API starts.
+if Attachments__EncryptionKeyBase64="not-base64" sh "$temp_dir/start.sh" > "$temp_dir/error.log" 2>&1; then
+  echo "Malformed override was unexpectedly accepted" >&2
+  exit 1
+fi
 
 # Corrupted (empty) stored key must fail rather than silently rotate.
 : > "$key_file"
