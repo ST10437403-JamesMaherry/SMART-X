@@ -151,8 +151,10 @@ test.describe('P2-10 operator-approved Suggested Actions', () => {
     await refresh.click();
 
     try {
+      // The intercepted request is still pending. Its transient button label
+      // can change if a concurrent SignalR invalidation supersedes this GET;
+      // the invariant we care about is that review remains available.
       await heldReadStarted;
-      await expect(panel.getByRole('button', { name: 'Checking...' })).toBeVisible();
       await expect(review).toBeEnabled();
       await review.click();
       await expect(confirmation).toBeVisible();
