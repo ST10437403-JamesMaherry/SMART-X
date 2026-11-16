@@ -1,6 +1,6 @@
 # Smart-X Client
 
-React + TypeScript frontend for the Smart-X PROG7312 IoT ecosystem.
+React + TypeScript frontend for the Smart-X IoT operations platform.
 
 The client is not a standalone mock. Its three pillars call the real ASP.NET Core API and use SignalR only as an invalidation channel before re-reading authoritative HTTP state.
 
@@ -17,7 +17,7 @@ Route constants live in `src/routing/routes.ts`. Cross-pillar selected-device an
 
 ## Requirements
 
-The post-P3-11 snapshot was tested with Node.js `v24.18.0` and npm `11.16.0`.
+The last recorded baseline was tested with Node.js `v24.18.0` and npm `11.16.0`.
 
 Install the locked dependencies from this directory:
 
@@ -65,10 +65,10 @@ Available npm scripts are defined in `package.json`:
 - `npm run format:check` — verify Prettier formatting.
 - `npm run test:e2e` — Playwright Chromium regression.
 
-Playwright starts isolated .NET and Vite servers according to `playwright.config.ts`. The P3-11 final run recorded 99 passing browser tests, one intentional opt-in load test skip, and no failures.
+Playwright starts isolated .NET and Vite servers according to `playwright.config.ts`. The recorded baseline included 99 passing browser tests, one intentional opt-in load test skip, and no failures.
 
 ## Production boundary
 
 In Docker, the built static client is served by the unprivileged Nginx image. Nginx is the single browser-facing service and proxies `/api/` and `/hubs/` to the private API container.
 
-See the repository root [`README.md`](../../README.md) for Docker setup, API examples, Part 3 algorithms, evidence and rubric traceability.
+See the repository root [`README.md`](../../README.md) for Docker setup, API examples, the system architecture, verification and security boundaries.
