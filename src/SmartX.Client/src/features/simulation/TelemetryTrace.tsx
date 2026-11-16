@@ -101,9 +101,9 @@ export default function TelemetryTrace({
 
       <p className="simulation-help">
         Start with <strong>Healthy network</strong> in step 01. The three sample values are
-        simulated, not physical moisture measurements. Send baseline, small change, then spike
-        for the clearest demonstration. Repeating or reordering readings can change the
-        detector's outcome because it evaluates real prior history.
+        simulated, not physical moisture measurements. Send baseline, small change, then spike for
+        the clearest demonstration. Repeating or reordering readings can change the detector's
+        outcome because it evaluates real prior history.
       </p>
 
       <div className="telemetry-trace__choices" role="group" aria-label="Telemetry trace inputs">
@@ -187,17 +187,16 @@ export default function TelemetryTrace({
           {error && (
             <p role="alert" className="telemetry-trace__error">
               {error}
-              {accepted &&
-                ' The reading was accepted; inspect Operations before sending it again.'}
+              {accepted && ' The reading was accepted; inspect Operations before sending it again.'}
             </p>
           )}
         </div>
       )}
 
       <p className="simulation-help">
-        The topology engine models logical links, while telemetry enters through the HTTP API.
-        A disconnected graph node does not automatically stop HTTP packets. This trace
-        demonstrates the actual software processing path, not RF transport.
+        The topology engine models logical links, while telemetry enters through the HTTP API. A
+        disconnected graph node does not automatically stop HTTP packets. This trace demonstrates
+        the actual software processing path, not RF transport.
       </p>
     </section>
   );
