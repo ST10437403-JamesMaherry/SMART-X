@@ -13,7 +13,7 @@ function IngestionPage() {
   return (
     <ApplicationShell>
       <section className="page-intro module-heading" aria-labelledby="page-title">
-        <p className="eyebrow">PART 1 / ACTIVE</p>
+        <p className="eyebrow">WORKBENCH / SENSOR INGESTION</p>
 
         <h1 className="page-title" id="page-title">
           Sensor Data
