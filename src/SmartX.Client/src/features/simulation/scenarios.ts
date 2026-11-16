@@ -153,7 +153,7 @@ async function inspectWorkspace(): Promise<FixtureInspection> {
       sensor.deploymentLocation.facility !== 'Greenhouse' ||
       sensor.deploymentLocation.zone !== 'Hydroponics' ||
       sensor.deploymentLocation.nodeId !== `Zone-${fixture.suffix}` ||
-      sensor.status === 'Decommissioned'
+      (sensor.status !== 'Online' && sensor.status !== 'Offline')
     ) {
       throw new ScenarioSafetyError(
         'This workspace contains other devices or modified demo sensors. The Simulation Lab will not overwrite it. Run the lab in a fresh local API instance.',
