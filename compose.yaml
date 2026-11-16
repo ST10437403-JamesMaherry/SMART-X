@@ -46,19 +46,14 @@ services:
       # ASP.NET Core execution.
       HttpsRedirection__Enabled: "false"
 
-      # Only the logical, process-local mesh may be edited. This is OFF in
-      # Production by default; enable it explicitly for a trusted demo only.
-      Topology__Simulation__Enabled: ${SMARTX_TOPOLOGY_SIMULATION_ENABLED:-false}
+      # Local-only logic lab: topology simulation stays inside loopback-bound
+      # Docker Compose; never publish this unauthenticated control surface.
+      Topology__Simulation__Enabled: "true"
 
       # Store encrypted payload and metadata files on the persistent Docker
       # volume rather than inside the replaceable container filesystem.
       Attachments__StoragePath: /data/attachments
 
-      # Compose fails immediately if a real encryption key has not been
-      # supplied through the local .env file or host environment.
-      #
-      # The value itself is never embedded in this Compose file or image.
-      Attachments__EncryptionKeyBase64: ${SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64:?SMARTX_ATTACHMENT_ENCRYPTION_KEY_BASE64 must be configured in the root .env file}
 
     # The API is discoverable by the client container but is deliberately not
     # published directly to the host machine.
@@ -66,10 +61,10 @@ services:
       - "8080"
 
     volumes:
-      # Only encrypted attachment persistence is currently durable.
-      #
-      # Sensor and telemetry repositories intentionally remain process-local.
+      # Encrypted payloads and locally generated key are persisted separately.
+      # All other repositories intentionally remain process-local.
       - smartx-attachments:/data/attachments
+      - smartx-local-keys:/data/keys
 
     # The Dockerfile already provides an API health check against:
     #
@@ -111,7 +106,7 @@ services:
       #   SMARTX_HTTP_PORT=9090
       #
       # would expose Smart-X at http://localhost:9090.
-      - "${SMARTX_HTTP_PORT:-8080}:8080"
+      - "127.0.0.1:${SMARTX_HTTP_PORT:-8080}:8080"
 
     # The client Dockerfile supplies its own /healthz container health check.
     init: true
@@ -137,6 +132,8 @@ volumes:
   #
   # `docker compose down --volumes` deliberately deletes it.
   smartx-attachments:
+  # Local AES key must survive container recreation and compose down.
+  smartx-local-keys:
 
 
 # =============================================================================
