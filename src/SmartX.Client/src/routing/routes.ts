@@ -6,6 +6,7 @@
  */
 export const routes = {
   home: '/',
+  simulation: '/simulation',
   ingestion: '/ingestion',
   realtime: '/realtime',
   topology: '/topology',
