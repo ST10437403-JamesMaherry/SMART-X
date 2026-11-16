@@ -42,7 +42,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
 
       # HTTPS redirection is deliberately disabled only inside the private
-      # Docker network. Commit 1 keeps it enabled by default for normal local
+      # Docker network. Normal local execution keeps it enabled by default for normal local
       # ASP.NET Core execution.
       HttpsRedirection__Enabled: "false"
 
@@ -66,7 +66,7 @@ services:
       - "8080"
 
     volumes:
-      # Only encrypted attachment persistence is durable during Part 1.
+      # Only encrypted attachment persistence is currently durable.
       #
       # Sensor and telemetry repositories intentionally remain process-local.
       - smartx-attachments:/data/attachments

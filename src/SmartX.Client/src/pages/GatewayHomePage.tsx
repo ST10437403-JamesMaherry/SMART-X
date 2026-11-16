@@ -80,7 +80,7 @@ function GatewayHomePage() {
   return (
     <ApplicationShell>
       <section className="page-intro" aria-labelledby="page-title">
-        <p className="eyebrow">PROG7312 / FINAL POE</p>
+        <p className="eyebrow">SMART-X / OPERATIONS PLATFORM</p>
 
         <h1 className="page-title" id="page-title">
           IoT Mesh
