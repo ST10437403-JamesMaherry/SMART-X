@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { getApiHealth } from '../api/healthApi';
 import ApplicationShell from '../components/ApplicationShell';
 import PillarNavigation from '../components/PillarNavigation';
+import { routes } from '../routing/routes';
 
 /**
  * Represents the current connection state between the React client and the
@@ -88,8 +90,15 @@ function GatewayHomePage() {
           Ecosystem
         </h1>
 
-        <p className="page-description">Sensor telemetry management for the Smart-X network.</p>
+        <p className="page-description">A local simulation of telemetry, operations and mesh routing. Start with the guided lab, then explore each system workbench.</p>
       </section>
+
+      <div className="home-simulation-entry">
+        <p className="eyebrow">RECOMMENDED START</p>
+        <h2>Simulation Lab</h2>
+        <p>Follow a greenhouse network through healthy operation, relay failure, gateway isolation and recovery. See what changes and why.</p>
+        <Link to={routes.simulation}>Open the guided simulation →</Link>
+      </div>
 
       <PillarNavigation />
 
