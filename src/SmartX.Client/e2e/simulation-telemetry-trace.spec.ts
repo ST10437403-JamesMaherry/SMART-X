@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Simulation Lab telemetry trace', () => {
-  test('shows the three real processing stages and disables writes in a non-fixture workspace', async ({
+  test('blocks telemetry writes in an unrelated workspace', async ({
     page,
     request,
   }) => {
@@ -30,10 +30,12 @@ test.describe('Simulation Lab telemetry trace', () => {
     await expect(page.getByRole('button', { name: 'Send baseline reading' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Send stable reading' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Send spike reading' })).toBeDisabled();
-    await expect(page.getByText(/Load the healthy greenhouse scenario before tracing telemetry/))
-      .toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Follow the data through Smart-X' }))
-      .toBeVisible();
+    await expect(
+      page.getByText(/Load the healthy greenhouse scenario before tracing telemetry/),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Follow the data through Smart-X' }),
+    ).toBeVisible();
 
     const probeTelemetry = await request.get('http://127.0.0.1:5095/api/sensors');
     expect(probeTelemetry.ok()).toBeTruthy();
