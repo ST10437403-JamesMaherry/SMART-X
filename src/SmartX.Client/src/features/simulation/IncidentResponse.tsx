@@ -194,7 +194,7 @@ export default function IncidentResponse({ trace, enabled, onBusyChange }: Incid
                 {issue.state === 'Active' && (
                   <button
                     type="button"
-                    disabled={acknowledging || status === 'loading'}
+                    disabled={acknowledging}
                     onClick={() => {
                       setReviewed(issue);
                       setFeedback(null);
