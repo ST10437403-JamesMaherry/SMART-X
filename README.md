@@ -95,7 +95,10 @@ The browser controls call existing, validated Smart-X APIs. No separate simulati
 2. **Inspect the network:** view the server-provided logical graph and switch between all configured links, a selected sensor's BFS fewest-hop route and the Prim minimum-cost backbone.
 3. **Compare outcomes:** see the API-confirmed numbers of reachable, disconnected and unavailable devices before and after the action, plus the Prim total-cost change.
 4. **Trace one telemetry reading:** load the **Healthy network** scenario, then submit baseline (20), small change (20.1) and spike (80) Float readings for the West-zone moisture probe. The lab confirms HTTP acceptance, waits for the exact per-device worker-history event and then displays the server's current TelemetrySpike/RepeatedFailure conditions.
-5. **Explore the workbenches:** move into Sensor Ingestion, Real-Time Operations or Topology for additional controls and investigations.
+5. **Review an actual incident:** after a completed telemetry trace, use **Refresh live incidents** to read currently unresolved TelemetrySpike and RepeatedFailure episodes for the same greenhouse probe. Select **Review acknowledgement**, then explicitly **Confirm acknowledgement**. Smart-X revalidates the exact active issue before writing and verifies the result from a fresh server snapshot.
+6. **Explore the workbenches:** move into Sensor Ingestion, Real-Time Operations or Topology for additional controls and investigations.
+
+**Acknowledgement is not remediation:** it records that an operator has reviewed the specific issue episode, but the sensor's anomaly remains unresolved until actual recovery evidence arrives. No relay commands execute from this step. The review may refuse a stale/resolved issue, and any uncertain POST outcome requires a fresh incident read before another action. The existing Real-Time Operations module remains the place for deliberate relay commands and Undo.
 
 The Telemetry Trace refuses to write when the expected six-sensor greenhouse fixture is absent or altered. It never generates a fake worker result or silently recreates operator data. The anomaly outcome depends on actual historical readings; repeated or out-of-order examples may not produce the same classification. If processing exceeds 15 seconds, check **Operations** before retrying—HTTP acceptance may already have occurred.
 
