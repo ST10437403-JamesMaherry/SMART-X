@@ -5,10 +5,7 @@ import type { TelemetryTraceResult } from './telemetryTrace';
  * Incident review must never cross a sensor boundary or acknowledge an
  * unrelated issue. Classification and issue membership remain server-owned.
  */
-export function isTraceIssue(
-  issue: DashboardIssueResponse,
-  trace: TelemetryTraceResult,
-): boolean {
+export function isTraceIssue(issue: DashboardIssueResponse, trace: TelemetryTraceResult): boolean {
   return (
     issue.sensorProfileId.toLowerCase() === trace.accepted.sensorProfileId.toLowerCase() &&
     (issue.type === 'TelemetrySpike' || issue.type === 'RepeatedFailure') &&
