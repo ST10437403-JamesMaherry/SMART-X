@@ -99,11 +99,6 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      - name: Temporary incident UI formatting diagnostics
-        run: |
-          npx prettier --write src/features/simulation/incidentReview.ts src/features/simulation/IncidentResponse.tsx src/features/simulation/IncidentResponse.css src/features/simulation/TelemetryTrace.tsx src/pages/SimulationPage.tsx e2e/simulation-incident-response.spec.ts
-          git diff -- src/features/simulation/incidentReview.ts src/features/simulation/IncidentResponse.tsx src/features/simulation/IncidentResponse.css src/features/simulation/TelemetryTrace.tsx src/pages/SimulationPage.tsx e2e/simulation-incident-response.spec.ts
-
       - name: Check frontend formatting
         run: npm run format:check
 
