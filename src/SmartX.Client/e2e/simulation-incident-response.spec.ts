@@ -6,7 +6,10 @@ test.describe('guided incident response', () => {
   }) => {
     let acknowledgements = 0;
     page.on('request', (request) => {
-      if (request.method() === 'POST' && /\/api\/dashboard\/issues\/.+\/acknowledge$/.test(request.url())) {
+      if (
+        request.method() === 'POST' &&
+        /\/api\/dashboard\/issues\/.+\/acknowledge$/.test(request.url())
+      ) {
         acknowledgements += 1;
       }
     });
