@@ -1,0 +1,111 @@
+.incident-response__refresh {
+  margin-top: 1.25rem;
+}
+
+.incident-response__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.4rem;
+}
+
+.incident-response__item,
+.incident-response__confirm {
+  min-width: 0;
+  padding: 1.4rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.incident-response__item h3,
+.incident-response__confirm h3 {
+  color: var(--heading);
+  margin: 0.4rem 0;
+  font: 400 1.3rem/1.3 var(--font-display);
+}
+
+.incident-response__item > p:not(.simulation-kicker),
+.incident-response__confirm p {
+  color: var(--text-muted);
+  line-height: 1.75;
+  font-size: 0.75rem;
+}
+
+.incident-response__item dl {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1.2rem 0;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.incident-response__item dl > div {
+  display: grid;
+  grid-template-columns: minmax(5rem, 1fr) 2fr;
+  gap: 0.6rem;
+}
+
+.incident-response__item dt {
+  color: var(--text-muted);
+}
+
+.incident-response__item dd {
+  margin: 0;
+  color: var(--heading);
+}
+
+.incident-response__item button,
+.incident-response__actions button {
+  min-height: 2.7rem;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--heading);
+  cursor: pointer;
+  font-size: 0.73rem;
+}
+
+.incident-response__item button:disabled,
+.incident-response__actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.incident-response__item button:hover:not(:disabled),
+.incident-response__actions button:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--background);
+}
+
+.incident-response__confirm {
+  margin-top: 1.4rem;
+  border-color: var(--accent);
+}
+
+.incident-response__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+}
+
+.incident-response__feedback,
+.incident-response__error {
+  margin: 1.1rem 0 0;
+  padding: 0.95rem 1.1rem;
+  border-left: 2px solid var(--success);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+
+.incident-response__error {
+  border-left-color: var(--danger);
+}
+
+@media (max-width: 720px) {
+  .incident-response__list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
