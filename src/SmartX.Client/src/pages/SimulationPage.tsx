@@ -427,6 +427,7 @@ export default function SimulationPage() {
       />
 
       <IncidentResponse
+        key={lastTrace?.accepted.capturedAtUtc ?? 'none'}
         trace={lastTrace}
         enabled={
           phase === 'ready' &&
