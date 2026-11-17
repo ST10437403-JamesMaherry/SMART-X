@@ -155,7 +155,7 @@ export default function IncidentResponse({
       <button
         type="button"
         className="simulation-secondary incident-response__refresh"
-        disabled={!permitted || busyRef.current || acknowledging}
+        disabled={!permitted || status === 'loading' || acknowledging}
         onClick={() => void refresh()}
       >
         {status === 'loading' ? 'Refreshing…' : 'Refresh live incidents'}
@@ -191,7 +191,7 @@ export default function IncidentResponse({
                 {issue.state === 'Active' && (
                   <button
                     type="button"
-                    disabled={acknowledging || busyRef.current}
+                    disabled={acknowledging || status === 'loading'}
                     onClick={() => {
                       setReviewed(issue);
                       setFeedback(null);
