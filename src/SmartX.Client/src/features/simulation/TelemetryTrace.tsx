@@ -14,6 +14,7 @@ interface TelemetryTraceProps {
   readonly enabled: boolean;
   readonly scenarioBusy: boolean;
   readonly onBusyChange: (busy: boolean) => void;
+  readonly onTraceComplete: (result: TelemetryTraceResult | null) => void;
 }
 
 type TracePhase = 'idle' | 'checking' | 'accepted' | 'completed' | 'error';
@@ -26,6 +27,7 @@ export default function TelemetryTrace({
   enabled,
   scenarioBusy,
   onBusyChange,
+  onTraceComplete,
 }: TelemetryTraceProps) {
   const [phase, setPhase] = useState<TracePhase>('idle');
   const [accepted, setAccepted] = useState<TelemetryReadingResponse | null>(null);
@@ -48,6 +50,7 @@ export default function TelemetryTrace({
     active.current = controller;
     onBusyChange(true);
     setLastStep(step);
+    onTraceComplete(null);
     setAccepted(null);
     setResult(null);
     setError(null);
@@ -62,6 +65,7 @@ export default function TelemetryTrace({
       });
       if (!controller.signal.aborted) {
         setResult(observed);
+        onTraceComplete(observed);
         setPhase('completed');
       }
     } catch (reason: unknown) {

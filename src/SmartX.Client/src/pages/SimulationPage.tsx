@@ -6,6 +6,8 @@ import { getApiErrorMessage } from '../api/apiTypes';
 import { loadConsistentTopology, type ConsistentTopologyProjection } from '../api/topologyApi';
 import { MeshCanvas } from '../features/topology/MeshCanvas';
 import TelemetryTrace from '../features/simulation/TelemetryTrace';
+import IncidentResponse from '../features/simulation/IncidentResponse';
+import type { TelemetryTraceResult } from '../features/simulation/telemetryTrace';
 import { buildMeshDiagram, sortMeshSensors } from '../features/topology/meshLayout';
 import { describeMeshOverlay, type MeshOverlayMode } from '../features/topology/meshOverlay';
 import { useTopologyData } from '../features/topology/useTopologyData';
@@ -75,6 +77,8 @@ export default function SimulationPage() {
   } = useTopologyData();
   const [overlayMode, setOverlayMode] = useState<MeshOverlayMode>('connections');
   const [traceBusy, setTraceBusy] = useState(false);
+  const [incidentBusy, setIncidentBusy] = useState(false);
+  const [lastTrace, setLastTrace] = useState<TelemetryTraceResult | null>(null);
   const [pending, setPending] = useState<ScenarioId | null>(null);
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(
     null,
@@ -84,9 +88,10 @@ export default function SimulationPage() {
 
   const runScenario = useCallback(
     async (id: ScenarioId) => {
-      if (busy.current || traceBusy) return;
+      if (busy.current || traceBusy || incidentBusy) return;
       busy.current = true;
       setPending(id);
+      setLastTrace(null);
       setFeedback(null);
       setComparison(null);
 
@@ -130,7 +135,7 @@ export default function SimulationPage() {
         setPending(null);
       }
     },
-    [refreshTopology, traceBusy],
+    [refreshTopology, traceBusy, incidentBusy],
   );
 
   const active = projection === null ? null : matchScenario(projection);
@@ -160,7 +165,8 @@ export default function SimulationPage() {
           <span>02 · Inspect the network</span>
           <span>03 · Compare the result</span>
           <span>04 · Trace telemetry</span>
-          <span>05 · Explore deeper</span>
+          <span>05 · Review an incident</span>
+          <span>06 · Explore deeper</span>
         </div>
       </section>
 
@@ -184,7 +190,7 @@ export default function SimulationPage() {
               <p>{scenario.description}</p>
               <button
                 type="button"
-                disabled={pending !== null || traceBusy || phase !== 'ready'}
+                disabled={pending !== null || traceBusy || incidentBusy || phase !== 'ready'}
                 onClick={() => void runScenario(scenario.id)}
                 aria-label={`Run ${scenario.title}`}
               >
@@ -415,14 +421,27 @@ export default function SimulationPage() {
 
       <TelemetryTrace
         enabled={phase === 'ready' && (active?.id === 'healthy' || active?.id === 'recovered')}
-        scenarioBusy={pending !== null || phase !== 'ready'}
+        scenarioBusy={pending !== null || incidentBusy || phase !== 'ready'}
         onBusyChange={setTraceBusy}
+        onTraceComplete={setLastTrace}
+      />
+
+      <IncidentResponse
+        key={lastTrace?.accepted.capturedAtUtc ?? 'none'}
+        trace={lastTrace}
+        enabled={
+          phase === 'ready' &&
+          (active?.id === 'healthy' || active?.id === 'recovered') &&
+          !traceBusy &&
+          pending === null
+        }
+        onBusyChange={setIncidentBusy}
       />
 
       <section className="simulation-section simulation-next" aria-labelledby="next-heading">
         <div className="simulation-section__heading">
           <div>
-            <p className="simulation-kicker">STEP 05 / DEEPER WORKBENCHES</p>
+            <p className="simulation-kicker">STEP 06 / DEEPER WORKBENCHES</p>
             <h2 id="next-heading">Follow the data through Smart-X</h2>
             <p>
               The Simulation Lab is a guided starting point. Each workbench exposes a different
