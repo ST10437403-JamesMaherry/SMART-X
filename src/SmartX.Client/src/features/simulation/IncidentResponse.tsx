@@ -20,11 +20,7 @@ interface IncidentResponseProps {
 
 type ReviewState = 'idle' | 'loading' | 'ready' | 'error';
 
-export default function IncidentResponse({
-  trace,
-  enabled,
-  onBusyChange,
-}: IncidentResponseProps) {
+export default function IncidentResponse({ trace, enabled, onBusyChange }: IncidentResponseProps) {
   const [issues, setIssues] = useState<readonly DashboardIssueResponse[]>([]);
   const [status, setStatus] = useState<ReviewState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -78,16 +74,14 @@ export default function IncidentResponse({
     try {
       const latest = await getDashboardSnapshot(false);
       const current = latest.issues.find((issue) => issue.id === reviewed.id);
-      if (
-        !current ||
-        !isTraceIssue(current, trace) ||
-        !isSameActiveEpisode(reviewed, current)
-      ) {
+      if (!current || !isTraceIssue(current, trace) || !isSameActiveEpisode(reviewed, current)) {
         if (mounted.current) {
           setIssues(latest.issues.filter((issue) => isTraceIssue(issue, trace)));
           setStatus('ready');
           setReviewed(null);
-          setFeedback('The incident changed during review. No acknowledgement was sent. Review the refreshed issue list.');
+          setFeedback(
+            'The incident changed during review. No acknowledgement was sent. Review the refreshed issue list.',
+          );
         }
         return;
       }
@@ -102,9 +96,7 @@ export default function IncidentResponse({
         !confirmed ||
         confirmed.state !== 'Acknowledged'
       ) {
-        throw new Error(
-          'Acknowledgement could not be confirmed from the current server snapshot.',
-        );
+        throw new Error('Acknowledgement could not be confirmed from the current server snapshot.');
       }
 
       if (!mounted.current) return;
@@ -132,24 +124,26 @@ export default function IncidentResponse({
   }
 
   return (
-    <section className="simulation-section incident-response" aria-labelledby="incident-response-title">
+    <section
+      className="simulation-section incident-response"
+      aria-labelledby="incident-response-title"
+    >
       <div className="simulation-section__heading">
         <div>
           <p className="simulation-kicker">STEP 05 / OPERATOR RESPONSE</p>
           <h2 id="incident-response-title">Review an actual incident</h2>
           <p>
-            Inspect current conditions for the traced moisture probe. Review a specific
-            server issue before explicitly acknowledging it.
+            Inspect current conditions for the traced moisture probe. Review a specific server issue
+            before explicitly acknowledging it.
           </p>
         </div>
         <span className="simulation-section__tag">MANUAL REVIEW</span>
       </div>
 
       <p className="simulation-help">
-        Acknowledgement records operator awareness. It does not resolve the
-        underlying anomaly, change topology, or issue relay commands. If no
-        eligible issue is present, repeat the telemetry experiment or examine
-        the detector history in Sensor &amp; telemetry.
+        Acknowledgement records operator awareness. It does not resolve the underlying anomaly,
+        change topology, or issue relay commands. If no eligible issue is present, repeat the
+        telemetry experiment or examine the detector history in Sensor &amp; telemetry.
       </p>
 
       <button
@@ -163,8 +157,8 @@ export default function IncidentResponse({
 
       {!permitted && (
         <p role="status" className="simulation-help">
-          Complete a telemetry trace on the healthy greenhouse fixture before
-          reviewing its incidents.
+          Complete a telemetry trace on the healthy greenhouse fixture before reviewing its
+          incidents.
         </p>
       )}
 
@@ -172,8 +166,8 @@ export default function IncidentResponse({
         <div className="incident-response__list" data-testid="incident-response-list">
           {issues.length === 0 ? (
             <p className="simulation-help">
-              No active telemetry-spike or repeated-failure incident is currently
-              reported for this probe.
+              No active telemetry-spike or repeated-failure incident is currently reported for this
+              probe.
             </p>
           ) : (
             issues.map((issue) => (
@@ -184,9 +178,18 @@ export default function IncidentResponse({
                 <h3>{issue.title}</h3>
                 <p>{issue.detail}</p>
                 <dl>
-                  <div><dt>Server state</dt><dd>{issue.state}</dd></div>
-                  <div><dt>Occurrences</dt><dd>{issue.occurrenceCount}</dd></div>
-                  <div><dt>Issue ID</dt><dd>{issue.id}</dd></div>
+                  <div>
+                    <dt>Server state</dt>
+                    <dd>{issue.state}</dd>
+                  </div>
+                  <div>
+                    <dt>Occurrences</dt>
+                    <dd>{issue.occurrenceCount}</dd>
+                  </div>
+                  <div>
+                    <dt>Issue ID</dt>
+                    <dd>{issue.id}</dd>
+                  </div>
                 </dl>
                 {issue.state === 'Active' && (
                   <button
@@ -211,32 +214,38 @@ export default function IncidentResponse({
         <div className="incident-response__confirm" data-testid="incident-acknowledge-review">
           <h3>Confirm acknowledgement</h3>
           <p>
-            Acknowledge the current {reviewed.type} episode for the West-zone
-            moisture probe? Smart-X will verify that the exact issue ID is
-            still Active before sending an acknowledgement request.
+            Acknowledge the current {reviewed.type} episode for the West-zone moisture probe?
+            Smart-X will verify that the exact issue ID is still Active before sending an
+            acknowledgement request.
           </p>
           <p>
-            This changes the incident to <strong>Acknowledged</strong>, not
-            Resolved. It sends no relay command.
+            This changes the incident to <strong>Acknowledged</strong>, not Resolved. It sends no
+            relay command.
           </p>
           <div className="incident-response__actions">
-            <button type="button" disabled={acknowledging}
-              onClick={() => void confirm()}>
+            <button type="button" disabled={acknowledging} onClick={() => void confirm()}>
               {acknowledging ? 'Checking…' : 'Confirm acknowledgement'}
             </button>
-            <button type="button" disabled={acknowledging}
-              onClick={() => setReviewed(null)}>
+            <button type="button" disabled={acknowledging} onClick={() => setReviewed(null)}>
               Cancel
             </button>
           </div>
         </div>
       )}
 
-      {feedback && <p role="status" className="incident-response__feedback">{feedback}</p>}
-      {error && <p role="alert" className="incident-response__error">{error}</p>}
+      {feedback && (
+        <p role="status" className="incident-response__feedback">
+          {feedback}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="incident-response__error">
+          {error}
+        </p>
+      )}
       <p className="simulation-help">
-        To investigate worker history, deliberate actuator commands and the
-        server-maintained Undo stack, visit <Link to={routes.realtime}>Real-time Operations</Link>.
+        To investigate worker history, deliberate actuator commands and the server-maintained Undo
+        stack, visit <Link to={routes.realtime}>Real-time Operations</Link>.
       </p>
     </section>
   );
