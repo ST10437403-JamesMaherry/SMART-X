@@ -1,0 +1,129 @@
+.telemetry-trace__choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.6rem;
+}
+
+.telemetry-trace__choice {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.telemetry-trace__choice > span {
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.telemetry-trace__choice h3,
+.telemetry-trace__results h3 {
+  margin: 0.8rem 0 0;
+  color: var(--heading);
+  font: 400 1.4rem/1.2 var(--font-display);
+}
+
+.telemetry-trace__choice p,
+.telemetry-trace__stages p,
+.telemetry-trace__stages li,
+.telemetry-trace__notice {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.75;
+}
+
+.telemetry-trace__choice p {
+  margin: 0.75rem 0 1.3rem;
+}
+
+.telemetry-trace__choice button {
+  align-self: flex-start;
+  min-height: 2.75rem;
+  margin-top: auto;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--accent);
+  color: var(--heading);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.73rem;
+}
+
+.telemetry-trace__choice button:hover:not(:disabled) {
+  color: var(--background);
+  background: var(--accent);
+}
+
+.telemetry-trace__choice button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.telemetry-trace__notice {
+  margin: 1rem 0 0;
+  padding: 0.95rem;
+  border-left: 2px solid var(--warning);
+  background: var(--surface);
+}
+
+.telemetry-trace__results {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.telemetry-trace__results h3 {
+  margin: 0 0 1rem;
+}
+
+.telemetry-trace__stages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.telemetry-trace__stages > li {
+  min-width: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-strong);
+  overflow-wrap: anywhere;
+}
+
+.telemetry-trace__stages strong {
+  color: var(--heading);
+  font-size: 0.74rem;
+}
+
+.telemetry-trace__stages ul {
+  margin: 0.7rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.telemetry-trace__error,
+.telemetry-trace__success {
+  margin: 1rem 0 0;
+  padding: 0.8rem;
+  border-left: 2px solid var(--danger);
+  color: var(--text);
+  font-size: 0.74rem;
+  line-height: 1.8;
+}
+
+.telemetry-trace__success {
+  border-left-color: var(--success);
+}
+
+@media (max-width: 720px) {
+  .telemetry-trace__choices,
+  .telemetry-trace__stages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
