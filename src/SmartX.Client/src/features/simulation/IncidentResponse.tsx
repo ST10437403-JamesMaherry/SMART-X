@@ -213,7 +213,7 @@ export default function IncidentResponse({
           <p>
             Acknowledge the current {reviewed.type} episode for the West-zone
             moisture probe? Smart-X will verify that the exact issue ID is
-            still Active before sending a command.
+            still Active before sending an acknowledgement request.
           </p>
           <p>
             This changes the incident to <strong>Acknowledged</strong>, not
