@@ -22,7 +22,9 @@ test.describe('guided incident response', () => {
       page.getByText(/Complete a telemetry trace on the healthy greenhouse fixture/),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Confirm acknowledgement' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Real-time Operations', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Real-time Operations', exact: true }),
+    ).toBeVisible();
     expect(acknowledgements).toBe(0);
   });
 });
